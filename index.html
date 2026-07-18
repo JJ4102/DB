@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bitcoin">
+<meta name="theme-color" content="#101320" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef0f6" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Bitcoin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.umd.min.js" crossorigin="anonymous"></script>
+<style>
+  /* ── Design-Tokens: verfeinerter Glassmorphism, Light + Dark ────── */
+  :root {
+    color-scheme: light;
+    --bg: #eef0f6;
+    --text: #191c26;
+    --muted: #565b6b;
+    --orange: #f7931a;
+    --green: #065f46;
+    --red: #a8352a;
+    --loss: #a8352a;
+    --glass: rgba(255,255,255,0.55);
+    --glass-strong: rgba(255,255,255,0.82);
+    --stroke: rgba(255,255,255,0.65);
+    --stroke-soft: rgba(25,28,38,0.08);
+    --shadow: 0 10px 30px rgba(35,42,74,0.10);
+    --shadow-soft: 0 4px 14px rgba(35,42,74,0.07);
+    --inset: inset 0 1px 0 rgba(255,255,255,0.65);
+    --blur: 12px;
+    --radius: 20px;
+    --radius-s: 14px;
+    --orb-opacity: 0.45;
+    --tap: 44px;               /* Mindest-Touchziel */
+    --ok: #1d9e6f;
+    --warn: #d97706;
+    /* Chart-Tokens (vom JS per getComputedStyle gelesen) */
+    --ch-grid: rgba(25,28,38,0.08);
+    --ch-tick: #565b6b;
+    --tip-bg: rgba(255,255,255,0.94);
+    --tip-border: rgba(255,255,255,0.9);
+    --tip-title: #191c26;
+    --tip-body: #565b6b;
+    --ath-line: rgba(86,91,107,0.35);
+    --ath-text: rgba(86,91,107,0.8);
+    --ath-ok: rgba(247,147,26,0.85);
+    --ath-warn: rgba(168,53,42,0.85);
+    --line-main: #f7931a;
+    --line-loss: #a8352a;
+    --line-invest: rgba(247,147,26,0.45);
+    --line-invest-loss: rgba(168,53,42,0.40);
+    --fill-gain: rgba(247,147,26,0.20);
+    --fill-loss: rgba(168,53,42,0.16);
+    --fill-sats: rgba(247,147,26,0.10);
+    --buy-dot: #1a7ef7;
+    --dot-border: #ffffff;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #101320;
+    --text: #f2f4fa;
+    --muted: #a6abbc;
+    --green: #34d399;
+    --red: #ff8577;
+    --loss: #ff8577;
+    --glass: rgba(24,28,44,0.55);
+    --glass-strong: rgba(24,28,44,0.88);
+    --stroke: rgba(255,255,255,0.14);
+    --stroke-soft: rgba(255,255,255,0.09);
+    --shadow: 0 12px 34px rgba(0,0,0,0.35);
+    --shadow-soft: 0 5px 16px rgba(0,0,0,0.28);
+    --inset: inset 0 1px 0 rgba(255,255,255,0.10);
+    --orb-opacity: 0.30;
+    --ok: #34d399;
+    --ch-grid: rgba(255,255,255,0.09);
+    --ch-tick: #a6abbc;
+    --tip-bg: rgba(24,28,44,0.96);
+    --tip-border: rgba(255,255,255,0.16);
+    --tip-title: #f2f4fa;
+    --tip-body: #a6abbc;
+    --ath-line: rgba(166,171,188,0.35);
+    --ath-text: rgba(166,171,188,0.85);
+    --ath-warn: rgba(255,133,119,0.9);
+    --line-loss: #ff8577;
+    --line-invest: rgba(247,147,26,0.55);
+    --line-invest-loss: rgba(255,133,119,0.5);
+    --fill-gain: rgba(247,147,26,0.22);
+    --fill-loss: rgba(255,133,119,0.15);
+    --fill-sats: rgba(247,147,26,0.12);
+    --buy-dot: #6ea8ff;
+    --dot-border: rgba(16,19,32,0.9);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    background: transparent;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "tnum";
+    padding: calc(20px + env(safe-area-inset-top)) 24px calc(48px + env(safe-area-inset-bottom));
+    max-width: 960px;
+    margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* ── Gradient-Orbs: ruhiger, gezielter unter Hero und Charts ────── */
+  .orbs { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: var(--orb-opacity); }
+  .orb.o1 { width: 460px; height: 460px; left: -140px; top: -160px; background: radial-gradient(circle at 30% 30%, #ffb45e, #ff5e8a); }
+  .orb.o2 { width: 520px; height: 520px; right: -190px; top: 22%; background: radial-gradient(circle at 60% 40%, #5e8bff, #8a5eff); }
+  .orb.o3 { width: 420px; height: 420px; left: 30%; bottom: -210px; background: radial-gradient(circle at 50% 50%, #2fd4c2, #5e8bff); }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .head-right { display: flex; align-items: center; gap: 8px; }
+  h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+  h1 span { color: var(--orange); }
+  .iconbtn {
+    border: 1px solid var(--stroke); background: var(--glass); color: var(--text);
+    -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+    border-radius: 999px; min-width: 34px; height: 34px; padding: 0 12px;
+    font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    box-shadow: var(--inset); display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .iconbtn:hover { border-color: var(--orange); }
+  .iconbtn:active { transform: scale(0.96); }
+  /* Sync-Status: Punkt + Kurztext */
+  #sync-chip { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 8px; transition: background 0.3s; }
+  .dot.ok { background: var(--ok); }
+  .dot.pend { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+  .dot.err { background: var(--red); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  .person-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .person-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .person-select {
+    appearance: none; -webkit-appearance: none;
+    border: 1px solid var(--stroke); background-color: var(--glass); color: var(--text);
+    -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+    border-radius: 12px; padding: 8px 32px 8px 14px; font: inherit; font-size: 13px;
+    font-weight: 600; cursor: pointer; min-height: 38px; box-shadow: var(--inset);
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8a95' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .person-select:focus { outline: none; border-color: var(--orange); }
+
+  /* ── Glaskarte ──────────────────────────────────────────────────── */
+  .card {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.5);
+    backdrop-filter: blur(var(--blur)) saturate(1.5);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    box-shadow: var(--inset), var(--shadow-soft);
+    padding: 18px 20px;
+  }
+  /* Einblend-Animation beim ersten Rendern, dezent gestaffelt */
+  .reveal .card, .reveal .hero, .reveal details { animation: rise 0.45s cubic-bezier(0.2,0.7,0.2,1) both; }
+  .reveal .stagger > *:nth-child(2) { animation-delay: 0.05s; }
+  .reveal .stagger > *:nth-child(3) { animation-delay: 0.10s; }
+  .reveal .stagger > *:nth-child(4) { animation-delay: 0.15s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .reveal * { animation: none !important; } }
+
+  /* ── Hero: Portfoliowert dominiert ──────────────────────────────── */
+  .hero {
+    position: relative; overflow: hidden;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.6);
+    backdrop-filter: blur(var(--blur)) saturate(1.6);
+    border: 1px solid var(--stroke); border-radius: var(--radius);
+    box-shadow: var(--inset), var(--shadow);
+    padding: 24px 24px 20px; margin-bottom: 12px;
+  }
+  .hero::before { /* feiner Lichtverlauf oben, statt zusätzlicher Orbs */
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 90px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.16), transparent);
+  }
+  html[data-theme="dark"] .hero::before { background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent); }
+  .hero-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  #stand { font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .hero-value { font-size: clamp(34px, 8vw, 46px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .hero-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 13px; font-weight: 650; border-radius: 999px; padding: 4px 11px;
+    background: var(--glass-strong); border: 1px solid var(--stroke-soft);
+  }
+  .chip.pos { color: var(--green); }
+  .chip.neg { color: var(--loss); }
+  .hero-sub { font-size: 12.5px; color: var(--muted); }
+
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 17px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--loss); }
+
+  .chart-card { margin-bottom: 12px; }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 360px; }
+  .chart-wrap canvas { touch-action: pan-y; }
+  .wtip {
+    position: absolute; opacity: 0; pointer-events: none; z-index: 5;
+    background: var(--tip-bg); border: 1px solid var(--tip-border); border-radius: 10px;
+    padding: 8px 10px; font-size: 11px; white-space: nowrap;
+    box-shadow: var(--shadow); transition: opacity 0.1s;
+  }
+  .wtip-head { display: flex; justify-content: space-between; gap: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .wtip-pct { font-weight: 600; opacity: 0.9; }
+  .wtip-pct.pos { color: var(--green); }
+  .wtip-pct.neg { color: var(--loss); }
+  .wtip-line { color: var(--muted); }
+  .legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin-bottom: 12px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+  details { margin-top: 12px; }
+  summary {
+    font-size: 13px; font-weight: 600; cursor: pointer; padding: 14px 20px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.5);
+    backdrop-filter: blur(var(--blur)) saturate(1.5);
+    border: 1px solid var(--stroke); border-radius: var(--radius);
+    box-shadow: var(--inset), var(--shadow-soft); list-style: none;
+    min-height: var(--tap); display: flex; align-items: center; justify-content: space-between;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); }
+  details[open] summary::after { content: "–"; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.5);
+    backdrop-filter: blur(var(--blur)) saturate(1.5);
+    border: 1px solid var(--stroke); border-radius: var(--radius); overflow: hidden;
+  }
+  th, td { text-align: right; padding: 10px 16px; border-bottom: 1px solid var(--stroke-soft); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { cursor: pointer; transition: background 0.12s; }
+  tbody tr:hover { background: var(--glass-strong); }
+  .tag { font-size: 10.5px; color: var(--muted); }
+  .typ { font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em;
+    border-radius: 6px; padding: 2px 6px; background: var(--glass-strong); border: 1px solid var(--stroke-soft); color: var(--muted); }
+
+  footer { font-size: 11px; color: var(--muted); margin-top: 24px; text-align: center; line-height: 1.7; }
+  footer button { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; padding: 4px; }
+
+  /* ── Skeleton-Ladezustand ───────────────────────────────────────── */
+  #skeleton .sk { border-radius: var(--radius); background: var(--glass); border: 1px solid var(--stroke);
+    position: relative; overflow: hidden; margin-bottom: 12px; }
+  #skeleton .sk::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    animation: shimmer 1.4s infinite; }
+  html[data-theme="dark"] #skeleton .sk::after {
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%); }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  #skeleton .sk.h1 { height: 132px; }
+  #skeleton .row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
+  #skeleton .row .sk { height: 74px; margin: 0; }
+  #skeleton .sk.hc { height: 430px; }
+  #sk-note { text-align: center; color: var(--muted); font-size: 12px; padding: 10px; min-height: 34px; }
+
+  /* ── Plus-Button (FAB): neue Bewegung ───────────────────────────── */
+  #fab {
+    position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 54px; height: 54px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5);
+    background: linear-gradient(145deg, #ffb45e, var(--orange));
+    color: #fff; font-size: 28px; line-height: 1; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(247,147,26,0.45), var(--inset); z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #fab:hover { transform: scale(1.06); }
+  #fab:active { transform: scale(0.94); }
+
+  /* ── Sheet/Modal (Formular & Einstellungen) ─────────────────────── */
+  .overlay { position: fixed; inset: 0; background: rgba(10,12,22,0.45); z-index: 30;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; z-index: 31; left: 50%; bottom: 0; transform: translate(-50%, 105%);
+    width: min(520px, 100%); max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
+    border: 1px solid var(--stroke); border-bottom: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.25), var(--inset);
+    padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
+    transition: transform 0.28s cubic-bezier(0.2,0.7,0.2,1);
+  }
+  .sheet.open { transform: translate(-50%, 0); }
+  @media (min-width: 700px) {
+    .sheet { bottom: auto; top: 50%; border-radius: var(--radius); border-bottom: 1px solid var(--stroke);
+      transform: translate(-50%, -46%) scale(0.97); opacity: 0; pointer-events: none; }
+    .sheet.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+  }
+  .sheet h2 { font-size: 15px; font-weight: 650; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .sheet h2 button { border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .f-row.one { grid-template-columns: 1fr; }
+  .f-field label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 4px; }
+  .f-field input, .f-field select {
+    width: 100%; min-height: var(--tap); font: inherit; font-size: 14px; color: var(--text);
+    background: var(--glass); border: 1px solid var(--stroke-soft); border-radius: var(--radius-s);
+    padding: 8px 12px; outline: none;
+  }
+  .f-field input:focus, .f-field select:focus { border-color: var(--orange); }
+  .f-hint { font-size: 11px; color: var(--muted); margin: -4px 0 10px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .seg button {
+    flex: 1 1 auto; min-height: 38px; font: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--stroke-soft); background: var(--glass); color: var(--muted);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .seg button.sel { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .btn {
+    min-height: var(--tap); width: 100%; font: inherit; font-size: 14px; font-weight: 650;
+    border: none; border-radius: var(--radius-s); cursor: pointer; margin-top: 6px;
+    background: linear-gradient(145deg, #ffb45e, var(--orange)); color: #fff;
+    box-shadow: 0 6px 18px rgba(247,147,26,0.35);
+    transition: transform 0.15s, filter 0.15s;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: scale(0.98); }
+  .btn.ghost { background: var(--glass); color: var(--text); border: 1px solid var(--stroke-soft); box-shadow: none; }
+  .btn.danger { background: none; border: 1px solid var(--stroke-soft); color: var(--red); box-shadow: none; }
+  .f-msg { font-size: 12px; margin-top: 10px; min-height: 16px; color: var(--muted); }
+  .f-msg.err { color: var(--red); }
+  .f-msg.ok { color: var(--ok); }
+  .divider { border: none; border-top: 1px solid var(--stroke-soft); margin: 16px 0; }
+
+  /* Toast */
+  #toast {
+    position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+    background: var(--glass-strong); border: 1px solid var(--stroke); border-radius: 999px;
+    -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+    box-shadow: var(--shadow); color: var(--text); font-size: 12.5px; font-weight: 600;
+    padding: 10px 18px; opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 40; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ── iPhone-Layout: eigens gedacht, nicht geschrumpft ───────────── */
+  @media (max-width: 700px) {
+    body { padding: calc(12px + env(safe-area-inset-top)) 12px calc(96px + env(safe-area-inset-bottom)); }
+    header { margin-bottom: 10px; }
+    .person-wrap { margin-bottom: 12px; }
+    .person-select { flex: 1; }             /* volle Breite = großes Touchziel */
+    .hero { padding: 20px 18px 16px; }
+    .grid4 { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .card { padding: 14px 14px; }
+    .chart-wrap { height: 300px; }
+    th, td { padding: 9px 10px; }
+    .legend { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="orbs" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
+
+<header>
+  <h1><span>&#8383;</span> Bitcoin Dashboard</h1>
+  <div class="head-right">
+    <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details"><i class="dot" id="sync-dot"></i><span id="sync-text">Lokal</span></button>
+    <button type="button" class="iconbtn" id="theme-toggle" aria-label="Theme wechseln">Dunkel</button>
+    <button type="button" class="iconbtn" id="settings-btn" aria-label="Einstellungen">&#9881;</button>
+  </div>
+</header>
+
+<div class="person-wrap">
+  <label class="person-label" for="person-select">Person</label>
+  <select id="person-select" class="person-select"></select>
+</div>
+
+<!-- Skeleton während des Ladens -->
+<div id="skeleton">
+  <div class="sk h1"></div>
+  <div class="row"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+  <div class="sk hc"></div>
+  <div id="sk-note">Lade Kursdaten &hellip;</div>
+</div>
+
+<div id="content" style="display:none">
+  <!-- Hero: der Portfoliowert dominiert -->
+  <section class="hero" aria-label="Portfoliowert">
+    <div class="hero-label"><span>Portfoliowert</span><span id="stand"></span></div>
+    <div class="hero-value" id="k-wert">–</div>
+    <div class="hero-row">
+      <span class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></span>
+      <span class="hero-sub" id="k-pnl-pct"></span>
+      <span class="hero-sub" id="k-wert-sub"></span>
+    </div>
+  </section>
+
+  <div class="grid4 stagger">
+    <div class="card"><div class="kpi-label">Investiert</div><div class="kpi-value" id="k-inv"></div></div>
+    <div class="card"><div class="kpi-label">Sats</div><div class="kpi-value" id="k-sats"></div></div>
+    <div class="card"><div class="kpi-label">&Oslash; Kaufkurs</div><div class="kpi-value" id="k-eca"></div></div>
+    <div class="card"><div class="kpi-label">BTC-Kurs</div><div class="kpi-value" id="k-kurs"></div><div class="kpi-sub" id="k-kurs-sub"></div></div>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-title">Wertentwicklung</div>
+    <div class="chart-sub">Eingesetzte Euro vs. Portfoliowert zum jeweiligen Tageskurs</div>
+    <div class="legend">
+      <span><i style="background:var(--line-main)"></i>Portfoliowert</span>
+      <span><i style="background:var(--line-invest)"></i>Investiert</span>
+      <span><i style="background:var(--fill-gain)"></i>Gewinn</span>
+      <span><i style="background:var(--fill-loss)"></i>Verlust</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
+  </div>
+
+  <div class="card chart-card" id="card-preis">
+    <div class="chart-title">Bitcoin-Kurs</div>
+    <div class="chart-sub">Historischer BTC/EUR-Kurs mit eigenen K&auml;ufen und &Oslash; Kaufkurs</div>
+    <div class="legend">
+      <span><i style="background:var(--line-main)"></i>BTC-Kurs</span>
+      <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
+      <span><i style="background:var(--buy-dot)"></i>&Oslash; Kaufkurs</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartPreis"></canvas></div>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-title">Sats-Bestand</div>
+    <div class="chart-sub">Kumulierter Zuwachs &uuml;ber Zeit</div>
+    <div class="chart-wrap"><canvas id="chartSats"></canvas></div>
+  </div>
+
+  <details>
+    <summary><span>Alle Bewegungen (<span id="tx-count"></span>)</span></summary>
+    <table>
+      <thead><tr><th>Datum</th><th>Typ</th><th>Sats</th><th>Euro</th></tr></thead>
+      <tbody id="tx-body"></tbody>
+    </table>
+  </details>
+
+  <footer>
+    Kursdaten: Coinbase (BTC/EUR) &middot; Daten verschl&uuml;sselt synchronisiert
+    <br><button type="button" id="backup-btn">Backup herunterladen</button> &middot;
+    <button type="button" id="import-btn">Daten importieren</button>
+    <input type="file" id="import-input" accept=".json,.csv,text/csv,application/json" hidden>
+  </footer>
+</div>
+
+<button type="button" id="fab" aria-label="Neue Bewegung erfassen">+</button>
+
+<!-- ── Formular: Bewegung erfassen/bearbeiten ──────────────────────── -->
+<div class="overlay" id="form-overlay"></div>
+<div class="sheet" id="form-sheet" role="dialog" aria-label="Bewegung erfassen">
+  <h2><span id="form-title">Neue Bewegung</span><button type="button" data-close="form" aria-label="Schließen">&times;</button></h2>
+  <div class="seg" id="typ-seg">
+    <button type="button" data-typ="kauf" class="sel">Kauf</button>
+    <button type="button" data-typ="verkauf">Verkauf</button>
+    <button type="button" data-typ="transfer">Transfer</button>
+    <button type="button" data-typ="gebuehr">Geb&uuml;hr</button>
+    <button type="button" data-typ="geschenk">Geschenk</button>
+  </div>
+  <div class="seg" id="dir-seg" style="display:none">
+    <button type="button" data-dir="in" class="sel">Eingang (+)</button>
+    <button type="button" data-dir="out">Ausgang (&minus;)</button>
+  </div>
+  <div class="f-row">
+    <div class="f-field"><label for="f-person">Person</label><select id="f-person"></select></div>
+    <div class="f-field"><label for="f-date">Datum</label><input type="date" id="f-date"></div>
+  </div>
+  <div class="f-row">
+    <div class="f-field"><label for="f-eur" id="f-eur-label">Euro</label><input type="text" id="f-eur" inputmode="decimal" placeholder="z. B. 100"></div>
+    <div class="f-field"><label for="f-sats">Sats</label><input type="text" id="f-sats" inputmode="numeric" placeholder="leer = aus Kurs"></div>
+  </div>
+  <div class="f-hint" id="f-hint">Sats leer lassen &rarr; werden aus dem Tageskurs berechnet.</div>
+  <div class="f-row" id="f-row2">
+    <div class="f-field"><label for="f-who">Wer (K&uuml;rzel, optional)</label><input type="text" id="f-who" maxlength="3" placeholder="z. B. Y"></div>
+    <div class="f-field"><label for="f-label">Notiz (optional)</label><input type="text" id="f-label" placeholder="z. B. Consolidation"></div>
+  </div>
+  <button type="button" class="btn" id="f-save">Speichern</button>
+  <button type="button" class="btn danger" id="f-delete" style="display:none">Bewegung l&ouml;schen</button>
+  <div class="f-msg" id="f-msg"></div>
+</div>
+
+<!-- ── Einstellungen: Sync, Sicherung ──────────────────────────────── -->
+<div class="overlay" id="set-overlay"></div>
+<div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
+  <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
+  <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label><input type="password" id="s-token" autocomplete="off" placeholder="github_pat_&hellip;"></div>
+  <div class="f-field" style="margin-bottom:10px"><label for="s-gist">Gist-ID (leer = neu anlegen)</label><input type="text" id="s-gist" autocomplete="off" placeholder="wird automatisch gef&uuml;llt"></div>
+  <div class="f-field" style="margin-bottom:4px"><label for="s-pass">Verschl&uuml;sselungs-Passwort</label><input type="password" id="s-pass" autocomplete="off" placeholder="selbst gew&auml;hlt, auf allen Ger&auml;ten gleich"></div>
+  <div class="f-hint">Alles bleibt nur auf diesem Ger&auml;t gespeichert. Das Passwort verschl&uuml;sselt deine Daten, bevor sie zu GitHub gehen.</div>
+  <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
+  <div class="f-msg" id="s-msg"></div>
+  <hr class="divider">
+  <button type="button" class="btn ghost" id="s-sync-now">Jetzt synchronisieren</button>
+  <button type="button" class="btn ghost" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
+  <button type="button" class="btn danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ═══════════ Helfer ═══════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const DAY = 864e5;
+const fmtEur = (v, d = 2) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d }) + " €";
+const fmtInt = v => Math.round(v).toLocaleString("de-DE");
+const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t.__tm);
+  t.__tm = setTimeout(() => t.classList.remove("show"), 2600);
+}
+/* Zahl mit deutschem Format einlesen ("1.234,56" oder "1234.56") */
+function parseNum(s) {
+  s = String(s || "").trim().replace(/\s|€/g, "");
+  if (!s) return NaN;
+  if (/,\d*$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  else s = s.replace(",", ".");
+  return parseFloat(s);
+}
+
+/* ═══════════ Datenspeicher (Bewegungen) ═══════════
+   Bewegung: { id, person, date "YYYY-MM-DD", typ, sats (±Delta),
+               eur (±Delta auf "Investiert"), who, label, mod, del }
+   Vorzeichen sind im Datensatz enthalten – Kauf: sats+ eur+,
+   Verkauf: sats− eur−, Gebühr: sats−, Geschenk: sats+, Transfer: ±. */
+const LS_STORE = "btc-dash-store-v3";
+const LS_SET   = "btc-dash-sync-v1";
+const LS_HIST  = "btc-dash-hist-v1";
+const LS_THEME = "btc-glass-theme";
+const LS_BACKUP = "btc-dash-lastbackup";
+const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
+const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
+
+let STORE = { schema: 3, updatedAt: 0, movements: [] };
+(function loadStore() {
+  try {
+    const o = JSON.parse(localStorage.getItem(LS_STORE));
+    if (o && Array.isArray(o.movements)) STORE = o;
+  } catch (e) {}
+})();
+function saveStore() {
+  STORE.updatedAt = Date.now();
+  try { localStorage.setItem(LS_STORE, JSON.stringify(STORE)); } catch (e) {}
+}
+const liveMovs = () => STORE.movements.filter(m => !m.del);
+function personList() {
+  const seen = new Set(liveMovs().map(m => m.person));
+  return PERSON_ORDER.filter(p => seen.has(p))
+    .concat([...seen].filter(p => !PERSON_ORDER.includes(p)).sort());
+}
+function upsertMov(m) {
+  m.mod = Date.now();
+  const i = STORE.movements.findIndex(x => x.id === m.id);
+  if (i >= 0) STORE.movements[i] = m; else STORE.movements.push(m);
+  saveStore();
+  markDirty();
+}
+function deleteMov(id) {
+  const m = STORE.movements.find(x => x.id === id);
+  if (m) { m.del = Date.now(); m.mod = Date.now(); saveStore(); markDirty(); }
+}
+/* Alt-Datensatz (Zeile aus CSV/Migration) → Bewegung mit stabiler ID */
+function rowToMov(person, r, idx) {
+  let typ;
+  if (r.eur > 0 && r.sats > 0) typ = "kauf";
+  else if (r.sats < 0) typ = /consolidation|fee|geb/i.test(r.label || "") ? "gebuehr" : "transfer";
+  else typ = (r.label ? "geschenk" : "kauf");
+  return { id: "mig-" + person.replace(/\W/g, "_") + "-" + idx + "-" + r.date + "-" + r.sats,
+    person, date: r.date, typ, sats: r.sats, eur: r.eur || 0,
+    who: r.who || "", label: r.label || "", mod: 1, del: 0 };
+}
+function importTables(tables) {
+  let n = 0;
+  for (const p of Object.keys(tables)) {
+    (tables[p] || []).forEach((r, i) => {
+      const m = rowToMov(p, r, i);
+      if (!STORE.movements.some(x => x.id === m.id)) { STORE.movements.push(m); n++; }
+    });
+  }
+  if (n) { saveStore(); markDirty(); }
+  return n;
+}
+/* Numbers-CSV parsen (unverändert aus der Vorgängerversion) */
+function parseCsvAll(text) {
+  const lines = text.split(/\r?\n/);
+  const headerName = l => {
+    const s = l.trim();
+    if (!s || s.includes(";") || /^\d{2}\/\d{2}\/\d{2}/.test(s)) return null;
+    const m = s.match(/^(.+?):\s/);
+    return (m ? m[1] : s).trim();
+  };
+  const sections = {};
+  let current = null;
+  for (const line of lines) {
+    const h = headerName(line);
+    if (h) { current = h; sections[current] = []; continue; }
+    if (current) sections[current].push(line);
+  }
+  const parseRows = scope => {
+    const rows = [];
+    for (const line of scope) {
+      const parts = line.split(";").map(p => p.trim());
+      const di = parts.findIndex(p => /^\d{2}\/\d{2}\/\d{2}$/.test(p));
+      if (di < 0) continue;
+      const rest = parts.slice(di + 1).filter(p => p !== "");
+      if (!rest.length || !/^-?[\d.]+$/.test(rest[0])) continue;
+      const sats = parseInt(rest[0].replace(/\./g, ""), 10);
+      if (!isFinite(sats)) continue;
+      const eurField = rest[1] || "";
+      const m = eurField.match(/^([\d.,]+)\s*€?$/);
+      const eur = m ? parseFloat(m[1].replace(/\./g, "").replace(",", ".")) : 0;
+      const label = m || !eurField ? null : eurField;
+      const [dd, mm, yy] = parts[di].split("/");
+      const row = { date: "20" + yy + "-" + mm + "-" + dd, sats, eur, label };
+      if (di >= 1 && /^[A-ZÄÖÜ]$/.test(parts[0])) row.who = parts[0];
+      rows.push(row);
+    }
+    return rows;
+  };
+  const names = Object.keys(sections);
+  const tables = {};
+  if (names.length) {
+    for (const n of names) {
+      const rows = parseRows(sections[n]);
+      if (rows.length) tables[n] = rows;
+    }
+  }
+  if (!Object.keys(tables).length) throw new Error("Keine Einträge in der Datei gefunden.");
+  return tables;
+}
+
+/* ═══════════ Verschlüsselung (AES-GCM, Schlüssel aus Passwort) ═══════════ */
+const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pass, salt) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 250000, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function encryptJson(obj, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pass, salt);
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv },
+    key, new TextEncoder().encode(JSON.stringify(obj)));
+  return JSON.stringify({ v: 1, alg: "AES-GCM/PBKDF2-250k", salt: b64(salt), iv: b64(iv), data: b64(data) });
+}
+async function decryptJson(text, pass) {
+  const o = JSON.parse(text);
+  if (!o || o.v !== 1) throw new Error("Unbekanntes Datenformat");
+  const key = await deriveKey(pass, unb64(o.salt));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.data));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+/* ═══════════ Gist-Sync ═══════════ */
+const GIST_FILE = "bitcoin-dashboard.json.enc";
+function syncCfg() {
+  try { return JSON.parse(localStorage.getItem(LS_SET)) || null; } catch (e) { return null; }
+}
+function setSyncCfg(cfg) {
+  if (cfg) localStorage.setItem(LS_SET, JSON.stringify(cfg));
+  else localStorage.removeItem(LS_SET);
+}
+function syncStatus(state, text) {
+  $("sync-dot").className = "dot" + (state ? " " + state : "");
+  $("sync-text").textContent = text;
+}
+async function ghApi(path, opts = {}) {
+  const cfg = syncCfg();
+  const r = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + cfg.token,
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      ...(opts.headers || {})
+    }
+  });
+  if (r.status === 401) throw new Error("Token ungültig oder abgelaufen");
+  if (r.status === 404) throw new Error("Gist nicht gefunden (ID prüfen / Token-Rechte)");
+  if (!r.ok) throw new Error("GitHub-Fehler " + r.status);
+  return r.json();
+}
+/* Zwei Stände vereinen: pro ID gewinnt die zuletzt geänderte Fassung */
+function mergeMovs(a, b) {
+  const map = new Map();
+  for (const m of a) map.set(m.id, m);
+  for (const m of b) {
+    const x = map.get(m.id);
+    if (!x || (m.mod || 0) > (x.mod || 0)) map.set(m.id, m);
+  }
+  return [...map.values()];
+}
+let dirty = false, pushTimer = null, syncing = false;
+function markDirty() {
+  dirty = true;
+  if (!syncCfg()) { syncStatus("", "Lokal"); return; }
+  syncStatus("pend", "Ausstehend");
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => doSync().catch(() => {}), 1500);
+}
+async function gistPull(cfg) {
+  const g = await ghApi("/gists/" + cfg.gistId);
+  const f = g.files && g.files[GIST_FILE];
+  if (!f) return null;
+  let content = f.content;
+  if (f.truncated) content = await (await fetch(f.raw_url)).text();
+  if (!content) return null;
+  try { return await decryptJson(content, cfg.pass); }
+  catch (e) { throw new Error("Entschlüsselung fehlgeschlagen – Passwort auf allen Geräten gleich?"); }
+}
+async function gistPush(cfg) {
+  const payload = await encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, cfg.pass);
+  await ghApi("/gists/" + cfg.gistId, { method: "PATCH",
+    body: JSON.stringify({ files: { [GIST_FILE]: { content: payload } } }) });
+}
+async function doSync(interactive) {
+  const cfg = syncCfg();
+  if (!cfg || syncing) return;
+  syncing = true;
+  syncStatus("pend", "Sync …");
+  try {
+    const remote = await gistPull(cfg);
+    if (remote && Array.isArray(remote.movements)) {
+      const before = JSON.stringify(STORE.movements);
+      STORE.movements = mergeMovs(STORE.movements, remote.movements);
+      if (JSON.stringify(STORE.movements) !== before) {
+        saveStore();
+        refreshAfterDataChange();
+      }
+      /* nur hochladen, wenn wir etwas haben, das drüben fehlt */
+      const localNewer = STORE.movements.length !== remote.movements.length ||
+        JSON.stringify(STORE.movements) !== JSON.stringify(mergeMovs(remote.movements, remote.movements));
+      if (dirty || localNewer) { await gistPush(cfg); }
+    } else {
+      await gistPush(cfg);
+    }
+    dirty = false;
+    cfg.lastSync = Date.now();
+    setSyncCfg(cfg);
+    syncStatus("ok", "Synchron " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }));
+    if (interactive) toast("Synchronisiert");
+  } catch (e) {
+    syncStatus("err", "Sync-Fehler");
+    if (interactive) toast("Sync fehlgeschlagen: " + (e.message || e));
+    throw e;
+  } finally { syncing = false; }
+}
+
+/* ═══════════ Backup (unverschlüsselte Datei) ═══════════ */
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(),
+    schema: 3, movements: liveMovs() }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bitcoin-dashboard-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  try { localStorage.setItem(LS_BACKUP, String(Date.now())); } catch (e) {}
+  toast("Backup gespeichert (Downloads)");
+}
+function maybeBackupReminder() {
+  const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (isStandalone || !liveMovs().length) return;
+  const last = parseInt(localStorage.getItem(LS_BACKUP) || "0", 10);
+  if (Date.now() - last > 30 * DAY) setTimeout(() =>
+    toast("Tipp: Backup ist älter als 30 Tage – unten „Backup herunterladen“"), 4000);
+}
+
+/* ═══════════ Kursdaten (Coinbase, direkt per fetch) ═══════════ */
+const HIST_START = Date.UTC(2015, 3, 23);
+function histCache() {
+  try {
+    const o = JSON.parse(localStorage.getItem(LS_HIST));
+    return o && Array.isArray(o.candles) && o.candles.length ? o : null;
+  } catch (e) { return null; }
+}
+async function fetchJson(url) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await sleep(1000);
+    try {
+      const r = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!r.ok) { lastErr = new Error("HTTP " + r.status); continue; }
+      return await r.json();
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+async function fetchRange(startMs, endMs) {
+  const rows = await fetchJson(
+    "https://api.exchange.coinbase.com/products/BTC-EUR/candles?granularity=86400" +
+    "&start=" + new Date(startMs).toISOString() +
+    "&end=" + new Date(endMs).toISOString());
+  return Array.isArray(rows) ? rows.map(c => [c[0], c[4]]).sort((a, b) => a[0] - b[0]) : [];
+}
+async function loadHistory(onProgress) {
+  const cached = histCache();
+  let hist = cached ? cached.candles.slice(0, Math.max(0, cached.candles.length - 7)) : [];
+  try {
+    const CHUNK = 290 * DAY;
+    let cursor = hist.length ? (hist[hist.length - 1][0] + 86400) * 1000 : HIST_START;
+    const endAll = Date.now() + DAY;
+    while (cursor < endAll) {
+      const end = Math.min(cursor + CHUNK, endAll);
+      if (end - cursor > 30 * DAY && onProgress) onProgress("Lade Kurshistorie … " + new Date(cursor).getFullYear());
+      const rows = await fetchRange(cursor, end);
+      for (const r of rows) if (!hist.length || r[0] > hist[hist.length - 1][0]) hist.push(r);
+      cursor = end;
+    }
+    if (!hist.length) throw new Error("keine Kurse erhalten");
+    try { localStorage.setItem(LS_HIST, JSON.stringify({ updatedAt: Date.now(), candles: hist })); } catch (e) {}
+    return { hist, fresh: true };
+  } catch (e) {
+    if (cached) return { hist: cached.candles, fresh: false };
+    throw new Error("Kurshistorie konnte nicht geladen werden (" + (e && e.message || e) + ")");
+  }
+}
+async function fetchSpot() {
+  try {
+    const t = await fetchJson("https://api.exchange.coinbase.com/products/BTC-EUR/ticker");
+    const p = parseFloat(t && t.price);
+    if (isFinite(p) && p > 0) return p;
+  } catch (e) {}
+  const s = await fetchJson("https://api.coinbase.com/v2/prices/BTC-EUR/spot");
+  const p = parseFloat(s && s.data && s.data.amount);
+  if (!isFinite(p) || !(p > 0)) throw new Error("kein Kurs");
+  return p;
+}
+</script>
+<script>
+"use strict";
+/* ═══════════ Zustand der Ansicht ═══════════ */
+let person = null;
+let ALL = [];            // Zeilen {date, sats, eur, label, who, typ, id} der gewählten Person
+let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
+function rebuildAll() {
+  ALL = liveMovs().filter(m => m.person === person)
+    .slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+function cumAt(ts) {
+  let sats = 0, eur = 0;
+  for (const b of ALL) {
+    if (new Date(b.date + "T00:00:00Z").getTime() <= ts) { sats += b.sats; eur += b.eur; }
+  }
+  return { sats, eur };
+}
+
+/* Sanft zählende Zahlen (Hero & BTC-Kurs) */
+function countTo(el, to, fmt) {
+  const from = el.__num != null ? el.__num : to;
+  el.__num = to;
+  if (!isFinite(from) || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now(), dur = 600;
+  cancelAnimationFrame(el.__raf);
+  (function step(t) {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(from + (to - from) * e);
+    if (k < 1) el.__raf = requestAnimationFrame(step);
+  })(t0);
+}
+
+/* ═══════════ KPIs (ohne Chart-Neuaufbau aktualisierbar) ═══════════ */
+function renderKpis(market) {
+  const { live, fetchedAt, liveOk, candles } = market;
+  const totSats = ALL.reduce((s, b) => s + b.sats, 0);
+  const totEur = ALL.reduce((s, b) => s + b.eur, 0);
+  const btc = totSats / 1e8;
+  const wert = btc * live;
+  const pnl = wert - totEur;
+  const hasInvest = totEur > 0;
+
+  countTo($("k-wert"), wert, v => fmtEur(v));
+  $("k-wert-sub").textContent = "₿ " + btc.toLocaleString("de-DE", { minimumFractionDigits: 8 });
+  const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
+  if (hasInvest) {
+    const pct = (wert / totEur - 1) * 100;
+    countTo(pnlEl, pnl, v => (v >= 0 ? "+" : "") + fmtEur(v));
+    chip.className = "chip " + (pnl >= 0 ? "pos" : "neg");
+    pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " %";
+    pctEl.className = "hero-sub " + (pnl >= 0 ? "pos" : "neg");
+  } else {
+    pnlEl.textContent = "–"; pnlEl.__num = null;
+    chip.className = "chip";
+    pctEl.textContent = "kein Einsatz erfasst"; pctEl.className = "hero-sub";
+  }
+  $("k-inv").textContent = fmtEur(totEur);
+  $("k-sats").textContent = fmtInt(totSats);
+  $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc, 0) : "–";
+  countTo($("k-kurs"), live, v => fmtEur(v, 0));
+  $("k-kurs-sub").textContent = liveOk ? "live" : "Cache";
+  $("stand").textContent = liveOk
+    ? new Date(fetchedAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })
+    : "Kurs vom " + fmtDate(candles[candles.length - 1].t) + " (offline)";
+}
+
+/* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
+function renderCharts(market) {
+  const { candles, live } = market;
+  const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = {
+    grid: cssv("--ch-grid"), tick: cssv("--ch-tick"),
+    tipBg: cssv("--tip-bg"), tipBorder: cssv("--tip-border"),
+    tipTitle: cssv("--tip-title"), tipBody: cssv("--tip-body"),
+    athLine: cssv("--ath-line"), athText: cssv("--ath-text"),
+    athOk: cssv("--ath-ok"), athWarn: cssv("--ath-warn"),
+    main: cssv("--line-main"), loss: cssv("--line-loss"),
+    invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
+    fillGain: cssv("--fill-gain"), fillLoss: cssv("--fill-loss"), fillSats: cssv("--fill-sats"),
+    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border")
+  };
+  const totSats = ALL.reduce((s, b) => s + b.sats, 0);
+  const wert = totSats / 1e8 * live;
+
+  const mapPt = c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close, wert: sats / 1e8 * c.close }; };
+  const firstTs = ALL.length ? new Date(ALL[0].date + "T00:00:00Z").getTime() : Date.UTC(2023, 5, 6);
+  const ptsW = candles.filter(c => c.t >= firstTs).map(mapPt);
+  const labelsW = ptsW.map(p => p.t);
+  const tickCbW = (v, i) => (i % Math.ceil(labelsW.length / 7) === 0) ? fmtMonth(labelsW[i]) : "";
+
+  function rescaleY(chart) {
+    if (chart.__resetting) return;
+    const x = chart.scales.x;
+    let lo = Infinity, hi = -Infinity;
+    chart.data.datasets.forEach((ds, di) => {
+      if (chart.getDatasetMeta(di).hidden) return;
+      const from = Math.max(0, Math.floor(x.min)), to = Math.min(ds.data.length - 1, Math.ceil(x.max));
+      for (let i = from; i <= to; i++) {
+        const v = ds.data[i];
+        if (v == null || !isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    });
+    if (!isFinite(lo) || !isFinite(hi)) return;
+    if (lo === hi) { lo -= 1; hi += 1; }
+    const pad = (hi - lo) * 0.06;
+    chart.options.scales.y.min = Math.max(0, lo - pad);
+    chart.options.scales.y.max = hi + pad;
+    chart.update("none");
+  }
+  const isTouch = "ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0;
+  const zoomOpts = {
+    limits: { x: { minRange: 7 } },
+    pan: Object.assign(
+      { enabled: true, mode: "x", threshold: 20, onPanComplete: c => rescaleY(c.chart) },
+      isTouch ? {} : { modifierKey: "shift" }
+    ),
+    zoom: { pinch: { enabled: false }, wheel: { enabled: true, speed: 0.05, modifierKey: "ctrl" },
+            drag: { enabled: !isTouch, threshold: 8, backgroundColor: "rgba(247,147,26,0.10)",
+                    borderColor: "rgba(247,147,26,0.35)", borderWidth: 1 },
+            mode: "x", onZoomComplete: c => rescaleY(c.chart) }
+  };
+  const common = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    interaction: { mode: "nearest", intersect: true },
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: C.tipBg, borderColor: C.tipBorder, borderWidth: 1,
+      titleColor: C.tipTitle, bodyColor: C.tipBody,
+      titleFont: { size: 11, weight: "600" }, bodyFont: { size: 11 },
+      cornerRadius: 8, padding: 8, boxWidth: 8, boxHeight: 8, boxPadding: 4,
+      callbacks: { title: items => fmtDate(labelsW[items[0].dataIndex]) }
+    }, zoom: zoomOpts },
+    scales: {
+      x: { grid: { display: false }, ticks: { callback: tickCbW, maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
+      y: { border: { display: false }, grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, count: 6 } }
+    }
+  };
+
+  Chart.getChart("chartWert")?.destroy();
+  Chart.getChart("chartSats")?.destroy();
+  Chart.getChart("chartPreis")?.destroy();
+
+  /* Persönliches ATH als dezente Linie */
+  const ath = ptsW.length ? Math.max(...ptsW.map(p => p.wert)) : 0;
+  const athPt = ptsW.find(p => p.wert === ath);
+  const athPlugin = {
+    id: "athLine",
+    afterDatasetsDraw(chart) {
+      if (!(ath > 0) || !athPt) return;
+      const y = chart.scales.y.getPixelForValue(ath);
+      const { left, right, top, bottom } = chart.chartArea;
+      if (y < top + 2 || y > bottom - 2) return;
+      const c = chart.ctx;
+      c.save();
+      c.strokeStyle = C.athLine;
+      c.setLineDash([4, 4]);
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+      c.setLineDash([]);
+      c.font = "10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      c.textBaseline = "top";
+      c.fillStyle = C.athText;
+      c.fillText("ATH " + fmtEur(ath, 0) + ", " + fmtDate(athPt.t), left + 6, y + 5);
+      const dist = (wert / ath - 1) * 100;
+      c.fillStyle = dist >= -0.5 ? C.athOk : C.athWarn;
+      c.fillText(dist.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %", left + 6, y + 16);
+      c.restore();
+    }
+  };
+
+  const oldTip = document.querySelector(".wtip");
+  if (oldTip) oldTip.style.opacity = 0;
+  function wertTooltip(ctx) {
+    const { chart, tooltip } = ctx;
+    let el = chart.canvas.parentNode.querySelector(".wtip");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "wtip";
+      chart.canvas.parentNode.appendChild(el);
+    }
+    const i = tooltip.opacity && tooltip.dataPoints && tooltip.dataPoints.length
+      ? tooltip.dataPoints[0].dataIndex : -1;
+    if (i < 0 || !ptsW[i]) { el.style.opacity = 0; return; }
+    const p = ptsW[i];
+    let pctHtml = "";
+    if (p.eur > 0) {
+      const pct = (p.wert / p.eur - 1) * 100;
+      pctHtml = '<span class="wtip-pct ' + (pct >= 0 ? "pos" : "neg") + '">' +
+        (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
+    }
+    el.innerHTML = '<div class="wtip-head"><span>' + fmtDate(p.t) + "</span>" + pctHtml + "</div>" +
+      '<div class="wtip-line">Portfoliowert: ' + fmtEur(p.wert) + "</div>" +
+      '<div class="wtip-line">Investiert: ' + fmtEur(p.eur) + "</div>";
+    el.style.opacity = 1;
+    el.style.left = Math.min(chart.width - el.offsetWidth - 4, Math.max(4, tooltip.caretX + 12)) + "px";
+    el.style.top = Math.max(4, tooltip.caretY - el.offsetHeight - 12) + "px";
+  }
+
+  new Chart($("chartWert"), {
+    type: "line",
+    plugins: [athPlugin],
+    data: { labels: labelsW, datasets: [
+      { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.main,
+        segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur ? C.loss : C.main) },
+        fill: { target: 1, above: C.fillGain, below: C.fillLoss },
+        borderWidth: 1.5, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
+      { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
+        segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
+          ? C.investLoss : C.invest) },
+        borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true }
+    ]},
+    options: { ...common, plugins: { ...common.plugins,
+      tooltip: { enabled: false, external: wertTooltip } },
+      scales: { ...common.scales,
+        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks,
+        callback: v => fmtInt(v) + " €" } } } }
+  });
+
+  new Chart($("chartSats"), {
+    type: "line",
+    data: { labels: labelsW, datasets: [
+      { label: "Sats", data: ptsW.map(p => p.sats), borderColor: C.main,
+        backgroundColor: C.fillSats, fill: true, borderWidth: 1.5, pointRadius: 0, pointHitRadius: 6, stepped: true }
+    ]},
+    options: { ...common, plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
+      callbacks: { ...common.plugins.tooltip.callbacks,
+        label: c => " " + fmtInt(c.parsed.y) + " Sats" } } },
+      scales: { ...common.scales, y: { ...common.scales.y, ticks: { ...common.scales.y.ticks,
+        callback: v => (v / 1e6).toLocaleString("de-DE") + " M" } } } }
+  });
+
+  const ptsK = candles.map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
+  const labelsK = ptsK.map(p => p.t);
+  const tickCbK = (v, i) => (i % Math.ceil(labelsK.length / 7) === 0) ? fmtMonth(labelsK[i]) : "";
+  const byDay = new Map();
+  for (const b of ALL) {
+    if (!(b.eur > 0 && b.sats > 0)) continue;
+    const t = new Date(b.date + "T00:00:00Z").getTime();
+    const cur = byDay.get(t) || { sats: 0, eur: 0 };
+    cur.sats += b.sats; cur.eur += b.eur;
+    byDay.set(t, cur);
+  }
+  const dots = ptsK.map(() => null);
+  const dotInfo = ptsK.map(() => null);
+  const dotR = ptsK.map(() => 0);
+  const vMax = Math.max(1, ...[...byDay.values()].map(v => v.eur));
+  for (const [t, v] of byDay) {
+    let i = ptsK.findIndex(p => p.t >= t);
+    if (i < 0) i = ptsK.length - 1;
+    dots[i] = ptsK[i].close;
+    dotInfo[i] = v;
+    dotR[i] = 2 + 4.5 * Math.sqrt(v.eur / vMax);
+  }
+  const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
+
+  Chart.Interaction.modes.kaufVorrang = (chart, e, options, useFinalPosition) => {
+    const items = Chart.Interaction.modes.point(chart, e, { intersect: true }, useFinalPosition);
+    const dotsHit = items.filter(i => i.datasetIndex === 2);
+    const pool = dotsHit.length ? dotsHit : items;
+    if (!pool.length) return [];
+    let best = pool[0], bd = Infinity;
+    for (const it of pool) {
+      const d = (it.element.x - e.x) ** 2 + (it.element.y - e.y) ** 2;
+      if (d < bd) { bd = d; best = it; }
+    }
+    return [best];
+  };
+
+  new Chart($("chartPreis"), {
+    type: "line",
+    data: { labels: labelsK, datasets: [
+      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: C.main,
+        borderWidth: 1.5, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
+      { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
+        borderWidth: 1.5, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
+      { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
+        showLine: false, pointBorderColor: C.dotBorder, pointBorderWidth: 0.75,
+        pointRadius: c => dotR[c.dataIndex] || 0,
+        pointHoverRadius: c => (dotR[c.dataIndex] || 0) + 1.5,
+        pointHitRadius: 4, order: 1 }
+    ]},
+    options: { ...common,
+      interaction: { mode: "kaufVorrang", intersect: true },
+      plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
+      callbacks: { ...common.plugins.tooltip.callbacks,
+        title: items => fmtDate(labelsK[items[0].dataIndex]),
+        label: c => {
+          if (c.datasetIndex === 2 && dotInfo[c.dataIndex]) {
+            const v = dotInfo[c.dataIndex];
+            return [" " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " @ " + fmtEur(v.eur / (v.sats / 1e8), 0),
+                    " " + fmtInt(v.sats) + " Sats"];
+          }
+          return " " + c.dataset.label + ": " + fmtEur(c.parsed.y, 0);
+        } } } },
+      scales: { ...common.scales,
+        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCbK } },
+        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, callback: v => fmtInt(v) + " €" } } } }
+  });
+
+  /* Gesten: Doppelklick/-tipp Reset, Trackpad-Pan, gedämpfter Pinch */
+  for (const id of ["chartWert", "chartSats", "chartPreis"]) {
+    const cv = $(id);
+    if (!cv) continue;
+    cv.style.touchAction = "pan-y";
+    if (cv.dataset.rz) continue;
+    cv.dataset.rz = "1";
+    const resetZoomFor = () => {
+      const ch = Chart.getChart(cv);
+      if (!ch || !ch.resetZoom) return;
+      ch.__resetting = true;
+      ch.resetZoom("none");
+      delete ch.options.scales.y.min;
+      delete ch.options.scales.y.max;
+      ch.__resetting = false;
+      ch.update("none");
+    };
+    cv.addEventListener("dblclick", resetZoomFor);
+    cv.addEventListener("wheel", e => {
+      if (e.ctrlKey) return;
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      const ch = Chart.getChart(cv);
+      if (!ch || !ch.pan) return;
+      e.preventDefault();
+      ch.pan({ x: -e.deltaX }, undefined, "default");
+      rescaleY(ch);
+    }, { passive: false });
+    let taps = 0, tapTimer = null;
+    cv.addEventListener("touchend", e => {
+      if (e.touches.length !== 0 || e.changedTouches.length !== 1) { taps = 0; return; }
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => { taps = 0; }, 400);
+      const ch = Chart.getChart(cv);
+      if (!ch || !ch.zoom) return;
+      if (taps === 2) {
+        const rect = cv.getBoundingClientRect();
+        const t = e.changedTouches[0];
+        ch.zoom({ x: 1.1, focalPoint: { x: t.clientX - rect.left, y: t.clientY - rect.top } });
+        rescaleY(ch);
+      } else if (taps >= 3) {
+        taps = 0;
+        resetZoomFor();
+      }
+    });
+    if (window.Hammer) {
+      const mc = new Hammer.Manager(cv, { touchAction: "pan-y" });
+      mc.add(new Hammer.Pinch());
+      let prevScale = 1;
+      mc.on("pinchstart", () => { prevScale = 1; });
+      mc.on("pinch", ev => {
+        const ch = Chart.getChart(cv);
+        if (!ch || !ch.zoom) return;
+        const raw = ev.scale / prevScale;
+        prevScale = ev.scale;
+        const f = 1 + (raw - 1) * 0.4;
+        const rect = cv.getBoundingClientRect();
+        ch.zoom({ x: f, focalPoint: { x: ev.center.x - rect.left, y: ev.center.y - rect.top } });
+      });
+      mc.on("pinchend", () => { const ch = Chart.getChart(cv); if (ch) rescaleY(ch); });
+    }
+    cv.style.touchAction = "pan-y";
+  }
+}
+
+/* ═══════════ Bewegungs-Tabelle ═══════════ */
+function renderTable() {
+  $("tx-count").textContent = ALL.length;
+  $("tx-body").innerHTML = [...ALL].reverse().map(b =>
+    '<tr data-id="' + esc(b.id) + '"><td>' + fmtDate(new Date(b.date + "T00:00:00").getTime()) +
+    (b.who ? ' <span class="tag">' + esc(b.who) + "</span>" : "") + "</td>" +
+    '<td><span class="typ">' + (TYP_NAME[b.typ] || "Kauf") + "</span></td>" +
+    "<td>" + fmtInt(b.sats) + "</td>" +
+    "<td>" + (b.eur ? fmtEur(b.eur) : (b.label ? '<span class="tag">' + esc(b.label) + "</span>" : "–")) + "</td></tr>"
+  ).join("");
+}
+$("tx-body").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (tr) openForm(tr.dataset.id);
+});
+
+function render(market) {
+  renderKpis(market);
+  renderCharts(market);
+  renderTable();
+}
+function refreshAfterDataChange() {
+  renderPersonSelect();
+  rebuildAll();
+  if (lastMarket) render(lastMarket);
+}
+
+/* ═══════════ Personen-Auswahl ═══════════ */
+function renderPersonSelect() {
+  const list = personList();
+  if (!list.length) { $("person-select").innerHTML = "<option>–</option>"; return; }
+  if (!person || !list.includes(person)) person = list[0];
+  $("person-select").innerHTML = list.map(p =>
+    '<option value="' + esc(p) + '"' + (p === person ? " selected" : "") + ">" + esc(p) + "</option>").join("");
+}
+$("person-select").addEventListener("change", e => {
+  person = e.target.value;
+  rebuildAll();
+  if (lastMarket) render(lastMarket);
+});
+
+/* ═══════════ Sheets (Formular / Einstellungen) ═══════════ */
+function openSheet(name) { $(name + "-overlay").classList.add("open"); $(name + "-sheet").classList.add("open"); }
+function closeSheet(name) { $(name + "-overlay").classList.remove("open"); $(name + "-sheet").classList.remove("open"); }
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeSheet(b.dataset.close)));
+$("form-overlay").addEventListener("click", () => closeSheet("form"));
+$("set-overlay").addEventListener("click", () => closeSheet("set"));
+
+/* ═══════════ Formular: Bewegung erfassen / bearbeiten ═══════════ */
+let fTyp = "kauf", fDir = "in", fEditId = null;
+const NEEDS_EUR = { kauf: "Euro", verkauf: "Erlös (€)" };
+function setTyp(t) {
+  fTyp = t;
+  document.querySelectorAll("#typ-seg button").forEach(b => b.classList.toggle("sel", b.dataset.typ === t));
+  $("dir-seg").style.display = t === "transfer" ? "flex" : "none";
+  const needsEur = !!NEEDS_EUR[t];
+  $("f-eur").parentElement.style.display = needsEur ? "block" : "none";
+  $("f-eur-label").textContent = NEEDS_EUR[t] || "Euro";
+  $("f-hint").textContent = t === "kauf"
+    ? "Sats leer lassen → werden aus dem Tageskurs berechnet."
+    : t === "verkauf" ? "Sats = verkaufte Menge. Erlös mindert „Investiert“."
+    : t === "transfer" ? "Eingang erhöht den Bestand, Ausgang verringert ihn."
+    : t === "gebuehr" ? "Sats werden vom Bestand abgezogen."
+    : "Erhaltene Sats ohne Euro-Einsatz (z. B. geschenkt).";
+}
+document.querySelectorAll("#typ-seg button").forEach(b => b.addEventListener("click", () => setTyp(b.dataset.typ)));
+document.querySelectorAll("#dir-seg button").forEach(b => b.addEventListener("click", () => {
+  fDir = b.dataset.dir;
+  document.querySelectorAll("#dir-seg button").forEach(x => x.classList.toggle("sel", x === b));
+}));
+function typFromMov(m) {
+  if (m.typ) return m.typ;
+  return m.eur > 0 ? "kauf" : m.sats < 0 ? "transfer" : "geschenk";
+}
+function fillPersonOptions(sel) {
+  const list = personList();
+  $("f-person").innerHTML = list.map(p =>
+    '<option value="' + esc(p) + '"' + (p === sel ? " selected" : "") + ">" + esc(p) + "</option>").join("") +
+    '<option value="__neu__">+ Neue Person …</option>';
+}
+$("f-person").addEventListener("change", e => {
+  if (e.target.value !== "__neu__") return;
+  const name = (prompt("Name der neuen Person (Kürzel wie in Numbers):") || "").trim();
+  if (name) {
+    const opt = document.createElement("option");
+    opt.value = opt.textContent = name;
+    e.target.insertBefore(opt, e.target.querySelector('[value="__neu__"]'));
+    e.target.value = name;
+  } else e.target.value = person || personList()[0] || "";
+});
+function openForm(editId) {
+  fEditId = editId || null;
+  const m = editId ? STORE.movements.find(x => x.id === editId) : null;
+  $("form-title").textContent = m ? "Bewegung bearbeiten" : "Neue Bewegung";
+  $("f-delete").style.display = m ? "block" : "none";
+  $("f-msg").textContent = ""; $("f-msg").className = "f-msg";
+  fillPersonOptions(m ? m.person : person);
+  setTyp(m ? typFromMov(m) : "kauf");
+  fDir = m && m.sats < 0 ? "out" : "in";
+  document.querySelectorAll("#dir-seg button").forEach(x => x.classList.toggle("sel", x.dataset.dir === fDir));
+  $("f-date").value = m ? m.date : new Date().toISOString().slice(0, 10);
+  $("f-eur").value = m && m.eur ? String(Math.abs(m.eur)).replace(".", ",") : "";
+  $("f-sats").value = m ? String(Math.abs(m.sats)) : "";
+  $("f-who").value = m ? (m.who || "") : "";
+  $("f-label").value = m ? (m.label || "") : "";
+  openSheet("form");
+}
+$("fab").addEventListener("click", () => openForm(null));
+$("f-delete").addEventListener("click", () => {
+  if (!fEditId) return;
+  if (!confirm("Diese Bewegung wirklich löschen?")) return;
+  deleteMov(fEditId);
+  closeSheet("form");
+  refreshAfterDataChange();
+  toast("Bewegung gelöscht");
+});
+function closeAtDate(dateStr) {
+  if (!lastMarket) return null;
+  const ts = new Date(dateStr + "T00:00:00Z").getTime();
+  let best = null;
+  for (const c of lastMarket.candles) { if (c.t <= ts + DAY) best = c.close; else break; }
+  return best || lastMarket.live;
+}
+$("f-save").addEventListener("click", () => {
+  const msg = (t, cls) => { $("f-msg").textContent = t; $("f-msg").className = "f-msg " + (cls || ""); };
+  const p = $("f-person").value;
+  const date = $("f-date").value;
+  if (!p || p === "__neu__") return msg("Bitte Person wählen.", "err");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return msg("Bitte Datum angeben.", "err");
+  if (date > new Date().toISOString().slice(0, 10)) return msg("Datum liegt in der Zukunft.", "err");
+  const needsEur = !!NEEDS_EUR[fTyp];
+  let eur = 0;
+  if (needsEur) {
+    eur = parseNum($("f-eur").value);
+    if (!isFinite(eur) || eur <= 0) return msg("Bitte gültigen Euro-Betrag angeben.", "err");
+  }
+  let sats = parseNum($("f-sats").value);
+  if (!isFinite(sats) || sats <= 0) {
+    if (fTyp === "kauf") {
+      const close = closeAtDate(date);
+      if (!close) return msg("Kein Kurs verfügbar – bitte Sats angeben.", "err");
+      sats = Math.round(eur / close * 1e8);
+      $("f-sats").value = String(sats);
+      msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – Speichern erneut tippen zum Bestätigen.", "ok");
+      $("f-save").dataset.confirm = "1";
+      if ($("f-save").dataset.confirmed !== String(sats)) { $("f-save").dataset.confirmed = String(sats); return; }
+    } else return msg("Bitte Sats angeben.", "err");
+  }
+  delete $("f-save").dataset.confirmed;
+  sats = Math.abs(Math.round(sats));
+  const sSign = fTyp === "verkauf" || fTyp === "gebuehr" || (fTyp === "transfer" && fDir === "out") ? -1 : 1;
+  const eSign = fTyp === "verkauf" ? -1 : 1;
+  const mov = {
+    id: fEditId || uid(),
+    person: p, date, typ: fTyp,
+    sats: sSign * sats,
+    eur: needsEur ? eSign * Math.round(eur * 100) / 100 : 0,
+    who: $("f-who").value.trim(), label: $("f-label").value.trim(),
+    mod: Date.now(), del: 0
+  };
+  upsertMov(mov);
+  closeSheet("form");
+  person = p;
+  refreshAfterDataChange();
+  toast(fEditId ? "Bewegung aktualisiert" : TYP_NAME[fTyp] + " erfasst");
+  fEditId = null;
+});
+
+/* ═══════════ Einstellungen / Sync-UI ═══════════ */
+$("settings-btn").addEventListener("click", () => {
+  const cfg = syncCfg();
+  $("s-token").value = cfg ? cfg.token : "";
+  $("s-gist").value = cfg ? cfg.gistId : "";
+  $("s-pass").value = cfg ? cfg.pass : "";
+  $("s-msg").textContent = cfg && cfg.lastSync
+    ? "Zuletzt synchronisiert: " + new Date(cfg.lastSync).toLocaleString("de-DE") : "";
+  $("s-msg").className = "f-msg";
+  openSheet("set");
+});
+$("sync-chip").addEventListener("click", () => $("settings-btn").click());
+$("s-connect").addEventListener("click", async () => {
+  const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
+  const token = $("s-token").value.trim();
+  const gistId = $("s-gist").value.trim();
+  const pass = $("s-pass").value;
+  if (!token) return msg("Bitte GitHub-Token eintragen.", "err");
+  if (!pass || pass.length < 6) return msg("Bitte Passwort mit mindestens 6 Zeichen wählen.", "err");
+  setSyncCfg({ token, gistId, pass });
+  try {
+    msg("Prüfe Verbindung …");
+    if (!gistId) {
+      const payload = await encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, pass);
+      const g = await ghApi("/gists", { method: "POST", body: JSON.stringify({
+        description: "Bitcoin Dashboard – verschlüsselte Daten", public: false,
+        files: { [GIST_FILE]: { content: payload } } }) });
+      setSyncCfg({ token, gistId: g.id, pass });
+      $("s-gist").value = g.id;
+      msg("Privates Gist angelegt und erster Stand hochgeladen. Diese Gist-ID am anderen Gerät eintragen.", "ok");
+    } else {
+      await doSync(false);
+      msg("Verbunden und synchronisiert.", "ok");
+    }
+    dirty = false;
+    syncStatus("ok", "Synchron");
+    toast("Sync eingerichtet");
+  } catch (e) {
+    msg("Fehler: " + (e.message || e), "err");
+    syncStatus("err", "Sync-Fehler");
+  }
+});
+$("s-sync-now").addEventListener("click", () => doSync(true).catch(() => {}));
+$("s-backup").addEventListener("click", downloadBackup);
+$("backup-btn").addEventListener("click", downloadBackup);
+$("s-disconnect").addEventListener("click", () => {
+  if (!confirm("Sync-Zugang auf diesem Gerät entfernen? (Daten bleiben lokal erhalten)")) return;
+  setSyncCfg(null);
+  syncStatus("", "Lokal");
+  toast("Sync getrennt");
+});
+
+/* ═══════════ Import (Backup-JSON, Migrations-JSON, Numbers-CSV) ═══ */
+$("import-btn").addEventListener("click", () => $("import-input").click());
+$("import-input").addEventListener("change", async () => {
+  const f = $("import-input").files[0];
+  $("import-input").value = "";
+  if (!f) return;
+  try {
+    const text = await f.text();
+    let n = 0;
+    if (/^\s*[{[]/.test(text)) {
+      const o = JSON.parse(text);
+      if (Array.isArray(o.movements)) {
+        const before = STORE.movements.length;
+        STORE.movements = mergeMovs(STORE.movements, o.movements);
+        n = STORE.movements.length - before;
+        saveStore(); markDirty();
+      } else if (o.tables) n = importTables(o.tables);
+      else throw new Error("Unbekanntes JSON-Format");
+    } else {
+      n = importTables(parseCsvAll(text));
+    }
+    refreshAfterDataChange();
+    toast(n ? n + " Bewegungen importiert" : "Keine neuen Bewegungen gefunden");
+  } catch (e) {
+    toast("Import fehlgeschlagen: " + (e.message || e));
+  }
+});
+
+/* ═══════════ Theme ═══════════ */
+const themeBtn = $("theme-toggle");
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === "dark" ? "Hell" : "Dunkel";
+  try { localStorage.setItem(LS_THEME, t); } catch (e) {}
+  if (lastMarket) renderCharts(lastMarket);
+}
+themeBtn.addEventListener("click", () =>
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+applyTheme((() => {
+  try {
+    return localStorage.getItem(LS_THEME) ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } catch (e) { return "light"; }
+})());
+
+/* ═══════════ Live-Ticker (~1 Minute) ═══════════ */
+let tickTimer = null;
+function startTicker() {
+  clearInterval(tickTimer);
+  tickTimer = setInterval(async () => {
+    if (document.hidden || !lastMarket) return;
+    try {
+      const p = await fetchSpot();
+      lastMarket.live = p;
+      lastMarket.fetchedAt = Date.now();
+      lastMarket.liveOk = true;
+      const last = lastMarket.candles[lastMarket.candles.length - 1];
+      if (last && Date.now() - last.t < 2 * DAY) last.close = p;
+      renderKpis(lastMarket);
+    } catch (e) {}
+  }, 60000);
+}
+
+/* ═══════════ Start ═══════════ */
+(async () => {
+  renderPersonSelect();
+  rebuildAll();
+  try {
+    const { hist, fresh } = await loadHistory(t => { $("sk-note").textContent = t; });
+    const candles = hist.map(h => ({ t: h[0] * 1000, close: h[1] }));
+    let live = candles[candles.length - 1].close, liveOk = fresh;
+    try { live = await fetchSpot(); liveOk = true; } catch (e) {}
+    lastMarket = { candles, live, fetchedAt: Date.now(), liveOk };
+    $("skeleton").style.display = "none";
+    $("content").style.display = "block";
+    document.body.classList.add("reveal");
+    render(lastMarket);
+    startTicker();
+    if (!liveMovs().length) {
+      setTimeout(() => toast(syncCfg()
+        ? "Noch keine Daten – Sync läuft oder „+“ für die erste Bewegung"
+        : "Willkommen! ⚙ öffnen, um den Sync zu verbinden – oder unten „Daten importieren“"), 800);
+    }
+    maybeBackupReminder();
+  } catch (e) {
+    $("sk-note").innerHTML = "Dashboard konnte nicht geladen werden.<br><small>" +
+      esc(String(e && e.message || e)) + "</small>";
+  }
+  if (syncCfg()) doSync().catch(() => {});
+  else syncStatus("", "Lokal");
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    if (syncCfg()) doSync().catch(() => {});
+    if (lastMarket) fetchSpot().then(p => {
+      lastMarket.live = p; lastMarket.fetchedAt = Date.now(); lastMarket.liveOk = true;
+      renderKpis(lastMarket);
+    }).catch(() => {});
+  });
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
