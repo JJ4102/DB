@@ -317,6 +317,14 @@
     padding: 8px 12px; outline: none;
   }
   .f-field input:focus, .f-field select:focus { border-color: var(--orange); }
+  /* Maskierte Eingabe ohne Passwort-Semantik: iOS-Schlüsselbund bleibt außen vor */
+  .masked { -webkit-text-security: disc; }
+  .masked.show { -webkit-text-security: none; }
+  .f-field .with-eye { position: relative; }
+  .f-field .with-eye input { padding-right: 44px; }
+  .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    border: none; background: none; color: var(--muted); font-size: 15px;
+    width: 38px; height: 38px; cursor: pointer; }
   .f-hint { font-size: 11px; color: var(--muted); margin: -4px 0 10px; }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .seg button {
@@ -494,9 +502,11 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
   <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
-  <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label><input type="password" id="s-token" autocomplete="off" placeholder="github_pat_&hellip;"></div>
-  <div class="f-field" style="margin-bottom:10px"><label for="s-gist">Gist-ID (leer = neu anlegen)</label><input type="text" id="s-gist" autocomplete="off" placeholder="wird automatisch gef&uuml;llt"></div>
-  <div class="f-field" style="margin-bottom:4px"><label for="s-pass">Verschl&uuml;sselungs-Passwort</label><input type="password" id="s-pass" autocomplete="off" placeholder="selbst gew&auml;hlt, auf allen Ger&auml;ten gleich"></div>
+  <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label>
+    <div class="with-eye"><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Anzeigen">&#128065;</button></div></div>
+  <div class="f-field" style="margin-bottom:10px"><label for="s-gist">Gist-ID (leer = neu anlegen)</label><input type="text" id="s-gist" name="cfg-b" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="wird automatisch gef&uuml;llt"></div>
+  <div class="f-field" style="margin-bottom:4px"><label for="s-pass">Verschl&uuml;sselungs-Passwort</label>
+    <div class="with-eye"><input type="text" class="masked" id="s-pass" name="cfg-c" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="auf allen Ger&auml;ten gleich"><button type="button" class="eye" data-eye="s-pass" aria-label="Anzeigen">&#128065;</button></div></div>
   <div class="f-hint">Alles bleibt nur auf diesem Ger&auml;t gespeichert. Das Passwort verschl&uuml;sselt deine Daten, bevor sie zu GitHub gehen.</div>
   <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
   <div class="f-msg" id="s-msg"></div>
@@ -1395,6 +1405,8 @@ $("settings-btn").addEventListener("click", () => {
   openSheet("set");
 });
 $("sync-chip").addEventListener("click", () => $("settings-btn").click());
+document.querySelectorAll(".eye").forEach(b => b.addEventListener("click", () =>
+  $(b.dataset.eye).classList.toggle("show")));
 $("s-connect").addEventListener("click", async () => {
   const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
   const token = $("s-token").value.trim();
