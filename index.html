@@ -361,6 +361,13 @@
 
   /* ── iPhone-Layout: eigens gedacht, nicht geschrumpft ───────────── */
   @media (max-width: 700px) {
+    :root { --blur: 8px; }   /* weniger Blur-Aufwand auf dem Telefon */
+    /* Orbs ohne filter:blur – weiche Kanten direkt im Verlauf, GPU-schonend */
+    .orb { filter: none; opacity: 0.5; }
+    .orb.o1 { background: radial-gradient(circle at 35% 35%, rgba(255,180,94,0.55), rgba(255,94,138,0.25) 55%, transparent 78%); }
+    .orb.o2 { background: radial-gradient(circle at 55% 45%, rgba(94,139,255,0.50), rgba(138,94,255,0.22) 55%, transparent 78%); }
+    .orb.o3 { background: radial-gradient(circle at 50% 50%, rgba(47,212,194,0.45), rgba(94,139,255,0.20) 55%, transparent 78%); }
+    html[data-theme="dark"] .orb { opacity: 0.38; }
     body { padding: calc(12px + env(safe-area-inset-top)) 12px calc(96px + env(safe-area-inset-bottom)); }
     header { margin-bottom: 10px; }
     .person-wrap { margin-bottom: 12px; }
@@ -950,7 +957,16 @@ function renderCharts(market) {
 
   const mapPt = c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close, wert: sats / 1e8 * c.close }; };
   const firstTs = ALL.length ? new Date(ALL[0].date + "T00:00:00Z").getTime() : Date.UTC(2023, 5, 6);
-  const ptsW = candles.filter(c => c.t >= firstTs).map(mapPt);
+  /* iOS-Speicher schonen: Punkte ausdünnen, Kauf-Tage und letzter Punkt bleiben immer erhalten */
+  const MAXPTS = 700;
+  const buyTs = new Set(ALL.filter(b => b.eur > 0 && b.sats > 0)
+    .map(b => new Date(b.date + "T00:00:00Z").getTime()));
+  const thin = arr => {
+    if (arr.length <= MAXPTS) return arr;
+    const stride = Math.ceil(arr.length / MAXPTS);
+    return arr.filter((c, i) => i % stride === 0 || i === arr.length - 1 || buyTs.has(c.t));
+  };
+  const ptsW = thin(candles.filter(c => c.t >= firstTs)).map(mapPt);
   const labelsW = ptsW.map(p => p.t);
   const tickCbW = (v, i) => (i % Math.ceil(labelsW.length / 7) === 0) ? fmtMonth(labelsW[i]) : "";
 
@@ -989,6 +1005,7 @@ function renderCharts(market) {
   };
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
+    devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
     interaction: { mode: "nearest", intersect: true },
     plugins: { legend: { display: false }, tooltip: {
       backgroundColor: C.tipBg, borderColor: C.tipBorder, borderWidth: 1,
@@ -1096,7 +1113,7 @@ function renderCharts(market) {
         callback: v => (v / 1e6).toLocaleString("de-DE") + " M" } } } }
   });
 
-  const ptsK = candles.map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
+  const ptsK = thin(candles).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
   const labelsK = ptsK.map(p => p.t);
   const tickCbK = (v, i) => (i % Math.ceil(labelsK.length / 7) === 0) ? fmtMonth(labelsK[i]) : "";
   const byDay = new Map();
@@ -1566,6 +1583,8 @@ function startTicker() {
     $("skeleton").style.display = "none";
     $("content").style.display = "block";
     document.body.classList.add("reveal");
+    /* Einblend-Animationen nach dem Auftritt entfernen – weniger Compositing-Ebenen */
+    setTimeout(() => document.body.classList.remove("reveal"), 1000);
     render(lastMarket);
     startTicker();
     if (!liveMovs().length) {
