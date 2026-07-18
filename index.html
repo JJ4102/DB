@@ -502,6 +502,9 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
   <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
+  <button type="button" class="btn" id="s-paste">Einrichtungs-Code &uuml;bernehmen (aus Zwischenablage)</button>
+  <div class="f-hint" style="margin:6px 0 12px">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &mdash; verbindet ohne Tippen.</div>
+  <hr class="divider">
   <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label>
     <div class="with-eye"><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Anzeigen">&#128065;</button></div></div>
   <div class="f-field" style="margin-bottom:10px"><label for="s-gist">Gist-ID (leer = neu anlegen)</label><input type="text" id="s-gist" name="cfg-b" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="wird automatisch gef&uuml;llt"></div>
@@ -511,6 +514,7 @@
   <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
   <div class="f-msg" id="s-msg"></div>
   <hr class="divider">
+  <button type="button" class="btn ghost" id="s-copycode">Einrichtungs-Code kopieren (f&uuml;r 2. Ger&auml;t)</button>
   <button type="button" class="btn ghost" id="s-sync-now">Jetzt synchronisieren</button>
   <button type="button" class="btn ghost" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
   <button type="button" class="btn danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button>
@@ -1407,6 +1411,45 @@ $("settings-btn").addEventListener("click", () => {
 $("sync-chip").addEventListener("click", () => $("settings-btn").click());
 document.querySelectorAll(".eye").forEach(b => b.addEventListener("click", () =>
   $(b.dataset.eye).classList.toggle("show")));
+/* iOS-Autofill fernhalten: Felder sind readonly, bis sie wirklich fokussiert werden */
+["s-token", "s-gist", "s-pass"].forEach(id => {
+  const el = $(id);
+  el.setAttribute("readonly", "");
+  const unlock = () => el.removeAttribute("readonly");
+  el.addEventListener("touchstart", unlock, { passive: true });
+  el.addEventListener("focus", unlock);
+});
+/* Einrichtungs-Code: Zugang ohne Tippen aufs zweite Gerät bringen */
+const CODE_PREFIX = "BTCDASH1.";
+$("s-copycode").addEventListener("click", async () => {
+  const cfg = syncCfg();
+  if (!cfg || !cfg.token || !cfg.gistId || !cfg.pass) { toast("Erst hier verbinden, dann Code erzeugen"); return; }
+  if (!confirm("Der Code enthält Token, Gist-ID und dein Passwort im Klartext. Nur an dich selbst schicken und die Nachricht/Notiz danach löschen. Fortfahren?")) return;
+  const code = CODE_PREFIX + b64(new TextEncoder().encode(JSON.stringify({ t: cfg.token, g: cfg.gistId, p: cfg.pass })));
+  try { await navigator.clipboard.writeText(code); toast("Einrichtungs-Code kopiert"); }
+  catch (e) { prompt("Kopieren nicht möglich – Code manuell markieren:", code); }
+});
+$("s-paste").addEventListener("click", async () => {
+  const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
+  let text = "";
+  try { text = (await navigator.clipboard.readText() || "").trim(); }
+  catch (e) { text = (prompt("Einrichtungs-Code hier einfügen:") || "").trim(); }
+  if (!text.startsWith(CODE_PREFIX)) return msg("Kein Einrichtungs-Code in der Zwischenablage gefunden.", "err");
+  try {
+    const o = JSON.parse(new TextDecoder().decode(unb64(text.slice(CODE_PREFIX.length))));
+    if (!o.t || !o.g || !o.p) throw new Error("unvollständig");
+    setSyncCfg({ token: o.t, gistId: o.g, pass: o.p });
+    $("s-token").value = o.t; $("s-gist").value = o.g; $("s-pass").value = o.p;
+    msg("Code übernommen – verbinde …");
+    await doSync(false);
+    dirty = false;
+    msg("Verbunden und synchronisiert.", "ok");
+    toast("Gerät eingerichtet");
+    refreshAfterDataChange();
+  } catch (e) {
+    msg("Code ungültig oder Verbindung fehlgeschlagen: " + (e.message || e), "err");
+  }
+});
 $("s-connect").addEventListener("click", async () => {
   const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
   const token = $("s-token").value.trim();
