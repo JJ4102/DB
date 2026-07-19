@@ -83,8 +83,8 @@
     --line-wert-loss: #B3261E;          /* Chart 1: Portfoliowert unter Investiert (dunkles Rot) */
     --line-invest: rgba(247,147,26,0.5);      /* Investiert: dezent, Farbe der anliegenden Flaeche */
     --line-invest-loss: rgba(179,38,30,0.5);
-    --fill-pos: rgba(247,147,26,0.12);  /* Flaeche zwischen den Kurven, Wert ueber Investiert */
-    --fill-neg: rgba(179,38,30,0.12);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
+    --fill-pos: rgba(247,147,26,0.05);  /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
+    --fill-neg: rgba(179,38,30,0.05);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
     --buy-dot: #0A0A0B;
     --dot-border: #FFFFFF;
     /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
@@ -117,8 +117,8 @@
     --line-wert-loss: #C4372B;
     --line-invest: rgba(247,147,26,0.55);
     --line-invest-loss: rgba(196,55,43,0.55);
-    --fill-pos: rgba(247,147,26,0.18);
-    --fill-neg: rgba(196,55,43,0.20);
+    --fill-pos: rgba(247,147,26,0.07);
+    --fill-neg: rgba(196,55,43,0.08);
     --buy-dot: #F5F5F6;
     --dot-border: #0D0D0F;
     --ch-after: #3C3C42;
@@ -206,8 +206,11 @@
     padding: var(--space-2) var(--screen-padding) var(--space-4);
   }
   .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
+  .hero-label .btc-sym { color: var(--btc); } /* ₿ als Identitätsfarbe (Abweichung 7) */
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
   .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  /* Prozentuale Veränderung direkt neben dem Portfoliowert, leicht kleiner */
+  .hero-pct { font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .hero-row { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
   .chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; font-variant-numeric: tabular-nums; }
   .hero-sub { font-size: var(--text-caption); color: var(--muted); }
@@ -219,8 +222,10 @@
   .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: var(--space-3); margin-bottom: var(--space-6); }
   .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4); }
   .kpi-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); }
+  .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
   .kpi-value { font-size: var(--text-h3); font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 2px; }
+  .grid4 .chip { margin-top: 2px; } /* nominale Veränderung unter „Investiert“ */
 
   .chart-card { margin-bottom: var(--space-6); }
   .chart-title { font-size: var(--text-h3); font-weight: 600; margin-bottom: var(--space-3); }
@@ -228,14 +233,17 @@
   .range-seg { display: flex; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
   .range-seg button {
     flex: 1 1 auto; min-height: var(--tap); border: 0; background: none; cursor: pointer;
-    font: inherit; font-size: var(--text-label); font-weight: 700; color: var(--muted);
+    font: inherit; font-size: var(--text-label); font-weight: 500; color: var(--muted);
     border-radius: var(--radius-sm); padding: 0;
     transition: color var(--duration-fast) var(--ease-standard);
   }
-  .range-seg button.sel { color: var(--text); }
-  .range-seg button.sel.pos { color: var(--positive); }
-  .range-seg button.sel.neg { color: var(--negative); }
+  /* Aktiver Zeitraum: Near-Black (Dark: Off-White) + fett — keine Trendfarbe mehr */
+  .range-seg button.sel { color: var(--text); font-weight: 700; }
   .chart-wrap { position: relative; height: 360px; }
+  /* Langes Verweilen auf dem Chart darf keine Textauswahl/Callout triggern */
+  .chart-wrap, .chart-wrap canvas {
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
   .chart-wrap canvas { touch-action: pan-y; }
   /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
   .scrub-line {
@@ -421,22 +429,20 @@
 </div>
 
 <div id="content" style="display:none">
-  <!-- Hero: der Portfoliowert dominiert -->
-  <section class="hero" aria-label="Portfoliowert">
-    <div class="hero-label"><span>Portfoliowert</span><span id="stand"></span></div>
-    <div class="hero-value" id="k-wert">–</div>
+  <!-- Hero: der Portfoliowert dominiert; Label zeigt den Satsbestand -->
+  <section class="hero" aria-label="Satsbestand und Portfoliowert">
+    <div class="hero-label"><span><span class="btc-sym">&#8383;</span> <span id="k-sats-head">–</span></span><span id="stand"></span></div>
+    <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
     <div class="hero-row">
-      <span class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></span>
-      <span class="hero-sub" id="k-pnl-pct"></span>
       <span class="hero-sub" id="k-wert-sub"></span>
     </div>
   </section>
 
   <div class="grid4 stagger">
-    <div class="card"><div class="kpi-label">Investiert</div><div class="kpi-value" id="k-inv"></div></div>
-    <div class="card"><div class="kpi-label">&Oslash; Kaufkurs</div><div class="kpi-value" id="k-eca"></div></div>
+    <div class="card"><div class="kpi-label">Investiert</div><div class="kpi-value" id="k-inv"></div><div class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></div></div>
+    <div class="card"><div class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></div><div class="kpi-value" id="k-ath"></div><div class="kpi-sub" id="k-ath-sub"></div></div>
     <div class="card"><div class="kpi-label" id="k-kurs-sub">Live-Kurs</div><div class="kpi-value" id="k-kurs"></div></div>
-    <div class="card"><div class="kpi-label">ATH</div><div class="kpi-value" id="k-ath"></div><div class="kpi-sub" id="k-ath-sub"></div></div>
+    <div class="card"><div class="kpi-label">&Oslash; Kaufkurs</div><div class="kpi-value" id="k-eca"></div></div>
   </div>
 
   <div class="card chart-card">
@@ -450,7 +456,7 @@
     </div>
     <div class="legend">
       <span><i style="background:var(--line-wert)"></i>Portfoliowert</span>
-      <span><i style="background:var(--line-invest)"></i>Investiert</span>
+      <span><i style="background:var(--line-invest)"></i>Investiert <span id="legend-inv"></span></span>
     </div>
     <div class="scrub-line" id="scrub-wert"></div>
     <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
@@ -950,6 +956,7 @@ function renderKpis(market) {
   const hasInvest = totEur > 0;
 
   countTo($("k-wert"), wert, v => fmtEur(v));
+  $("k-sats-head").textContent = fmtInt(totSats);
   $("k-wert-sub").textContent = "₿ " + btc.toLocaleString("de-DE", { minimumFractionDigits: 8 });
   const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
   if (hasInvest) {
@@ -957,11 +964,11 @@ function renderKpis(market) {
     countTo(pnlEl, pnl, v => (v >= 0 ? "+" : "") + fmtEur(v));
     chip.className = "chip " + (pnl >= 0 ? "pos" : "neg");
     pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " %";
-    pctEl.className = "hero-sub " + (pnl >= 0 ? "pos" : "neg");
+    pctEl.className = "hero-pct " + (pnl >= 0 ? "pos" : "neg");
   } else {
     pnlEl.textContent = "–"; pnlEl.__num = null;
     chip.className = "chip";
-    pctEl.textContent = "kein Einsatz erfasst"; pctEl.className = "hero-sub";
+    pctEl.textContent = ""; pctEl.className = "hero-pct";
   }
   $("k-inv").textContent = fmtEur(totEur);
   $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc, 0) : "–";
@@ -984,11 +991,13 @@ function renderKpis(market) {
   if (ath > 0) {
     const dist = (wert / ath - 1) * 100;
     $("k-ath").textContent = fmtEur(ath, 0);
-    $("k-ath-sub").innerHTML = fmtDate(athTs) + " &middot; " +
+    $("k-ath-date").textContent = fmtDate(athTs);
+    $("k-ath-sub").innerHTML =
       '<span class="' + (dist >= -0.05 ? "pos" : "neg") + '">' +
       (dist >= 0 ? "+" : "") + dist.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
   } else {
     $("k-ath").textContent = "–";
+    $("k-ath-date").textContent = "";
     $("k-ath-sub").textContent = "";
   }
   $("stand").textContent = liveOk
@@ -1088,6 +1097,9 @@ function attachScrub(chart, s, cfg) {
   chart.canvas.addEventListener("pointerup", end, o);
   chart.canvas.addEventListener("pointercancel", end, o);
   chart.canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") end(); }, o);
+  /* Erst jetzt existiert chart.$scrub — neu zeichnen, damit die gepunktete
+     Startwert-Linie sofort sichtbar ist (vorher erst nach dem ersten Tap) */
+  chart.draw();
 }
 
 /* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
@@ -1104,7 +1116,8 @@ function renderCharts(market) {
     invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
     fillPos: cssv("--fill-pos"), fillNeg: cssv("--fill-neg"),
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
-    after: cssv("--ch-after"), base: cssv("--base-line")
+    after: cssv("--ch-after"), base: cssv("--base-line"),
+    btc: cssv("--btc")
   };
   Chart.defaults.font.family = cssv("--font-family");
 
@@ -1161,11 +1174,6 @@ function renderCharts(market) {
     }
     return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
   };
-  /* Aktiver Zeitraum-Button in der Trendfarbe der angezeigten Periode */
-  const tintSeg = (key, up) => {
-    const b = document.querySelector('.range-seg[data-chart="' + key + '"] button.sel');
-    if (b) { b.classList.toggle("pos", up); b.classList.toggle("neg", !up); }
-  };
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
     devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
@@ -1183,7 +1191,6 @@ function renderCharts(market) {
   Chart.getChart("chartPreis")?.destroy();
 
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
-  tintSeg("wert", ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true);
   const scW = { i: -1 };
   /* Portfoliowert: BTC-Orange ueber Investiert, dunkles Rot darunter */
   const colW = i => (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
@@ -1194,7 +1201,7 @@ function renderCharts(market) {
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
         segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)) },
         fill: { target: 1, above: C.fillPos, below: C.fillNeg },
-        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
+        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
         segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
           ? C.investLoss : C.invest) },
@@ -1212,9 +1219,11 @@ function renderCharts(market) {
     html: i => {
       const p = ptsW[i];
       const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
+      /* Investiert-Summe steht in der Legende (laeuft beim Scrubben mit) —
+         nicht mehr in der Scrub-Zeile, damit dort kein Zeilenumbruch entsteht */
+      $("legend-inv").textContent = fmtEur(p.eur, 0);
       return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
-        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
-        "Investiert " + fmtEur(p.eur, 0));
+        pct != null ? fmtPct(pct) : "", pct != null && pct < 0, "");
     }
   });
 
@@ -1240,15 +1249,15 @@ function renderCharts(market) {
     }
   };
   const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
-  tintSeg("sats", true);
   const scS = { i: -1 };
+  /* Sats-Bestand: Kurve in BTC-Orange */
   const chS = new Chart($("chartSats"), {
     type: "line",
     plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
     data: { labels: labelsS, datasets: [
-      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.main,
-        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.main) },
-        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, stepped: true }
+      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.btc,
+        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.btc) },
+        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
     options: { ...common,
       scales: { ...common.scales,
@@ -1257,12 +1266,11 @@ function renderCharts(market) {
         callback: v => (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M" } } } }
   });
   attachScrub(chS, scS, {
-    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.main,
+    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.btc,
     baseValue: ptsS.length ? ptsS[0].sats : null, baseColor: C.base,
     html: i => {
-      const p = ptsS[i], d = p.sats - ptsS[0].sats;
-      return scrubHtml(fmtDate(p.t), fmtInt(p.sats) + " Sats",
-        (d >= 0 ? "+" : "") + fmtInt(d), d < 0, "seit Periodenstart");
+      const p = ptsS[i];
+      return scrubHtml(fmtDate(p.t), fmtInt(p.sats) + " Sats", "", false, "");
     }
   });
 
@@ -1292,7 +1300,6 @@ function renderCharts(market) {
 
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
-  tintSeg("preis", kTrendUp);
   const scK = { i: -1 };
   const chK = new Chart($("chartPreis"), {
     type: "line",
@@ -1300,7 +1307,7 @@ function renderCharts(market) {
     data: { labels: labelsK, datasets: [
       { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: kTrendUp ? C.main : C.loss,
         segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : (kTrendUp ? C.main : C.loss)) },
-        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
+        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
       { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
@@ -1334,7 +1341,7 @@ document.querySelectorAll(".range-seg").forEach(seg => seg.addEventListener("cli
   const b = e.target.closest("button[data-range]");
   if (!b || b.classList.contains("sel")) return;
   RANGES[seg.dataset.chart] = b.dataset.range;
-  seg.querySelectorAll("button").forEach(x => { x.classList.toggle("sel", x === b); x.classList.remove("pos", "neg"); });
+  seg.querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b));
   if (lastMarket) renderCharts(lastMarket);
 }));
 
@@ -1659,7 +1666,7 @@ applyTheme((() => {
   } catch (e) { return "light"; }
 })());
 
-/* ═══════════ Live-Ticker (~1 Minute) ═══════════ */
+/* ═══════════ Live-Ticker (~5 Sekunden) ═══════════ */
 let tickTimer = null;
 function startTicker() {
   clearInterval(tickTimer);
@@ -1674,7 +1681,7 @@ function startTicker() {
       if (last && Date.now() - last.t < 2 * DAY) last.close = p;
       renderKpis(lastMarket);
     } catch (e) {}
-  }, 60000);
+  }, 5000);
 }
 
 /* ═══════════ Start ═══════════ */
