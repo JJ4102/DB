@@ -358,7 +358,12 @@
     .person-wrap { margin-bottom: var(--space-5); }
     .person-select { flex: 1; }
     .hero { padding: var(--space-3) 0 var(--space-4); }
-    .grid4 { grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-5); }
+    /* KPI-Karten: horizontal scrollbarer Kartenstreifen wie in der App */
+    .grid4 { display: flex; gap: var(--space-3); margin: 0 calc(-1 * var(--screen-padding)) var(--space-5); padding: 0 var(--screen-padding) 2px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .grid4::-webkit-scrollbar { display: none; }
+    .grid4 .card { flex: 0 0 auto; min-width: 44vw; scroll-snap-align: start; }
+    #skeleton .row { display: flex; gap: var(--space-3); overflow: hidden; }
+    #skeleton .row .sk { flex: 0 0 44vw; }
     .chart-wrap { height: 300px; }
     th, td { padding: 10px 6px; }
     .legend { gap: 10px; }
