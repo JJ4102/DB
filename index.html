@@ -84,6 +84,9 @@
     --line-invest-loss: #B7B7BC;
     --buy-dot: #0A0A0B;
     --dot-border: #FFFFFF;
+    /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
+    --ch-after: #D6D6DA;
+    --base-line: rgba(138,138,142,0.22);
   }
   html[data-theme="dark"] {
     color-scheme: dark;
@@ -114,6 +117,8 @@
     --line-invest-loss: #5E5E64;
     --buy-dot: #F5F5F6;
     --dot-border: #0D0D0F;
+    --ch-after: #3C3C42;
+    --base-line: rgba(154,154,160,0.25);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -225,15 +230,16 @@
   .range-seg button.sel.neg { color: var(--negative); }
   .chart-wrap { position: relative; height: 360px; }
   .chart-wrap canvas { touch-action: pan-y; }
-  .wtip {
-    position: absolute; opacity: 0; pointer-events: none; z-index: 5;
-    background: var(--tip-bg); border: 1px solid var(--tip-border); border-radius: var(--radius-md);
-    padding: 8px 10px; font-size: var(--text-caption); white-space: nowrap;
-    box-shadow: var(--shadow-soft); transition: opacity var(--duration-fast) var(--ease-standard);
+  /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
+  .scrub-line {
+    display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
+    min-height: 26px; margin-bottom: var(--space-2);
+    font-size: var(--text-label); font-variant-numeric: tabular-nums;
   }
-  .wtip-head { display: flex; justify-content: space-between; gap: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-  .wtip-pct { font-weight: 600; }
-  .wtip-line { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .scrub-date { color: var(--muted); font-weight: 500; }
+  .scrub-value { font-weight: 700; color: var(--text); }
+  .scrub-delta { font-weight: 600; }
+  .scrub-extra { color: var(--muted); font-size: var(--text-caption); }
   .legend { display: flex; gap: var(--space-4); font-size: var(--text-caption); color: var(--muted); margin-bottom: var(--space-3); flex-wrap: wrap; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
@@ -443,6 +449,7 @@
       <span><i style="background:var(--line-main)"></i>Portfoliowert</span>
       <span><i style="background:var(--line-invest)"></i>Investiert</span>
     </div>
+    <div class="scrub-line" id="scrub-wert"></div>
     <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
   </div>
 
@@ -460,6 +467,7 @@
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
       <span><i style="background:var(--buy-dot)"></i>&Oslash; Kaufkurs</span>
     </div>
+    <div class="scrub-line" id="scrub-preis"></div>
     <div class="chart-wrap"><canvas id="chartPreis"></canvas></div>
   </div>
 
@@ -472,6 +480,7 @@
       <button type="button" data-range="1y">1J</button>
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
+    <div class="scrub-line" id="scrub-sats"></div>
     <div class="chart-wrap"><canvas id="chartSats"></canvas></div>
   </div>
 
@@ -963,6 +972,100 @@ function renderKpis(market) {
     : "Kurs vom " + fmtDate(candles[candles.length - 1].t) + " (offline)";
 }
 
+/* ═══════════ TR-Scrubbing: Snap-Marker, Puls, Vor/Nach-Färbung ═══════════ */
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
+/* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
+const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
+function scrubHtml(date, value, delta, neg, extra) {
+  return '<span class="scrub-date">' + date + '</span>' +
+    '<span class="scrub-value">' + value + '</span>' +
+    (delta ? '<span class="scrub-delta ' + (neg ? "neg" : "pos") + '">' + delta + '</span>' : '') +
+    (extra ? '<span class="scrub-extra">' + extra + '</span>' : '');
+}
+/* Marker am aktiven Punkt: pulsiert kompakt ↔ expandiert mit Halo (Endlosschleife) */
+const scrubPlugin = {
+  id: "trScrub",
+  afterDatasetsDraw(chart) {
+    const s = chart.$scrub;
+    if (!s || s.i < 0) return;
+    const el = chart.getDatasetMeta(0).data[s.i];
+    if (!el) return;
+    const k = REDUCED_MOTION ? 1
+      : 0.5 - 0.5 * Math.cos(((performance.now() - s.t0) % 1600) / 1600 * 2 * Math.PI);
+    const c = chart.ctx, color = s.cfg.colorAt(s.i);
+    c.save();
+    c.fillStyle = color;
+    c.globalAlpha = 0.18 * k;                       /* Halo-Ring */
+    c.beginPath(); c.arc(el.x, el.y, 7 + 7 * k, 0, 2 * Math.PI); c.fill();
+    c.globalAlpha = 1;                              /* Kern */
+    c.beginPath(); c.arc(el.x, el.y, 4 + 1.5 * k, 0, 2 * Math.PI); c.fill();
+    c.restore();
+  }
+};
+/* Gepunktete Referenzlinie auf Höhe des ersten Werts im gewählten Zeitraum */
+const baselinePlugin = {
+  id: "startLine",
+  beforeDatasetsDraw(chart) {
+    const s = chart.$scrub;
+    if (!s || s.cfg.baseValue == null || !isFinite(s.cfg.baseValue)) return;
+    const y = chart.scales.y.getPixelForValue(s.cfg.baseValue);
+    const { left, right, top, bottom } = chart.chartArea;
+    if (y < top + 2 || y > bottom - 2) return;
+    const c = chart.ctx;
+    c.save();
+    c.strokeStyle = s.cfg.baseColor;
+    c.lineWidth = 1.5; c.lineCap = "round"; c.setLineDash([0.1, 6]);
+    c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+    c.restore();
+  }
+};
+/* Scrub-Verhalten an einen Chart binden: Maus-Hover (Desktop) bzw. Touch-Drag (Mobile),
+   X-Position snappt auf den nächstgelegenen Datenpunkt; Loslassen → Grundzustand */
+function attachScrub(chart, s, cfg) {
+  s.cfg = cfg;
+  s.t0 = 0; s.raf = 0;
+  chart.$scrub = s;
+  const line = $(cfg.lineId);
+  const show = i => { if (line) line.innerHTML = cfg.n ? cfg.html(i) : ""; };
+  show(cfg.n - 1); /* Grundzustand: letzter Punkt des Zeitraums */
+  const loop = () => {
+    s.raf = 0;
+    if (s.i < 0 || !chart.ctx) return;
+    chart.draw();
+    s.raf = requestAnimationFrame(loop);
+  };
+  const setIdx = i => {
+    if (i === s.i) return;
+    s.i = i;
+    show(i < 0 ? cfg.n - 1 : i);
+    chart.update("none"); /* Segmentfarben vor/nach Marker neu auswerten */
+    if (i >= 0 && !REDUCED_MOTION && !s.raf) { s.t0 = performance.now(); loop(); }
+  };
+  const idxAt = e => {
+    if (!cfg.n || !chart.chartArea) return -1;
+    const r = chart.canvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const { left, right } = chart.chartArea;
+    if (x < left - 16 || x > right + 16) return -1;
+    const v = chart.scales.x.getValueForPixel(Math.min(right, Math.max(left, x)));
+    return Math.max(0, Math.min(cfg.n - 1, Math.round(v)));
+  };
+  chart.canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
+  const ac = chart.canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
+  let touching = false;
+  chart.canvas.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse") { touching = true; setIdx(idxAt(e)); }
+  }, o);
+  chart.canvas.addEventListener("pointermove", e => {
+    if (e.pointerType === "mouse" || touching) setIdx(idxAt(e));
+  }, o);
+  const end = () => { touching = false; setIdx(-1); };
+  chart.canvas.addEventListener("pointerup", end, o);
+  chart.canvas.addEventListener("pointercancel", end, o);
+  chart.canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") end(); }, o);
+}
+
 /* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
 function renderCharts(market) {
   const { candles, live } = market;
@@ -975,7 +1078,8 @@ function renderCharts(market) {
     athOk: cssv("--ath-ok"), athWarn: cssv("--ath-warn"),
     main: cssv("--line-main"), loss: cssv("--line-loss"),
     invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
-    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border")
+    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
+    after: cssv("--ch-after"), base: cssv("--base-line")
   };
   Chart.defaults.font.family = cssv("--font-family");
   const totSats = ALL.reduce((s, b) => s + b.sats, 0);
@@ -1041,14 +1145,8 @@ function renderCharts(market) {
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
     devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
-    interaction: { mode: "nearest", intersect: true },
-    plugins: { legend: { display: false }, tooltip: {
-      backgroundColor: C.tipBg, borderColor: C.tipBorder, borderWidth: 1,
-      titleColor: C.tipTitle, bodyColor: C.tipBody,
-      titleFont: { size: 11, weight: "600" }, bodyFont: { size: 11 },
-      cornerRadius: 8, padding: 8, boxWidth: 8, boxHeight: 8, boxPadding: 4,
-      callbacks: { title: items => fmtDate(labelsW[items[0].dataIndex]) }
-    } },
+    events: [], /* Hover/Tooltip aus — Interaktion läuft über das Scrubbing */
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
     elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
     scales: {
       x: { grid: { display: false }, ticks: { callback: tickCb(labelsW), maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
@@ -1088,54 +1186,38 @@ function renderCharts(market) {
     }
   };
 
-  const oldTip = document.querySelector(".wtip");
-  if (oldTip) oldTip.style.opacity = 0;
-  function wertTooltip(ctx) {
-    const { chart, tooltip } = ctx;
-    let el = chart.canvas.parentNode.querySelector(".wtip");
-    if (!el) {
-      el = document.createElement("div");
-      el.className = "wtip";
-      chart.canvas.parentNode.appendChild(el);
-    }
-    const i = tooltip.opacity && tooltip.dataPoints && tooltip.dataPoints.length
-      ? tooltip.dataPoints[0].dataIndex : -1;
-    if (i < 0 || !ptsW[i]) { el.style.opacity = 0; return; }
-    const p = ptsW[i];
-    let pctHtml = "";
-    if (p.eur > 0) {
-      const pct = (p.wert / p.eur - 1) * 100;
-      pctHtml = '<span class="wtip-pct ' + (pct >= 0 ? "pos" : "neg") + '">' +
-        (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
-    }
-    el.innerHTML = '<div class="wtip-head"><span>' + fmtDate(p.t) + "</span>" + pctHtml + "</div>" +
-      '<div class="wtip-line">Portfoliowert: ' + fmtEur(p.wert) + "</div>" +
-      '<div class="wtip-line">Investiert: ' + fmtEur(p.eur) + "</div>";
-    el.style.opacity = 1;
-    el.style.left = Math.min(chart.width - el.offsetWidth - 4, Math.max(4, tooltip.caretX + 12)) + "px";
-    el.style.top = Math.max(4, tooltip.caretY - el.offsetHeight - 12) + "px";
-  }
-
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   tintSeg("wert", ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true);
-  new Chart($("chartWert"), {
+  const scW = { i: -1 };
+  const colW = i => (ptsW[i].wert < ptsW[i].eur ? C.loss : C.main);
+  const chW = new Chart($("chartWert"), {
     type: "line",
-    plugins: [athPlugin],
+    plugins: [baselinePlugin, athPlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.main,
-        segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur ? C.loss : C.main) },
+        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)) },
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
         segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
           ? C.investLoss : C.invest) },
         borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
-    options: { ...common, plugins: { ...common.plugins,
-      tooltip: { enabled: false, external: wertTooltip } },
+    options: { ...common,
       scales: { ...common.scales,
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
           callback: v => fmtInt(v) + " €" } } } }
+  });
+  attachScrub(chW, scW, {
+    lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
+    baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
+    html: i => {
+      const p = ptsW[i];
+      const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
+      return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
+        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
+        "Investiert " + fmtEur(p.eur, 0));
+    }
   });
 
   /* Wholecoiner-Ziel: dezente Markierung bei 1 BTC (100 Mio. Sats) */
@@ -1161,21 +1243,29 @@ function renderCharts(market) {
   };
   const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
   tintSeg("sats", true);
-  new Chart($("chartSats"), {
+  const scS = { i: -1 };
+  const chS = new Chart($("chartSats"), {
     type: "line",
-    plugins: [wholecoinerPlugin],
+    plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
     data: { labels: labelsS, datasets: [
       { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.main,
+        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.main) },
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
-    options: { ...common, plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
-      callbacks: { ...common.plugins.tooltip.callbacks,
-        title: items => fmtDate(labelsS[items[0].dataIndex]),
-        label: c => " " + fmtInt(c.parsed.y) + " Sats" } } },
+    options: { ...common,
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsS) } },
         y: { ...common.scales.y, min: bS.min, max: bS.max, ticks: { ...common.scales.y.ticks, stepSize: bS.step,
         callback: v => (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M" } } } }
+  });
+  attachScrub(chS, scS, {
+    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.main,
+    baseValue: ptsS.length ? ptsS[0].sats : null, baseColor: C.base,
+    html: i => {
+      const p = ptsS[i], d = p.sats - ptsS[0].sats;
+      return scrubHtml(fmtDate(p.t), fmtInt(p.sats) + " Sats",
+        (d >= 0 ? "+" : "") + fmtInt(d), d < 0, "seit Periodenstart");
+    }
   });
 
   const ptsK = thin(inRange("preis", 0)).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
@@ -1202,26 +1292,16 @@ function renderCharts(market) {
   }
   const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
 
-  Chart.Interaction.modes.kaufVorrang = (chart, e, options, useFinalPosition) => {
-    const items = Chart.Interaction.modes.point(chart, e, { intersect: true }, useFinalPosition);
-    const dotsHit = items.filter(i => i.datasetIndex === 2);
-    const pool = dotsHit.length ? dotsHit : items;
-    if (!pool.length) return [];
-    let best = pool[0], bd = Infinity;
-    for (const it of pool) {
-      const d = (it.element.x - e.x) ** 2 + (it.element.y - e.y) ** 2;
-      if (d < bd) { bd = d; best = it; }
-    }
-    return [best];
-  };
-
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
   tintSeg("preis", kTrendUp);
-  new Chart($("chartPreis"), {
+  const scK = { i: -1 };
+  const chK = new Chart($("chartPreis"), {
     type: "line",
+    plugins: [baselinePlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
       { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: kTrendUp ? C.main : C.loss,
+        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : (kTrendUp ? C.main : C.loss)) },
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
@@ -1232,21 +1312,21 @@ function renderCharts(market) {
         pointHitRadius: 4, order: 1 }
     ]},
     options: { ...common,
-      interaction: { mode: "kaufVorrang", intersect: true },
-      plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
-      callbacks: { ...common.plugins.tooltip.callbacks,
-        title: items => fmtDate(labelsK[items[0].dataIndex]),
-        label: c => {
-          if (c.datasetIndex === 2 && dotInfo[c.dataIndex]) {
-            const v = dotInfo[c.dataIndex];
-            return [" " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " @ " + fmtEur(v.eur / (v.sats / 1e8), 0),
-                    " " + fmtInt(v.sats) + " Sats"];
-          }
-          return " " + c.dataset.label + ": " + fmtEur(c.parsed.y, 0);
-        } } } },
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
         y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: v => fmtInt(v) + " €" } } } }
+  });
+  attachScrub(chK, scK, {
+    lineId: "scrub-preis", n: ptsK.length, colorAt: () => (kTrendUp ? C.main : C.loss),
+    baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base,
+    html: i => {
+      const p = ptsK[i];
+      const pct = ptsK[0].close > 0 ? (p.close / ptsK[0].close - 1) * 100 : null;
+      const v = dotInfo[i];
+      return scrubHtml(fmtDate(p.t), fmtEur(p.close, 0),
+        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
+        v ? "Kauf " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " · " + fmtInt(v.sats) + " Sats" : "seit Periodenstart");
+    }
   });
 
 }
