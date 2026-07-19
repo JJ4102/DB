@@ -66,6 +66,7 @@
     --duration-fast: 150ms; --duration-base: 220ms; --duration-slow: 320ms;
 
     --tap: 44px;
+    --topbar-h: 58px;   /* Hoehe der fixierten Kopfzeile (ohne Safe-Area) */
 
     /* Chart-Tokens (JS liest sie per getComputedStyle) — Standard: neutral */
     --ch-grid: transparent;
@@ -76,17 +77,14 @@
     --tip-body: #8A8A8E;
     --ath-line: rgba(138,138,142,0.35);
     --ath-text: rgba(138,138,142,0.9);
-    --ath-ok:   rgba(33,184,74,0.9);
-    --ath-warn: rgba(229,48,29,0.9);
     --line-main: var(--positive);    /* Kurven: semantisch wie in der TR-App */
     --line-loss: var(--negative);
-    --line-invest: #B7B7BC;
-    --line-invest-loss: #B7B7BC;
+    --line-wert: var(--btc);         /* Chart 1: Portfoliowert in BTC-Orange */
+    --line-invest: #0A0A0B;          /* Chart 1: Investiert klar abgesetzt (Near-Black) */
+    --fill-pos: rgba(33,184,74,0.10);   /* Flaeche: Wert ueber Investiert */
+    --fill-neg: rgba(229,48,29,0.10);   /* Flaeche: Wert unter Investiert */
     --buy-dot: #0A0A0B;
     --dot-border: #FFFFFF;
-    /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
-    --ch-after: #D6D6DA;
-    --base-line: rgba(138,138,142,0.22);
   }
   html[data-theme="dark"] {
     color-scheme: dark;
@@ -111,14 +109,11 @@
     --tip-body: #9A9AA0;
     --ath-line: rgba(154,154,160,0.35);
     --ath-text: rgba(154,154,160,0.9);
-    --ath-ok:   rgba(52,209,88,0.9);
-    --ath-warn: rgba(255,69,58,0.9);
-    --line-invest: #5E5E64;
-    --line-invest-loss: #5E5E64;
+    --line-invest: #F5F5F6;
+    --fill-pos: rgba(52,209,88,0.16);
+    --fill-neg: rgba(255,69,58,0.16);
     --buy-dot: #F5F5F6;
     --dot-border: #0D0D0F;
-    --ch-after: #3C3C42;
-    --base-line: rgba(154,154,160,0.25);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -140,17 +135,15 @@
   :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: var(--radius-sm); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* ── Kopfzeile: ruhig, sticky, slidet beim Scrollen weg ─────────── */
+  /* ── Kopfzeile: ruhig, sticky — bleibt beim Scrollen dauerhaft sichtbar ── */
   header {
     position: sticky; top: 0; z-index: 15;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    margin: 0 calc(-1 * var(--screen-padding)) var(--space-4);
+    margin: 0 calc(-1 * var(--screen-padding));
     padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-padding) var(--space-3);
     background: var(--bg);
-    transition: transform var(--duration-slow) var(--ease-standard);
   }
-  header.hide { transform: translateY(-105%); }
-  @media (prefers-reduced-motion: reduce) { header { transition: none; } }
+  .head-left { display: flex; align-items: center; gap: var(--space-3); flex: 0 0 auto; }
   .head-right { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
   h1 { font-size: var(--text-h3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   h1 span { color: var(--btc); }
@@ -168,24 +161,27 @@
   .iconbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   /* Sync-Status: nur der Punkt (Details in den Einstellungen) */
   #sync-chip { width: 34px; padding: 0; color: var(--muted); }
+  #theme-toggle { width: 34px; padding: 0; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex: 0 0 8px; transition: background var(--duration-base) var(--ease-standard); }
   .dot.ok { background: var(--positive); }
   .dot.pend { background: var(--warning); animation: pulse 1.2s var(--ease-standard) infinite; }
   .dot.err { background: var(--negative); }
   @keyframes pulse { 50% { opacity: 0.35; } }
 
-  .person-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-6); }
-  .person-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; color: var(--muted); }
-  .person-select {
-    appearance: none; -webkit-appearance: none;
-    border: 1px solid var(--hairline); background-color: transparent; color: var(--text);
-    border-radius: var(--radius-full); padding: 8px 32px 8px 14px; font: inherit; font-size: var(--text-label);
-    font-weight: 500; cursor: pointer; min-height: 38px;
-    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A8E' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
-    transition: border-color var(--duration-fast) var(--ease-standard);
+  /* Personen-Auswahl: runder Avatar mit Initialen (TR-Stil); Select liegt unsichtbar darueber */
+  .avatar-wrap { position: relative; width: 34px; height: 34px; flex: 0 0 auto; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: var(--radius-full);
+    background: var(--accent); color: var(--on-accent);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+    display: flex; align-items: center; justify-content: center; user-select: none;
   }
-  .person-select:focus { outline: none; border-color: var(--text); }
+  .person-select {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    appearance: none; -webkit-appearance: none; border: 0; background: transparent;
+    color: transparent; opacity: 0; cursor: pointer; font: inherit;
+  }
+  .avatar-wrap:has(.person-select:focus-visible) .avatar { outline: 2px solid var(--text); outline-offset: 2px; }
 
   /* ── Karten: borderless, flach — Gruppierung durch Weissraum ────── */
   .card { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
@@ -197,7 +193,12 @@
   @media (prefers-reduced-motion: reduce) { .reveal * { animation: none !important; } }
 
   /* ── Hero-Metric: die Zahl ist der Held ─────────────────────────── */
-  .hero { background: transparent; border: 0; box-shadow: none; padding: var(--space-4) 0 var(--space-5); margin-bottom: 0; }
+  .hero {
+    position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top)); z-index: 14;
+    background: var(--bg); border: 0; box-shadow: none;
+    margin: 0 calc(-1 * var(--screen-padding));
+    padding: var(--space-2) var(--screen-padding) var(--space-4);
+  }
   .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
   .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
@@ -209,11 +210,12 @@
   .neg { color: var(--negative); }
 
   /* ── KPI-Karten im TR-App-Stil (wie Position/Performance) ───────── */
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-bottom: var(--space-6); }
+  .grid4 { display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 1fr; gap: var(--space-3); margin-bottom: var(--space-6); }
   .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4); }
   .kpi-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); }
   .kpi-value { font-size: var(--text-h3); font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 2px; }
+  .livedot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--positive); margin-right: 5px; vertical-align: 1px; }
 
   .chart-card { margin-bottom: var(--space-6); }
   .chart-title { font-size: var(--text-h3); font-weight: 600; margin-bottom: var(--space-3); }
@@ -230,16 +232,15 @@
   .range-seg button.sel.neg { color: var(--negative); }
   .chart-wrap { position: relative; height: 360px; }
   .chart-wrap canvas { touch-action: pan-y; }
-  /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
-  .scrub-line {
-    display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
-    min-height: 26px; margin-bottom: var(--space-2);
-    font-size: var(--text-label); font-variant-numeric: tabular-nums;
+  .wtip {
+    position: absolute; opacity: 0; pointer-events: none; z-index: 5;
+    background: var(--tip-bg); border: 1px solid var(--tip-border); border-radius: var(--radius-md);
+    padding: 8px 10px; font-size: var(--text-caption); white-space: nowrap;
+    box-shadow: var(--shadow-soft); transition: opacity var(--duration-fast) var(--ease-standard);
   }
-  .scrub-date { color: var(--muted); font-weight: 500; }
-  .scrub-value { font-weight: 700; color: var(--text); }
-  .scrub-delta { font-weight: 600; }
-  .scrub-extra { color: var(--muted); font-size: var(--text-caption); }
+  .wtip-head { display: flex; justify-content: space-between; gap: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+  .wtip-pct { font-weight: 600; }
+  .wtip-line { color: var(--muted); font-variant-numeric: tabular-nums; }
   .legend { display: flex; gap: var(--space-4); font-size: var(--text-caption); color: var(--muted); margin-bottom: var(--space-3); flex-wrap: wrap; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
@@ -279,7 +280,7 @@
     background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); }
   @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
   #skeleton .sk.h1 { height: 132px; }
-  #skeleton .row { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+  #skeleton .row { display: grid; grid-template-columns: repeat(5,1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
   #skeleton .row .sk { height: 74px; margin: 0; }
   #skeleton .sk.hc { height: 430px; }
   #sk-note { text-align: center; color: var(--muted); font-size: var(--text-caption); padding: 10px; min-height: 34px; }
@@ -381,11 +382,8 @@
   /* ── iPhone-Layout ──────────────────────────────────────────────── */
   @media (max-width: 700px) {
     body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-    header { margin-bottom: var(--space-3); }
-    .person-wrap { margin-bottom: var(--space-5); }
-    .person-select { flex: 1; }
-    .hero { padding: var(--space-3) 0 var(--space-4); }
-    /* KPI-Karten: 2x2-Raster wie Position/Performance in der App */
+    .hero { padding: var(--space-2) var(--screen-padding) var(--space-3); }
+    /* KPI-Karten: 2-spaltiges Raster wie Position/Performance in der App */
     .grid4 { grid-template-columns: repeat(2, 1fr); margin-bottom: var(--space-5); }
     #skeleton .row { grid-template-columns: repeat(2, 1fr); }
     #skeleton .row .sk { height: 74px; }
@@ -397,22 +395,24 @@
 </head>
 <body>
 <header id="topbar">
-  <h1><span>&#8383;</span> Bitcoin Dashboard</h1>
+  <div class="head-left">
+    <div class="avatar-wrap">
+      <span class="avatar" id="person-avatar" aria-hidden="true">&ndash;</span>
+      <select id="person-select" class="person-select" aria-label="Person wählen"></select>
+    </div>
+    <h1 aria-label="Bitcoin Dashboard"><span>&#8383;</span></h1>
+  </div>
   <div class="head-right">
     <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details" aria-label="Sync-Status"><i class="dot" id="sync-dot"></i><span id="sync-text" class="sr-only">Lokal</span></button>
+    <button type="button" class="iconbtn" id="theme-toggle" aria-label="Design wechseln"><svg id="theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg id="theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
     <button type="button" class="iconbtn" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
 </header>
 
-<div class="person-wrap">
-  <label class="person-label" for="person-select">Person</label>
-  <select id="person-select" class="person-select"></select>
-</div>
-
 <!-- Skeleton während des Ladens -->
 <div id="skeleton">
   <div class="sk h1"></div>
-  <div class="row"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+  <div class="row"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   <div class="sk hc"></div>
   <div id="sk-note">Lade Kursdaten &hellip;</div>
 </div>
@@ -433,7 +433,8 @@
     <div class="card"><div class="kpi-label">Investiert</div><div class="kpi-value" id="k-inv"></div></div>
     <div class="card"><div class="kpi-label">Sats</div><div class="kpi-value" id="k-sats"></div></div>
     <div class="card"><div class="kpi-label">&Oslash; Kaufkurs</div><div class="kpi-value" id="k-eca"></div></div>
-    <div class="card"><div class="kpi-label">BTC-Kurs</div><div class="kpi-value" id="k-kurs"></div><div class="kpi-sub" id="k-kurs-sub"></div></div>
+    <div class="card"><div class="kpi-label" id="k-kurs-sub">live</div><div class="kpi-value" id="k-kurs"></div></div>
+    <div class="card"><div class="kpi-label">ATH</div><div class="kpi-value" id="k-ath"></div><div class="kpi-sub" id="k-ath-sub"></div></div>
   </div>
 
   <div class="card chart-card">
@@ -446,10 +447,9 @@
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
     <div class="legend">
-      <span><i style="background:var(--line-main)"></i>Portfoliowert</span>
+      <span><i style="background:var(--line-wert)"></i>Portfoliowert</span>
       <span><i style="background:var(--line-invest)"></i>Investiert</span>
     </div>
-    <div class="scrub-line" id="scrub-wert"></div>
     <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
   </div>
 
@@ -467,7 +467,6 @@
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
       <span><i style="background:var(--buy-dot)"></i>&Oslash; Kaufkurs</span>
     </div>
-    <div class="scrub-line" id="scrub-preis"></div>
     <div class="chart-wrap"><canvas id="chartPreis"></canvas></div>
   </div>
 
@@ -480,7 +479,6 @@
       <button type="button" data-range="1y">1J</button>
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
-    <div class="scrub-line" id="scrub-sats"></div>
     <div class="chart-wrap"><canvas id="chartSats"></canvas></div>
   </div>
 
@@ -539,8 +537,6 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
   <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
-  <button type="button" class="btn ghost" id="theme-toggle">Dunkles Design</button>
-  <hr class="divider">
   <button type="button" class="btn" id="s-paste">Einrichtungs-Code &uuml;bernehmen (aus Zwischenablage)</button>
   <div class="f-hint" style="margin:6px 0 12px">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &mdash; verbindet ohne Tippen.</div>
   <hr class="divider">
@@ -966,104 +962,34 @@ function renderKpis(market) {
   $("k-sats").textContent = fmtInt(totSats);
   $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc, 0) : "–";
   countTo($("k-kurs"), live, v => fmtEur(v, 0));
-  $("k-kurs-sub").textContent = liveOk ? "live" : "Cache";
+  $("k-kurs-sub").innerHTML = liveOk ? '<span class="livedot"></span>live' : "Cache";
+
+  /* ATH-Kachel: persoenliches Portfoliowert-ATH ueber die gesamte Historie */
+  let ath = 0, athTs = 0;
+  if (ALL.length && candles.length) {
+    const first = new Date(ALL[0].date + "T00:00:00Z").getTime();
+    let ai = 0, s = 0;
+    for (const c of candles) {
+      if (c.t < first) continue;
+      while (ai < ALL.length && new Date(ALL[ai].date + "T00:00:00Z").getTime() <= c.t) { s += ALL[ai].sats; ai++; }
+      const w = s / 1e8 * c.close;
+      if (w > ath) { ath = w; athTs = c.t; }
+    }
+    if (wert > ath) { ath = wert; athTs = fetchedAt; }
+  }
+  if (ath > 0) {
+    const dist = (wert / ath - 1) * 100;
+    $("k-ath").textContent = fmtEur(ath, 0);
+    $("k-ath-sub").innerHTML = fmtDate(athTs) + " &middot; " +
+      '<span class="' + (dist >= -0.05 ? "pos" : "neg") + '">' +
+      (dist >= 0 ? "+" : "") + dist.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
+  } else {
+    $("k-ath").textContent = "–";
+    $("k-ath-sub").textContent = "";
+  }
   $("stand").textContent = liveOk
     ? new Date(fetchedAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })
     : "Kurs vom " + fmtDate(candles[candles.length - 1].t) + " (offline)";
-}
-
-/* ═══════════ TR-Scrubbing: Snap-Marker, Puls, Vor/Nach-Färbung ═══════════ */
-const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
-/* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
-const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
-function scrubHtml(date, value, delta, neg, extra) {
-  return '<span class="scrub-date">' + date + '</span>' +
-    '<span class="scrub-value">' + value + '</span>' +
-    (delta ? '<span class="scrub-delta ' + (neg ? "neg" : "pos") + '">' + delta + '</span>' : '') +
-    (extra ? '<span class="scrub-extra">' + extra + '</span>' : '');
-}
-/* Marker am aktiven Punkt: pulsiert kompakt ↔ expandiert mit Halo (Endlosschleife) */
-const scrubPlugin = {
-  id: "trScrub",
-  afterDatasetsDraw(chart) {
-    const s = chart.$scrub;
-    if (!s || s.i < 0) return;
-    const el = chart.getDatasetMeta(0).data[s.i];
-    if (!el) return;
-    const k = REDUCED_MOTION ? 1
-      : 0.5 - 0.5 * Math.cos(((performance.now() - s.t0) % 1600) / 1600 * 2 * Math.PI);
-    const c = chart.ctx, color = s.cfg.colorAt(s.i);
-    c.save();
-    c.fillStyle = color;
-    c.globalAlpha = 0.18 * k;                       /* Halo-Ring */
-    c.beginPath(); c.arc(el.x, el.y, 7 + 7 * k, 0, 2 * Math.PI); c.fill();
-    c.globalAlpha = 1;                              /* Kern */
-    c.beginPath(); c.arc(el.x, el.y, 4 + 1.5 * k, 0, 2 * Math.PI); c.fill();
-    c.restore();
-  }
-};
-/* Gepunktete Referenzlinie auf Höhe des ersten Werts im gewählten Zeitraum */
-const baselinePlugin = {
-  id: "startLine",
-  beforeDatasetsDraw(chart) {
-    const s = chart.$scrub;
-    if (!s || s.cfg.baseValue == null || !isFinite(s.cfg.baseValue)) return;
-    const y = chart.scales.y.getPixelForValue(s.cfg.baseValue);
-    const { left, right, top, bottom } = chart.chartArea;
-    if (y < top + 2 || y > bottom - 2) return;
-    const c = chart.ctx;
-    c.save();
-    c.strokeStyle = s.cfg.baseColor;
-    c.lineWidth = 1.5; c.lineCap = "round"; c.setLineDash([0.1, 6]);
-    c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
-    c.restore();
-  }
-};
-/* Scrub-Verhalten an einen Chart binden: Maus-Hover (Desktop) bzw. Touch-Drag (Mobile),
-   X-Position snappt auf den nächstgelegenen Datenpunkt; Loslassen → Grundzustand */
-function attachScrub(chart, s, cfg) {
-  s.cfg = cfg;
-  s.t0 = 0; s.raf = 0;
-  chart.$scrub = s;
-  const line = $(cfg.lineId);
-  const show = i => { if (line) line.innerHTML = cfg.n ? cfg.html(i) : ""; };
-  show(cfg.n - 1); /* Grundzustand: letzter Punkt des Zeitraums */
-  const loop = () => {
-    s.raf = 0;
-    if (s.i < 0 || !chart.ctx) return;
-    chart.draw();
-    s.raf = requestAnimationFrame(loop);
-  };
-  const setIdx = i => {
-    if (i === s.i) return;
-    s.i = i;
-    show(i < 0 ? cfg.n - 1 : i);
-    chart.update("none"); /* Segmentfarben vor/nach Marker neu auswerten */
-    if (i >= 0 && !REDUCED_MOTION && !s.raf) { s.t0 = performance.now(); loop(); }
-  };
-  const idxAt = e => {
-    if (!cfg.n || !chart.chartArea) return -1;
-    const r = chart.canvas.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const { left, right } = chart.chartArea;
-    if (x < left - 16 || x > right + 16) return -1;
-    const v = chart.scales.x.getValueForPixel(Math.min(right, Math.max(left, x)));
-    return Math.max(0, Math.min(cfg.n - 1, Math.round(v)));
-  };
-  chart.canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
-  const ac = chart.canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
-  let touching = false;
-  chart.canvas.addEventListener("pointerdown", e => {
-    if (e.pointerType !== "mouse") { touching = true; setIdx(idxAt(e)); }
-  }, o);
-  chart.canvas.addEventListener("pointermove", e => {
-    if (e.pointerType === "mouse" || touching) setIdx(idxAt(e));
-  }, o);
-  const end = () => { touching = false; setIdx(-1); };
-  chart.canvas.addEventListener("pointerup", end, o);
-  chart.canvas.addEventListener("pointercancel", end, o);
-  chart.canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") end(); }, o);
 }
 
 /* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
@@ -1075,15 +1001,12 @@ function renderCharts(market) {
     tipBg: cssv("--tip-bg"), tipBorder: cssv("--tip-border"),
     tipTitle: cssv("--tip-title"), tipBody: cssv("--tip-body"),
     athLine: cssv("--ath-line"), athText: cssv("--ath-text"),
-    athOk: cssv("--ath-ok"), athWarn: cssv("--ath-warn"),
     main: cssv("--line-main"), loss: cssv("--line-loss"),
-    invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
-    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
-    after: cssv("--ch-after"), base: cssv("--base-line")
+    wert: cssv("--line-wert"), invest: cssv("--line-invest"),
+    fillPos: cssv("--fill-pos"), fillNeg: cssv("--fill-neg"),
+    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border")
   };
   Chart.defaults.font.family = cssv("--font-family");
-  const totSats = ALL.reduce((s, b) => s + b.sats, 0);
-  const wert = totSats / 1e8 * live;
 
   const mapPt = c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close, wert: sats / 1e8 * c.close }; };
   const firstTs = ALL.length ? new Date(ALL[0].date + "T00:00:00Z").getTime() : Date.UTC(2023, 5, 6);
@@ -1106,7 +1029,8 @@ function renderCharts(market) {
   };
   const ptsW = thin(inRange("wert", firstTs)).map(mapPt);
   const labelsW = ptsW.map(p => p.t);
-  const ptsS = thin(inRange("sats", firstTs)).map(mapPt);
+  /* Sats-Chart beginnt einen Tag vor dem ersten Kauf bei 0 Sats */
+  const ptsS = thin(inRange("sats", firstTs - DAY)).map(mapPt);
   const labelsS = ptsS.map(p => p.t);
   /* X-Achse: Label-Anzahl richtet sich nach der Chartbreite — kein Overlap */
   const tickCb = labels => {
@@ -1145,8 +1069,14 @@ function renderCharts(market) {
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
     devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
-    events: [], /* Hover/Tooltip aus — Interaktion läuft über das Scrubbing */
-    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    interaction: { mode: "nearest", intersect: true },
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: C.tipBg, borderColor: C.tipBorder, borderWidth: 1,
+      titleColor: C.tipTitle, bodyColor: C.tipBody,
+      titleFont: { size: 11, weight: "600" }, bodyFont: { size: 11 },
+      cornerRadius: 8, padding: 8, boxWidth: 8, boxHeight: 8, boxPadding: 4,
+      callbacks: { title: items => fmtDate(labelsW[items[0].dataIndex]) }
+    } },
     elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
     scales: {
       x: { grid: { display: false }, ticks: { callback: tickCb(labelsW), maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
@@ -1158,66 +1088,51 @@ function renderCharts(market) {
   Chart.getChart("chartSats")?.destroy();
   Chart.getChart("chartPreis")?.destroy();
 
-  /* Persönliches ATH als dezente Linie */
-  const ath = ptsW.length ? Math.max(...ptsW.map(p => p.wert)) : 0;
-  const athPt = ptsW.find(p => p.wert === ath);
-  const athPlugin = {
-    id: "athLine",
-    afterDatasetsDraw(chart) {
-      if (!(ath > 0) || !athPt) return;
-      const y = chart.scales.y.getPixelForValue(ath);
-      const { left, right, top, bottom } = chart.chartArea;
-      if (y < top + 2 || y > bottom - 2) return;
-      const c = chart.ctx;
-      c.save();
-      c.strokeStyle = C.athLine;
-      c.setLineDash([4, 4]);
-      c.lineWidth = 1;
-      c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
-      c.setLineDash([]);
-      c.font = "10px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      c.textBaseline = "top";
-      c.fillStyle = C.athText;
-      c.fillText("ATH " + fmtEur(ath, 0) + ", " + fmtDate(athPt.t), left + 6, y + 5);
-      const dist = (wert / ath - 1) * 100;
-      c.fillStyle = dist >= -0.5 ? C.athOk : C.athWarn;
-      c.fillText(dist.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %", left + 6, y + 16);
-      c.restore();
+  const oldTip = document.querySelector(".wtip");
+  if (oldTip) oldTip.style.opacity = 0;
+  function wertTooltip(ctx) {
+    const { chart, tooltip } = ctx;
+    let el = chart.canvas.parentNode.querySelector(".wtip");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "wtip";
+      chart.canvas.parentNode.appendChild(el);
     }
-  };
+    const i = tooltip.opacity && tooltip.dataPoints && tooltip.dataPoints.length
+      ? tooltip.dataPoints[0].dataIndex : -1;
+    if (i < 0 || !ptsW[i]) { el.style.opacity = 0; return; }
+    const p = ptsW[i];
+    let pctHtml = "";
+    if (p.eur > 0) {
+      const pct = (p.wert / p.eur - 1) * 100;
+      pctHtml = '<span class="wtip-pct ' + (pct >= 0 ? "pos" : "neg") + '">' +
+        (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
+    }
+    el.innerHTML = '<div class="wtip-head"><span>' + fmtDate(p.t) + "</span>" + pctHtml + "</div>" +
+      '<div class="wtip-line">Portfoliowert: ' + fmtEur(p.wert) + "</div>" +
+      '<div class="wtip-line">Investiert: ' + fmtEur(p.eur) + "</div>";
+    el.style.opacity = 1;
+    el.style.left = Math.min(chart.width - el.offsetWidth - 4, Math.max(4, tooltip.caretX + 12)) + "px";
+    el.style.top = Math.max(4, tooltip.caretY - el.offsetHeight - 12) + "px";
+  }
 
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   tintSeg("wert", ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true);
-  const scW = { i: -1 };
-  const colW = i => (ptsW[i].wert < ptsW[i].eur ? C.loss : C.main);
-  const chW = new Chart($("chartWert"), {
+  new Chart($("chartWert"), {
     type: "line",
-    plugins: [baselinePlugin, athPlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
-      { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.main,
-        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)) },
-        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
+      { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
+        fill: { target: 1, above: C.fillPos, below: C.fillNeg },
+        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
-        segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
-          ? C.investLoss : C.invest) },
-        borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true }
+        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
-    options: { ...common,
+    options: { ...common, plugins: { ...common.plugins,
+      tooltip: { enabled: false, external: wertTooltip } },
       scales: { ...common.scales,
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
           callback: v => fmtInt(v) + " €" } } } }
-  });
-  attachScrub(chW, scW, {
-    lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
-    baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
-    html: i => {
-      const p = ptsW[i];
-      const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
-      return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
-        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
-        "Investiert " + fmtEur(p.eur, 0));
-    }
   });
 
   /* Wholecoiner-Ziel: dezente Markierung bei 1 BTC (100 Mio. Sats) */
@@ -1243,29 +1158,21 @@ function renderCharts(market) {
   };
   const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
   tintSeg("sats", true);
-  const scS = { i: -1 };
-  const chS = new Chart($("chartSats"), {
+  new Chart($("chartSats"), {
     type: "line",
-    plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
+    plugins: [wholecoinerPlugin],
     data: { labels: labelsS, datasets: [
       { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.main,
-        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.main) },
-        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
+        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
-    options: { ...common,
+    options: { ...common, plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
+      callbacks: { ...common.plugins.tooltip.callbacks,
+        title: items => fmtDate(labelsS[items[0].dataIndex]),
+        label: c => " " + fmtInt(c.parsed.y) + " Sats" } } },
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsS) } },
         y: { ...common.scales.y, min: bS.min, max: bS.max, ticks: { ...common.scales.y.ticks, stepSize: bS.step,
         callback: v => (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M" } } } }
-  });
-  attachScrub(chS, scS, {
-    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.main,
-    baseValue: ptsS.length ? ptsS[0].sats : null, baseColor: C.base,
-    html: i => {
-      const p = ptsS[i], d = p.sats - ptsS[0].sats;
-      return scrubHtml(fmtDate(p.t), fmtInt(p.sats) + " Sats",
-        (d >= 0 ? "+" : "") + fmtInt(d), d < 0, "seit Periodenstart");
-    }
   });
 
   const ptsK = thin(inRange("preis", 0)).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
@@ -1292,17 +1199,27 @@ function renderCharts(market) {
   }
   const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
 
+  Chart.Interaction.modes.kaufVorrang = (chart, e, options, useFinalPosition) => {
+    const items = Chart.Interaction.modes.point(chart, e, { intersect: true }, useFinalPosition);
+    const dotsHit = items.filter(i => i.datasetIndex === 2);
+    const pool = dotsHit.length ? dotsHit : items;
+    if (!pool.length) return [];
+    let best = pool[0], bd = Infinity;
+    for (const it of pool) {
+      const d = (it.element.x - e.x) ** 2 + (it.element.y - e.y) ** 2;
+      if (d < bd) { bd = d; best = it; }
+    }
+    return [best];
+  };
+
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
   tintSeg("preis", kTrendUp);
-  const scK = { i: -1 };
-  const chK = new Chart($("chartPreis"), {
+  new Chart($("chartPreis"), {
     type: "line",
-    plugins: [baselinePlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
       { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: kTrendUp ? C.main : C.loss,
-        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : (kTrendUp ? C.main : C.loss)) },
-        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
+        borderWidth: 3, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
       { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
@@ -1312,21 +1229,21 @@ function renderCharts(market) {
         pointHitRadius: 4, order: 1 }
     ]},
     options: { ...common,
+      interaction: { mode: "kaufVorrang", intersect: true },
+      plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
+      callbacks: { ...common.plugins.tooltip.callbacks,
+        title: items => fmtDate(labelsK[items[0].dataIndex]),
+        label: c => {
+          if (c.datasetIndex === 2 && dotInfo[c.dataIndex]) {
+            const v = dotInfo[c.dataIndex];
+            return [" " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " @ " + fmtEur(v.eur / (v.sats / 1e8), 0),
+                    " " + fmtInt(v.sats) + " Sats"];
+          }
+          return " " + c.dataset.label + ": " + fmtEur(c.parsed.y, 0);
+        } } } },
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
         y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: v => fmtInt(v) + " €" } } } }
-  });
-  attachScrub(chK, scK, {
-    lineId: "scrub-preis", n: ptsK.length, colorAt: () => (kTrendUp ? C.main : C.loss),
-    baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base,
-    html: i => {
-      const p = ptsK[i];
-      const pct = ptsK[0].close > 0 ? (p.close / ptsK[0].close - 1) * 100 : null;
-      const v = dotInfo[i];
-      return scrubHtml(fmtDate(p.t), fmtEur(p.close, 0),
-        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
-        v ? "Kauf " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " · " + fmtInt(v.sats) + " Sats" : "seit Periodenstart");
-    }
   });
 
 }
@@ -1340,17 +1257,7 @@ document.querySelectorAll(".range-seg").forEach(seg => seg.addEventListener("cli
   if (lastMarket) renderCharts(lastMarket);
 }));
 
-/* ═══════════ Kopfzeile: slidet beim Runterscrollen weg ═══════════ */
-(() => {
-  const bar = $("topbar");
-  let lastY = 0;
-  addEventListener("scroll", () => {
-    const y = Math.max(0, window.scrollY);
-    if (Math.abs(y - lastY) < 4) return;
-    bar.classList.toggle("hide", y > 72 && y > lastY);
-    lastY = y;
-  }, { passive: true });
-})();
+/* Kopfzeile & Portfoliowert sind fixiert (sticky) — kein Ausblenden beim Scrollen */
 
 /* ═══════════ Bewegungs-Tabelle ═══════════ */
 function renderTable() {
@@ -1379,16 +1286,25 @@ function refreshAfterDataChange() {
   if (lastMarket) render(lastMarket);
 }
 
-/* ═══════════ Personen-Auswahl ═══════════ */
+/* ═══════════ Personen-Auswahl (Avatar mit Initialen, TR-Stil) ═══════════ */
+function initials(p) {
+  const s = String(p || "").trim();
+  if (!s) return "–";
+  const parts = s.split(/[^0-9A-Za-zÄÖÜäöüß]+/).filter(Boolean);
+  const ini = parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
+  return ini.toUpperCase();
+}
 function renderPersonSelect() {
   const list = personList();
-  if (!list.length) { $("person-select").innerHTML = "<option>–</option>"; return; }
+  if (!list.length) { $("person-select").innerHTML = "<option>–</option>"; $("person-avatar").textContent = "–"; return; }
   if (!person || !list.includes(person)) person = list[0];
   $("person-select").innerHTML = list.map(p =>
     '<option value="' + esc(p) + '"' + (p === person ? " selected" : "") + ">" + esc(p) + "</option>").join("");
+  $("person-avatar").textContent = initials(person);
 }
 $("person-select").addEventListener("change", e => {
   person = e.target.value;
+  $("person-avatar").textContent = initials(person);
   rebuildAll();
   if (lastMarket) render(lastMarket);
 });
@@ -1644,8 +1560,12 @@ $("import-input").addEventListener("change", async () => {
 /* ═══════════ Theme ═══════════ */
 const themeBtn = $("theme-toggle");
 function applyTheme(t) {
+  const dark = t === "dark";
   document.documentElement.dataset.theme = t;
-  themeBtn.textContent = t === "dark" ? "Helles Design" : "Dunkles Design";
+  /* Icon zeigt das Ziel-Design: Mond im Light-Mode, Sonne im Dark-Mode */
+  $("theme-icon-moon").style.display = dark ? "none" : "block";
+  $("theme-icon-sun").style.display = dark ? "block" : "none";
+  themeBtn.setAttribute("aria-label", dark ? "Helles Design aktivieren" : "Dunkles Design aktivieren");
   try { localStorage.setItem(LS_THEME, t); } catch (e) {}
   if (lastMarket) renderCharts(lastMarket);
 }
