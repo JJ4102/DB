@@ -78,27 +78,14 @@
     --tip-body: #8A8A8E;
     --ath-line: rgba(138,138,142,0.35);
     --ath-text: rgba(138,138,142,0.9);
-    --ath-ok:   rgba(138,138,142,0.9);
-    --ath-warn: rgba(138,138,142,0.9);
-    --line-main: #0A0A0B;            /* Portfoliolinie = Textfarbe */
-    --line-loss: #0A0A0B;            /* neutral: kein Rot */
-    --line-btc:  var(--btc);         /* BTC-Kurslinie: Asset-Identitaet */
-    --line-invest: #B7B7BC;
-    --line-invest-loss: #B7B7BC;
-    --fill-gain: rgba(10,10,11,0.04);
-    --fill-loss: rgba(10,10,11,0.04);
-    --fill-sats: rgba(10,10,11,0.04);
-    --buy-dot: #0A0A0B;
-    --dot-border: #FFFFFF;
-  }
-  /* Performance-Modus: erst jetzt tragen Gruen/Rot Bedeutung */
-  html[data-perf="on"] {
-    --ch-grid: var(--hairline);
-    --line-loss: var(--negative);
-    --fill-gain: rgba(0,184,124,0.10);
-    --fill-loss: rgba(229,72,77,0.10);
     --ath-ok:   rgba(0,184,124,0.9);
     --ath-warn: rgba(229,72,77,0.9);
+    --line-main: var(--positive);    /* Kurven: semantisch wie in der TR-App */
+    --line-loss: var(--negative);
+    --line-invest: #B7B7BC;
+    --line-invest-loss: #B7B7BC;
+    --buy-dot: #0A0A0B;
+    --dot-border: #FFFFFF;
   }
   html[data-theme="dark"] {
     color-scheme: dark;
@@ -123,24 +110,12 @@
     --tip-body: #9A9AA0;
     --ath-line: rgba(154,154,160,0.35);
     --ath-text: rgba(154,154,160,0.9);
-    --ath-ok:   rgba(154,154,160,0.9);
-    --ath-warn: rgba(154,154,160,0.9);
-    --line-main: #F5F5F6;
-    --line-loss: #F5F5F6;
-    --line-invest: #5E5E64;
-    --line-invest-loss: #5E5E64;
-    --fill-gain: rgba(245,245,246,0.05);
-    --fill-loss: rgba(245,245,246,0.05);
-    --fill-sats: rgba(245,245,246,0.05);
-    --buy-dot: #F5F5F6;
-    --dot-border: #0D0D0F;
-  }
-  html[data-theme="dark"][data-perf="on"] {
-    --line-loss: var(--negative);
-    --fill-gain: rgba(46,207,158,0.12);
-    --fill-loss: rgba(255,97,102,0.12);
     --ath-ok:   rgba(46,207,158,0.9);
     --ath-warn: rgba(255,97,102,0.9);
+    --line-invest: #5E5E64;
+    --line-invest-loss: #5E5E64;
+    --buy-dot: #F5F5F6;
+    --dot-border: #0D0D0F;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -213,14 +188,14 @@
   .hero-row { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
   .chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; font-variant-numeric: tabular-nums; }
   .hero-sub { font-size: var(--text-caption); color: var(--muted); }
-  /* Gruen/Rot NUR im Performance-Modus — Vorzeichen tragen die Bedeutung immer */
-  .pos, .neg { color: var(--muted); }
-  html[data-perf="on"] .pos { color: var(--positive); }
-  html[data-perf="on"] .neg { color: var(--negative); }
+  /* Semantische Farben wie in der TR-App — Vorzeichen tragen die Bedeutung zusaetzlich */
+  .pos { color: var(--positive); }
+  .neg { color: var(--negative); }
 
-  /* ── KPI-Band: Label/Wert-Staks, Hairlines statt Boxen ──────────── */
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-5); padding: var(--space-4) 0; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); margin-bottom: var(--space-6); }
-  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); }
+  /* ── KPI-Karten im TR-App-Stil (wie Position/Performance) ───────── */
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-bottom: var(--space-6); }
+  .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4); }
+  .kpi-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); }
   .kpi-value { font-size: var(--text-h3); font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 2px; }
 
@@ -240,8 +215,6 @@
   .wtip-line { color: var(--muted); font-variant-numeric: tabular-nums; }
   .legend { display: flex; gap: var(--space-4); font-size: var(--text-caption); color: var(--muted); margin-bottom: var(--space-3); flex-wrap: wrap; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
-  .perf-only { display: none; }
-  html[data-perf="on"] .perf-only { display: inline; }
 
   /* ── Bewegungsliste: Hairline-Rows, keine Box ───────────────────── */
   details { margin-top: var(--space-6); }
@@ -397,7 +370,6 @@
   <h1><span>&#8383;</span> Bitcoin Dashboard</h1>
   <div class="head-right">
     <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details"><i class="dot" id="sync-dot"></i><span id="sync-text">Lokal</span></button>
-    <button type="button" class="iconbtn" id="perf-toggle" aria-label="Performance-Farben umschalten" title="Performance-Farben einschalten">&plusmn;%</button>
     <button type="button" class="iconbtn" id="theme-toggle" aria-label="Theme wechseln">Dunkel</button>
     <button type="button" class="iconbtn" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
@@ -441,8 +413,6 @@
     <div class="legend">
       <span><i style="background:var(--line-main)"></i>Portfoliowert</span>
       <span><i style="background:var(--line-invest)"></i>Investiert</span>
-      <span class="perf-only"><i style="background:var(--fill-gain)"></i>Gewinn</span>
-      <span class="perf-only"><i style="background:var(--fill-loss)"></i>Verlust</span>
     </div>
     <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
   </div>
@@ -451,7 +421,7 @@
     <div class="chart-title">Bitcoin-Kurs</div>
     <div class="chart-sub">Historischer BTC/EUR-Kurs mit eigenen K&auml;ufen und &Oslash; Kaufkurs</div>
     <div class="legend">
-      <span><i style="background:var(--line-btc)"></i>BTC-Kurs</span>
+      <span><i style="background:var(--line-main)"></i>BTC-Kurs</span>
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
       <span><i style="background:var(--buy-dot)"></i>&Oslash; Kaufkurs</span>
     </div>
@@ -577,7 +547,6 @@ const LS_STORE = "btc-dash-store-v3";
 const LS_SET   = "btc-dash-sync-v1";
 const LS_HIST  = "btc-dash-hist-v1";
 const LS_THEME = "btc-glass-theme";
-const LS_PERF  = "btc-dash-perf";
 const LS_BACKUP = "btc-dash-lastbackup";
 const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
 const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
@@ -960,11 +929,8 @@ function renderCharts(market) {
     athOk: cssv("--ath-ok"), athWarn: cssv("--ath-warn"),
     main: cssv("--line-main"), loss: cssv("--line-loss"),
     invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
-    fillGain: cssv("--fill-gain"), fillLoss: cssv("--fill-loss"), fillSats: cssv("--fill-sats"),
-    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
-    btc: cssv("--line-btc")
+    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border")
   };
-  const PERF = document.documentElement.dataset.perf === "on";
   Chart.defaults.font.family = cssv("--font-family");
   const totSats = ALL.reduce((s, b) => s + b.sats, 0);
   const wert = totSats / 1e8 * live;
@@ -1030,8 +996,8 @@ function renderCharts(market) {
     }, zoom: zoomOpts },
     elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
     scales: {
-      x: { grid: { display: false }, ticks: { display: PERF, callback: tickCbW, maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
-      y: { border: { display: false }, grid: { display: PERF, color: C.grid }, ticks: { display: PERF, color: C.tick, font: { size: 11 }, count: 6 } }
+      x: { grid: { display: false }, ticks: { callback: tickCbW, maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
+      y: { position: "right", border: { display: false }, grid: { display: false }, ticks: { color: C.tick, font: { size: 11 } } }
     }
   };
 
@@ -1101,7 +1067,6 @@ function renderCharts(market) {
     data: { labels: labelsW, datasets: [
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.main,
         segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur ? C.loss : C.main) },
-        fill: { target: 1, above: C.fillGain, below: C.fillLoss },
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
         segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
@@ -1111,20 +1076,42 @@ function renderCharts(market) {
     options: { ...common, plugins: { ...common.plugins,
       tooltip: { enabled: false, external: wertTooltip } },
       scales: { ...common.scales,
-        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks,
+        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000,
         callback: v => fmtInt(v) + " €" } } } }
   });
 
+  /* Wholecoiner-Ziel: dezente Markierung bei 1 BTC (100 Mio. Sats) */
+  const wholecoinerPlugin = {
+    id: "wholecoiner",
+    afterDatasetsDraw(chart) {
+      const y = chart.scales.y.getPixelForValue(1e8);
+      const { left, right, top, bottom } = chart.chartArea;
+      if (y < top + 2 || y > bottom - 2) return;
+      const c = chart.ctx;
+      c.save();
+      c.strokeStyle = C.athLine;
+      c.setLineDash([2, 5]);
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+      c.setLineDash([]);
+      c.font = "10px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      c.textBaseline = "bottom";
+      c.fillStyle = C.athText;
+      c.fillText("1 BTC", left + 6, y - 4);
+      c.restore();
+    }
+  };
   new Chart($("chartSats"), {
     type: "line",
+    plugins: [wholecoinerPlugin],
     data: { labels: labelsW, datasets: [
       { label: "Sats", data: ptsW.map(p => p.sats), borderColor: C.main,
-        backgroundColor: C.fillSats, fill: true, borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
+        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
     options: { ...common, plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
       callbacks: { ...common.plugins.tooltip.callbacks,
         label: c => " " + fmtInt(c.parsed.y) + " Sats" } } },
-      scales: { ...common.scales, y: { ...common.scales.y, ticks: { ...common.scales.y.ticks,
+      scales: { ...common.scales, y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000000,
         callback: v => (v / 1e6).toLocaleString("de-DE") + " M" } } } }
   });
 
@@ -1165,10 +1152,11 @@ function renderCharts(market) {
     return [best];
   };
 
+  const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   new Chart($("chartPreis"), {
     type: "line",
     data: { labels: labelsK, datasets: [
-      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: C.btc,
+      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: kTrendUp ? C.main : C.loss,
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
@@ -1193,7 +1181,7 @@ function renderCharts(market) {
         } } } },
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCbK } },
-        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, callback: v => fmtInt(v) + " €" } } } }
+        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000, callback: v => fmtInt(v) + " €" } } } }
   });
 
   /* Gesten: Doppelklick/-tipp Reset, Trackpad-Pan, gedämpfter Pinch */
@@ -1566,19 +1554,6 @@ applyTheme((() => {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   } catch (e) { return "light"; }
 })());
-
-/* ═══════════ Performance-Modus: Grün/Rot nur auf Wunsch (Guide §8) ═══════════ */
-const perfBtn = $("perf-toggle");
-function applyPerf(on) {
-  document.documentElement.dataset.perf = on ? "on" : "off";
-  perfBtn.classList.toggle("sel", on);
-  perfBtn.title = on ? "Performance-Farben ausschalten" : "Performance-Farben einschalten";
-  try { localStorage.setItem(LS_PERF, on ? "1" : "0"); } catch (e) {}
-  if (lastMarket) renderCharts(lastMarket);
-}
-perfBtn.addEventListener("click", () =>
-  applyPerf(document.documentElement.dataset.perf !== "on"));
-applyPerf((() => { try { return localStorage.getItem(LS_PERF) === "1"; } catch (e) { return false; } })());
 
 /* ═══════════ Live-Ticker (~1 Minute) ═══════════ */
 let tickTimer = null;
