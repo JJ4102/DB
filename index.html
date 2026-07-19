@@ -17,8 +17,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <title>Bitcoin Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.umd.min.js" crossorigin="anonymous"></script>
 <style>
   /* ══ Design-Tokens: Trade-Republic-inspiriert — ruhig, editorial, borderless ══ */
   :root {
@@ -36,9 +34,9 @@
     /* Akzent = Near-Black (TR: keine Markenfarbe fuer Primaeraktionen) */
     --accent:         #0A0A0B;
     --accent-hover:   #2A2A2E;
-    /* Semantik — nur Performance-Modus & Status */
-    --positive:       #00B87C;
-    --negative:       #E5484D;
+    /* Semantik — sattes TR-Grün/Rot (wie in der App) */
+    --positive:       #21B84A;
+    --negative:       #E5301D;
     --warning:        #E0A800;
     /* Pro-Asset-Farbe: Bitcoin-Orange (gleiche Farbe fuer auf & ab) */
     --btc:            #F7931A;
@@ -78,8 +76,8 @@
     --tip-body: #8A8A8E;
     --ath-line: rgba(138,138,142,0.35);
     --ath-text: rgba(138,138,142,0.9);
-    --ath-ok:   rgba(0,184,124,0.9);
-    --ath-warn: rgba(229,72,77,0.9);
+    --ath-ok:   rgba(33,184,74,0.9);
+    --ath-warn: rgba(229,48,29,0.9);
     --line-main: var(--positive);    /* Kurven: semantisch wie in der TR-App */
     --line-loss: var(--negative);
     --line-invest: #B7B7BC;
@@ -99,8 +97,8 @@
     --on-accent:      #0A0A0B;
     --accent:         #F5F5F6;
     --accent-hover:   #D6D6D9;
-    --positive:       #2ECF9E;
-    --negative:       #FF6166;
+    --positive:       #34D158;
+    --negative:       #FF453A;
     --warning:        #F5C24B;
     --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
     --ch-tick: #9A9AA0;
@@ -110,8 +108,8 @@
     --tip-body: #9A9AA0;
     --ath-line: rgba(154,154,160,0.35);
     --ath-text: rgba(154,154,160,0.9);
-    --ath-ok:   rgba(46,207,158,0.9);
-    --ath-warn: rgba(255,97,102,0.9);
+    --ath-ok:   rgba(52,209,88,0.9);
+    --ath-warn: rgba(255,69,58,0.9);
     --line-invest: #5E5E64;
     --line-invest-loss: #5E5E64;
     --buy-dot: #F5F5F6;
@@ -119,7 +117,7 @@
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { background: var(--bg); }
+  html { background: var(--bg); overflow-x: clip; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -127,16 +125,29 @@
     font-size: var(--text-body);
     line-height: 1.5;
     font-feature-settings: "tnum";
-    padding: calc(var(--space-5) + env(safe-area-inset-top)) var(--screen-padding) calc(var(--space-7) + env(safe-area-inset-bottom));
+    padding: 0 var(--screen-padding) calc(var(--space-7) + env(safe-area-inset-bottom));
+    width: 100%;
     max-width: 1080px;
     margin: 0 auto;
+    overflow-x: clip;
     -webkit-text-size-adjust: 100%;
   }
   :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: var(--radius-sm); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: var(--space-5); }
-  .head-right { display: flex; align-items: center; gap: var(--space-2); }
-  h1 { font-size: var(--text-h3); font-weight: 600; white-space: nowrap; }
+  /* ── Kopfzeile: ruhig, sticky, slidet beim Scrollen weg ─────────── */
+  header {
+    position: sticky; top: 0; z-index: 15;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin: 0 calc(-1 * var(--screen-padding)) var(--space-4);
+    padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-padding) var(--space-3);
+    background: var(--bg);
+    transition: transform var(--duration-slow) var(--ease-standard);
+  }
+  header.hide { transform: translateY(-105%); }
+  @media (prefers-reduced-motion: reduce) { header { transition: none; } }
+  .head-right { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
+  h1 { font-size: var(--text-h3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   h1 span { color: var(--btc); }
   .iconbtn {
     border: 1px solid var(--hairline); background: transparent; color: var(--text);
@@ -150,8 +161,8 @@
   .iconbtn:hover { border-color: var(--text); }
   .iconbtn.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .iconbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  /* Sync-Status: Punkt + Kurztext (Statusfarben sind semantisch, erlaubt) */
-  #sync-chip { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  /* Sync-Status: nur der Punkt (Details in den Einstellungen) */
+  #sync-chip { width: 34px; padding: 0; color: var(--muted); }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex: 0 0 8px; transition: background var(--duration-base) var(--ease-standard); }
   .dot.ok { background: var(--positive); }
   .dot.pend { background: var(--warning); animation: pulse 1.2s var(--ease-standard) infinite; }
@@ -182,7 +193,7 @@
 
   /* ── Hero-Metric: die Zahl ist der Held ─────────────────────────── */
   .hero { background: transparent; border: 0; box-shadow: none; padding: var(--space-4) 0 var(--space-5); margin-bottom: 0; }
-  .hero-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
+  .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
   .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
   .hero-row { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
@@ -200,8 +211,18 @@
   .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 2px; }
 
   .chart-card { margin-bottom: var(--space-6); }
-  .chart-title { font-size: var(--text-h3); font-weight: 600; margin-bottom: 2px; }
-  .chart-sub { font-size: var(--text-caption); color: var(--muted); margin-bottom: var(--space-4); }
+  .chart-title { font-size: var(--text-h3); font-weight: 600; margin-bottom: var(--space-3); }
+  /* Zeitraum-Auswahl im TR-Stil: reine Textbuttons, aktiv = Trendfarbe */
+  .range-seg { display: flex; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+  .range-seg button {
+    flex: 1 1 auto; min-height: var(--tap); border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: var(--text-label); font-weight: 700; color: var(--muted);
+    border-radius: var(--radius-sm); padding: 0;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .range-seg button.sel { color: var(--text); }
+  .range-seg button.sel.pos { color: var(--positive); }
+  .range-seg button.sel.neg { color: var(--negative); }
   .chart-wrap { position: relative; height: 360px; }
   .chart-wrap canvas { touch-action: pan-y; }
   .wtip {
@@ -260,13 +281,13 @@
   /* ── Plus-Button (FAB): Akzentflaeche, schwebender Layer ────────── */
   #fab {
     position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom));
-    width: 54px; height: 54px; border-radius: var(--radius-full); border: 0;
-    background: var(--accent); color: var(--on-accent);
-    font-size: 26px; font-weight: 400; line-height: 1; cursor: pointer;
+    width: 56px; height: 56px; border-radius: var(--radius-full); border: 0;
+    background: var(--accent); color: var(--on-accent); cursor: pointer;
     box-shadow: var(--shadow-soft); z-index: 20;
     display: flex; align-items: center; justify-content: center;
     transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
   }
+  #fab svg { display: block; width: 28px; height: 28px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
   #fab:hover { background: var(--accent-hover); }
   #fab:active { transform: scale(0.96); }
 
@@ -353,17 +374,15 @@
 
   /* ── iPhone-Layout ──────────────────────────────────────────────── */
   @media (max-width: 700px) {
-    body { padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-padding) calc(96px + env(safe-area-inset-bottom)); }
-    header { margin-bottom: var(--space-4); }
+    body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    header { margin-bottom: var(--space-3); }
     .person-wrap { margin-bottom: var(--space-5); }
     .person-select { flex: 1; }
     .hero { padding: var(--space-3) 0 var(--space-4); }
-    /* KPI-Karten: horizontal scrollbarer Kartenstreifen wie in der App */
-    .grid4 { display: flex; gap: var(--space-3); margin: 0 calc(-1 * var(--screen-padding)) var(--space-5); padding: 0 var(--screen-padding) 2px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .grid4::-webkit-scrollbar { display: none; }
-    .grid4 .card { flex: 0 0 auto; min-width: 44vw; scroll-snap-align: start; }
-    #skeleton .row { display: flex; gap: var(--space-3); overflow: hidden; }
-    #skeleton .row .sk { flex: 0 0 44vw; }
+    /* KPI-Karten: 2x2-Raster wie Position/Performance in der App */
+    .grid4 { grid-template-columns: repeat(2, 1fr); margin-bottom: var(--space-5); }
+    #skeleton .row { grid-template-columns: repeat(2, 1fr); }
+    #skeleton .row .sk { height: 74px; }
     .chart-wrap { height: 300px; }
     th, td { padding: 10px 6px; }
     .legend { gap: 10px; }
@@ -371,11 +390,10 @@
 </style>
 </head>
 <body>
-<header>
+<header id="topbar">
   <h1><span>&#8383;</span> Bitcoin Dashboard</h1>
   <div class="head-right">
-    <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details"><i class="dot" id="sync-dot"></i><span id="sync-text">Lokal</span></button>
-    <button type="button" class="iconbtn" id="theme-toggle" aria-label="Theme wechseln">Dunkel</button>
+    <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details" aria-label="Sync-Status"><i class="dot" id="sync-dot"></i><span id="sync-text" class="sr-only">Lokal</span></button>
     <button type="button" class="iconbtn" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
 </header>
@@ -414,7 +432,13 @@
 
   <div class="card chart-card">
     <div class="chart-title">Wertentwicklung</div>
-    <div class="chart-sub">Eingesetzte Euro vs. Portfoliowert zum jeweiligen Tageskurs</div>
+    <div class="range-seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung">
+      <button type="button" data-range="1w">1W</button>
+      <button type="button" data-range="1m">1M</button>
+      <button type="button" data-range="6m">6M</button>
+      <button type="button" data-range="1y">1J</button>
+      <button type="button" data-range="max" class="sel">Max</button>
+    </div>
     <div class="legend">
       <span><i style="background:var(--line-main)"></i>Portfoliowert</span>
       <span><i style="background:var(--line-invest)"></i>Investiert</span>
@@ -424,7 +448,13 @@
 
   <div class="card chart-card" id="card-preis">
     <div class="chart-title">Bitcoin-Kurs</div>
-    <div class="chart-sub">Historischer BTC/EUR-Kurs mit eigenen K&auml;ufen und &Oslash; Kaufkurs</div>
+    <div class="range-seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs">
+      <button type="button" data-range="1w">1W</button>
+      <button type="button" data-range="1m">1M</button>
+      <button type="button" data-range="6m">6M</button>
+      <button type="button" data-range="1y">1J</button>
+      <button type="button" data-range="max" class="sel">Max</button>
+    </div>
     <div class="legend">
       <span><i style="background:var(--line-main)"></i>BTC-Kurs</span>
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
@@ -435,7 +465,13 @@
 
   <div class="card chart-card">
     <div class="chart-title">Sats-Bestand</div>
-    <div class="chart-sub">Kumulierter Zuwachs &uuml;ber Zeit</div>
+    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Sats-Bestand">
+      <button type="button" data-range="1w">1W</button>
+      <button type="button" data-range="1m">1M</button>
+      <button type="button" data-range="6m">6M</button>
+      <button type="button" data-range="1y">1J</button>
+      <button type="button" data-range="max" class="sel">Max</button>
+    </div>
     <div class="chart-wrap"><canvas id="chartSats"></canvas></div>
   </div>
 
@@ -455,7 +491,7 @@
   </footer>
 </div>
 
-<button type="button" id="fab" aria-label="Neue Bewegung erfassen">+</button>
+<button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <!-- ── Formular: Bewegung erfassen/bearbeiten ──────────────────────── -->
 <div class="overlay" id="form-overlay"></div>
@@ -494,6 +530,8 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
   <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
+  <button type="button" class="btn ghost" id="theme-toggle">Dunkles Design</button>
+  <hr class="divider">
   <button type="button" class="btn" id="s-paste">Einrichtungs-Code &uuml;bernehmen (aus Zwischenablage)</button>
   <div class="f-hint" style="margin:6px 0 12px">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &mdash; verbindet ohne Tippen.</div>
   <hr class="divider">
@@ -861,6 +899,9 @@ async function fetchSpot() {
 let person = null;
 let ALL = [];            // Zeilen {date, sats, eur, label, who, typ, id} der gewählten Person
 let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
+/* Zeitraum pro Chart (ersetzt den früheren Zoom) */
+const RANGES = { wert: "max", preis: "max", sats: "max" };
+const RANGE_DAYS = { "1w": 7, "1m": 30, "6m": 183, "1y": 365 };
 function rebuildAll() {
   ALL = liveMovs().filter(m => m.person === person)
     .slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -951,42 +992,51 @@ function renderCharts(market) {
     const stride = Math.ceil(arr.length / MAXPTS);
     return arr.filter((c, i) => i % stride === 0 || i === arr.length - 1 || buyTs.has(c.t));
   };
-  const ptsW = thin(candles.filter(c => c.t >= firstTs)).map(mapPt);
+  /* Zeitraum-Filter pro Chart: 1W/1M/6M/1J/Max */
+  const lastTs = candles.length ? candles[candles.length - 1].t : Date.now();
+  const cutFor = key => RANGE_DAYS[RANGES[key]] ? lastTs - RANGE_DAYS[RANGES[key]] * DAY : 0;
+  const inRange = (key, minTs) => {
+    const cut = Math.max(minTs || 0, cutFor(key));
+    const arr = candles.filter(c => c.t >= cut);
+    return arr.length >= 2 ? arr : candles.slice(-2);
+  };
+  const ptsW = thin(inRange("wert", firstTs)).map(mapPt);
   const labelsW = ptsW.map(p => p.t);
-  const tickCbW = (v, i) => (i % Math.ceil(labelsW.length / 7) === 0) ? fmtMonth(labelsW[i]) : "";
-
-  function rescaleY(chart) {
-    if (chart.__resetting) return;
-    const x = chart.scales.x;
+  const ptsS = thin(inRange("sats", firstTs)).map(mapPt);
+  const labelsS = ptsS.map(p => p.t);
+  /* X-Achse: Label-Anzahl richtet sich nach der Chartbreite — kein Overlap */
+  const tickCb = labels => {
+    const span = labels.length ? labels[labels.length - 1] - labels[0] : 0;
+    const fmt = span <= 200 * DAY
+      ? ts => new Date(ts).toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+      : fmtMonth;
+    return function (v, i) {
+      const w = (this.chart && this.chart.width) || 360;
+      const slots = Math.max(3, Math.min(6, Math.floor(w / 96)));
+      const every = Math.ceil(labels.length / slots);
+      return i % every === 0 ? fmt(labels[i]) : "";
+    };
+  };
+  /* Y-Achse: feste Schritte (10.000 € / 10 Mio Sats), auf Vielfache gerundet;
+     bei kurzen Zeiträumen automatisch feinere „schöne" Schritte (1/2/2,5/5 × 10^n) */
+  const axisBounds = (vals, prefStep) => {
     let lo = Infinity, hi = -Infinity;
-    chart.data.datasets.forEach((ds, di) => {
-      if (chart.getDatasetMeta(di).hidden) return;
-      const from = Math.max(0, Math.floor(x.min)), to = Math.min(ds.data.length - 1, Math.ceil(x.max));
-      for (let i = from; i <= to; i++) {
-        const v = ds.data[i];
-        if (v == null || !isFinite(v)) continue;
-        if (v < lo) lo = v;
-        if (v > hi) hi = v;
-      }
-    });
-    if (!isFinite(lo) || !isFinite(hi)) return;
-    if (lo === hi) { lo -= 1; hi += 1; }
-    const pad = (hi - lo) * 0.06;
-    chart.options.scales.y.min = Math.max(0, lo - pad);
-    chart.options.scales.y.max = hi + pad;
-    chart.update("none");
-  }
-  const isTouch = "ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0;
-  const zoomOpts = {
-    limits: { x: { minRange: 7 } },
-    pan: Object.assign(
-      { enabled: true, mode: "x", threshold: 20, onPanComplete: c => rescaleY(c.chart) },
-      isTouch ? {} : { modifierKey: "shift" }
-    ),
-    zoom: { pinch: { enabled: false }, wheel: { enabled: true, speed: 0.05, modifierKey: "ctrl" },
-            drag: { enabled: !isTouch, threshold: 8, backgroundColor: "rgba(138,138,142,0.12)",
-                    borderColor: "rgba(138,138,142,0.45)", borderWidth: 1 },
-            mode: "x", onZoomComplete: c => rescaleY(c.chart) }
+    for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
+    let step = prefStep;
+    const ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
+    if (ticks(step) < 2 || ticks(step) > 7) {
+      const raw = (hi - lo) / 4;
+      const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
+    }
+    return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
+  };
+  /* Aktiver Zeitraum-Button in der Trendfarbe der angezeigten Periode */
+  const tintSeg = (key, up) => {
+    const b = document.querySelector('.range-seg[data-chart="' + key + '"] button.sel');
+    if (b) { b.classList.toggle("pos", up); b.classList.toggle("neg", !up); }
   };
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
@@ -998,10 +1048,10 @@ function renderCharts(market) {
       titleFont: { size: 11, weight: "600" }, bodyFont: { size: 11 },
       cornerRadius: 8, padding: 8, boxWidth: 8, boxHeight: 8, boxPadding: 4,
       callbacks: { title: items => fmtDate(labelsW[items[0].dataIndex]) }
-    }, zoom: zoomOpts },
+    } },
     elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
     scales: {
-      x: { grid: { display: false }, ticks: { callback: tickCbW, maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
+      x: { grid: { display: false }, ticks: { callback: tickCb(labelsW), maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
       y: { position: "right", border: { display: false }, grid: { display: false }, ticks: { color: C.tick, font: { size: 11 } } }
     }
   };
@@ -1066,6 +1116,8 @@ function renderCharts(market) {
     el.style.top = Math.max(4, tooltip.caretY - el.offsetHeight - 12) + "px";
   }
 
+  const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
+  tintSeg("wert", ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true);
   new Chart($("chartWert"), {
     type: "line",
     plugins: [athPlugin],
@@ -1081,8 +1133,9 @@ function renderCharts(market) {
     options: { ...common, plugins: { ...common.plugins,
       tooltip: { enabled: false, external: wertTooltip } },
       scales: { ...common.scales,
-        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000,
-        callback: v => fmtInt(v) + " €" } } } }
+        y: { ...common.scales.y, min: bW.min, max: bW.max,
+          ticks: { ...common.scales.y.ticks, stepSize: bW.step,
+          callback: v => fmtInt(v) + " €" } } } }
   });
 
   /* Wholecoiner-Ziel: dezente Markierung bei 1 BTC (100 Mio. Sats) */
@@ -1106,23 +1159,27 @@ function renderCharts(market) {
       c.restore();
     }
   };
+  const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
+  tintSeg("sats", true);
   new Chart($("chartSats"), {
     type: "line",
     plugins: [wholecoinerPlugin],
-    data: { labels: labelsW, datasets: [
-      { label: "Sats", data: ptsW.map(p => p.sats), borderColor: C.main,
+    data: { labels: labelsS, datasets: [
+      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.main,
         borderWidth: 2, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
     options: { ...common, plugins: { ...common.plugins, tooltip: { ...common.plugins.tooltip,
       callbacks: { ...common.plugins.tooltip.callbacks,
+        title: items => fmtDate(labelsS[items[0].dataIndex]),
         label: c => " " + fmtInt(c.parsed.y) + " Sats" } } },
-      scales: { ...common.scales, y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000000,
-        callback: v => (v / 1e6).toLocaleString("de-DE") + " M" } } } }
+      scales: { ...common.scales,
+        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsS) } },
+        y: { ...common.scales.y, min: bS.min, max: bS.max, ticks: { ...common.scales.y.ticks, stepSize: bS.step,
+        callback: v => (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M" } } } }
   });
 
-  const ptsK = thin(candles).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
+  const ptsK = thin(inRange("preis", 0)).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
   const labelsK = ptsK.map(p => p.t);
-  const tickCbK = (v, i) => (i % Math.ceil(labelsK.length / 7) === 0) ? fmtMonth(labelsK[i]) : "";
   const byDay = new Map();
   for (const b of ALL) {
     if (!(b.eur > 0 && b.sats > 0)) continue;
@@ -1136,6 +1193,7 @@ function renderCharts(market) {
   const dotR = ptsK.map(() => 0);
   const vMax = Math.max(1, ...[...byDay.values()].map(v => v.eur));
   for (const [t, v] of byDay) {
+    if (!ptsK.length || t < ptsK[0].t - DAY) continue; /* Käufe vor dem gewählten Zeitraum nicht anzeigen */
     let i = ptsK.findIndex(p => p.t >= t);
     if (i < 0) i = ptsK.length - 1;
     dots[i] = ptsK[i].close;
@@ -1158,6 +1216,8 @@ function renderCharts(market) {
   };
 
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
+  const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
+  tintSeg("preis", kTrendUp);
   new Chart($("chartPreis"), {
     type: "line",
     data: { labels: labelsK, datasets: [
@@ -1185,74 +1245,32 @@ function renderCharts(market) {
           return " " + c.dataset.label + ": " + fmtEur(c.parsed.y, 0);
         } } } },
       scales: { ...common.scales,
-        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCbK } },
-        y: { ...common.scales.y, ticks: { ...common.scales.y.ticks, stepSize: 10000, callback: v => fmtInt(v) + " €" } } } }
+        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
+        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: v => fmtInt(v) + " €" } } } }
   });
 
-  /* Gesten: Doppelklick/-tipp Reset, Trackpad-Pan, gedämpfter Pinch */
-  for (const id of ["chartWert", "chartSats", "chartPreis"]) {
-    const cv = $(id);
-    if (!cv) continue;
-    cv.style.touchAction = "pan-y";
-    if (cv.dataset.rz) continue;
-    cv.dataset.rz = "1";
-    const resetZoomFor = () => {
-      const ch = Chart.getChart(cv);
-      if (!ch || !ch.resetZoom) return;
-      ch.__resetting = true;
-      ch.resetZoom("none");
-      delete ch.options.scales.y.min;
-      delete ch.options.scales.y.max;
-      ch.__resetting = false;
-      ch.update("none");
-    };
-    cv.addEventListener("dblclick", resetZoomFor);
-    cv.addEventListener("wheel", e => {
-      if (e.ctrlKey) return;
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-      const ch = Chart.getChart(cv);
-      if (!ch || !ch.pan) return;
-      e.preventDefault();
-      ch.pan({ x: -e.deltaX }, undefined, "default");
-      rescaleY(ch);
-    }, { passive: false });
-    let taps = 0, tapTimer = null;
-    cv.addEventListener("touchend", e => {
-      if (e.touches.length !== 0 || e.changedTouches.length !== 1) { taps = 0; return; }
-      taps++;
-      clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => { taps = 0; }, 400);
-      const ch = Chart.getChart(cv);
-      if (!ch || !ch.zoom) return;
-      if (taps === 2) {
-        const rect = cv.getBoundingClientRect();
-        const t = e.changedTouches[0];
-        ch.zoom({ x: 1.1, focalPoint: { x: t.clientX - rect.left, y: t.clientY - rect.top } });
-        rescaleY(ch);
-      } else if (taps >= 3) {
-        taps = 0;
-        resetZoomFor();
-      }
-    });
-    if (window.Hammer) {
-      const mc = new Hammer.Manager(cv, { touchAction: "pan-y" });
-      mc.add(new Hammer.Pinch());
-      let prevScale = 1;
-      mc.on("pinchstart", () => { prevScale = 1; });
-      mc.on("pinch", ev => {
-        const ch = Chart.getChart(cv);
-        if (!ch || !ch.zoom) return;
-        const raw = ev.scale / prevScale;
-        prevScale = ev.scale;
-        const f = 1 + (raw - 1) * 0.4;
-        const rect = cv.getBoundingClientRect();
-        ch.zoom({ x: f, focalPoint: { x: ev.center.x - rect.left, y: ev.center.y - rect.top } });
-      });
-      mc.on("pinchend", () => { const ch = Chart.getChart(cv); if (ch) rescaleY(ch); });
-    }
-    cv.style.touchAction = "pan-y";
-  }
 }
+
+/* ═══════════ Zeitraum-Buttons (pro Chart, ersetzen den Zoom) ═══════════ */
+document.querySelectorAll(".range-seg").forEach(seg => seg.addEventListener("click", e => {
+  const b = e.target.closest("button[data-range]");
+  if (!b || b.classList.contains("sel")) return;
+  RANGES[seg.dataset.chart] = b.dataset.range;
+  seg.querySelectorAll("button").forEach(x => { x.classList.toggle("sel", x === b); x.classList.remove("pos", "neg"); });
+  if (lastMarket) renderCharts(lastMarket);
+}));
+
+/* ═══════════ Kopfzeile: slidet beim Runterscrollen weg ═══════════ */
+(() => {
+  const bar = $("topbar");
+  let lastY = 0;
+  addEventListener("scroll", () => {
+    const y = Math.max(0, window.scrollY);
+    if (Math.abs(y - lastY) < 4) return;
+    bar.classList.toggle("hide", y > 72 && y > lastY);
+    lastY = y;
+  }, { passive: true });
+})();
 
 /* ═══════════ Bewegungs-Tabelle ═══════════ */
 function renderTable() {
@@ -1547,7 +1565,7 @@ $("import-input").addEventListener("change", async () => {
 const themeBtn = $("theme-toggle");
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  themeBtn.textContent = t === "dark" ? "Hell" : "Dunkel";
+  themeBtn.textContent = t === "dark" ? "Helles Design" : "Dunkles Design";
   try { localStorage.setItem(LS_THEME, t); } catch (e) {}
   if (lastMarket) renderCharts(lastMarket);
 }

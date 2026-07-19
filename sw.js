@@ -1,14 +1,12 @@
 /* Bitcoin Dashboard – Service Worker: App-Hülle offlinefähig halten */
-const CACHE = "btc-dash-v4";
+const CACHE = "btc-dash-v5";
 const SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon-180.png",
   "./icon-512.png",
-  "https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js",
-  "https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js",
-  "https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.umd.min.js"
+  "https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
