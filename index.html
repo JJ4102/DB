@@ -92,6 +92,7 @@
     --dot-border: #FFFFFF;
     /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
     --ch-after: #D6D6DA;
+    --fill-after: rgba(140,140,146,0.05);  /* Flaechen-Fade nach dem Scrub-Marker */
     --base-line: rgba(138,138,142,0.32);
   }
   html[data-theme="dark"] {
@@ -126,6 +127,7 @@
     --avg-line: #9A9AA0;
     --dot-border: #131316;
     --ch-after: #3C3C42;
+    --fill-after: rgba(154,154,160,0.07); /* Flaechen-Fade nach dem Scrub-Marker */
     --base-line: rgba(154,154,160,0.34);
   }
 
@@ -1216,7 +1218,7 @@ function renderCharts(market) {
     fillPos: cssv("--fill-pos"), fillNeg: cssv("--fill-neg"),
     price: cssv("--line-price"), avg: cssv("--avg-line"),
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
-    after: cssv("--ch-after"), base: cssv("--base-line"),
+    after: cssv("--ch-after"), fillAfter: cssv("--fill-after"), base: cssv("--base-line"),
     btc: cssv("--btc")
   };
   Chart.defaults.font.family = cssv("--font-family");
@@ -1307,7 +1309,9 @@ function renderCharts(market) {
     plugins: [baselinePlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
-        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)) },
+        /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven */
+        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)),
+                   backgroundColor: c => (scrubAfter(scW, c) ? C.fillAfter : undefined) },
         fill: { target: 1, above: C.fillPos, below: C.fillNeg },
         borderWidth: denseW ? 1.6 : 2.21, pointRadius: 0, pointHitRadius: 6, tension: denseW ? 0.35 : 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
@@ -1443,17 +1447,19 @@ function renderCharts(market) {
   };
   const chK = new Chart($("chartPreis"), {
     type: "line",
-    plugins: [baselinePlugin, scrubPlugin, buyMarkerPlugin],
+    plugins: [baselinePlugin, buyHaloPlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
       { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: C.price,
         segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : C.price) },
         borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.avg,
         borderWidth: 1.4, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
-      /* Käufe: Datensatz bleibt (Legende/Achsen unveraendert), aber ohne sichtbare Dauer-Punkte —
-         der Punkt erscheint nur beim Einrasten via buyMarkerPlugin (Punkt 4) */
+      /* Käufe: permanent sichtbare Punkte (Groesse nach Kaufsumme), wie urspruenglich */
       { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
-        showLine: false, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0, order: 1 }
+        showLine: false, pointBorderColor: C.dotBorder, pointBorderWidth: 0.75,
+        pointRadius: c => dotR[c.dataIndex] || 0,
+        pointHoverRadius: c => (dotR[c.dataIndex] || 0) + 1.5,
+        pointHitRadius: 4, order: 1 }
     ]},
     options: { ...common,
       scales: { ...common.scales,
