@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bitcoin">
-<meta name="theme-color" content="#0D0D0F" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -77,29 +77,26 @@
     --tip-body: #8A8A8E;
     --ath-line: rgba(138,138,142,0.35);
     --ath-text: rgba(138,138,142,0.9);
-    --line-main: var(--positive);    /* Chart 3: semantisch wie in der TR-App */
+    --line-main: var(--positive);    /* Charts 2+3: semantisch wie in der TR-App */
     --line-loss: var(--negative);
-    --tr-green: #5CCA51;                /* TR-Chartgruen, aus den App-Screenshots gesampelt (hell wie dunkel identisch) */
-    --line-wert: var(--tr-green);       /* Chart 1: Portfoliowert ueber Investiert */
+    --line-wert: var(--btc);            /* Chart 1: Portfoliowert ueber Investiert (BTC-Orange) */
     --line-wert-loss: #B3261E;          /* Chart 1: Portfoliowert unter Investiert (dunkles Rot) */
-    --line-invest: rgba(92,202,81,0.5);       /* Investiert: dezent, Farbe der anliegenden Flaeche */
+    --line-invest: rgba(247,147,26,0.5);      /* Investiert: dezent, Farbe der anliegenden Flaeche */
     --line-invest-loss: rgba(179,38,30,0.5);
-    --fill-pos: rgba(92,202,81,0.05);   /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
+    --fill-pos: rgba(247,147,26,0.05);  /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
     --fill-neg: rgba(179,38,30,0.05);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
-    --line-price: var(--text);          /* Chart 2: Preiskurve neutral (Near-Black / Off-White) */
-    --buy-dot: #4A4A50;                 /* Kaufpunkte: dunkles Grau im Hellmodus */
-    --avg-line: #7A7A80;                /* Oe-Kaufkurs-Linie: mittleres Grau */
+    --buy-dot: #0A0A0B;
     --dot-border: #FFFFFF;
     /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
     --ch-after: #D6D6DA;
-    --base-line: rgba(138,138,142,0.3);
+    --base-line: rgba(138,138,142,0.32);
   }
   html[data-theme="dark"] {
     color-scheme: dark;
-    --bg:             #0D0D0F;   /* dunkles Grau, kein reines Schwarz */
-    --surface:        #0D0D0F;
-    --surface-subtle: #1A1A1D;
-    --hairline:       #26262A;
+    --bg:             #131316;   /* sehr dunkles Grau, dezent ueber reinem Schwarz (iOS-Dark-Konvention) */
+    --surface:        #131316;
+    --surface-subtle: #202024;   /* KPI-Karten heben sich klar vom Hintergrund ab */
+    --hairline:       #2C2C31;
     --text:           #F5F5F6;   /* Off-White */
     --muted:          #9A9AA0;
     --text-tertiary:  #5E5E64;
@@ -111,22 +108,21 @@
     --warning:        #F5C24B;
     --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
     --ch-tick: #9A9AA0;
-    --tip-bg: #1A1A1D;
-    --tip-border: #26262A;
+    --tip-bg: #202024;
+    --tip-border: #2C2C31;
     --tip-title: #F5F5F6;
     --tip-body: #9A9AA0;
     --ath-line: rgba(154,154,160,0.35);
     --ath-text: rgba(154,154,160,0.9);
     --line-wert-loss: #C4372B;
-    --line-invest: rgba(92,202,81,0.55);
+    --line-invest: rgba(247,147,26,0.55);
     --line-invest-loss: rgba(196,55,43,0.55);
-    --fill-pos: rgba(92,202,81,0.07);
+    --fill-pos: rgba(247,147,26,0.07);
     --fill-neg: rgba(196,55,43,0.08);
-    --buy-dot: #C2C2C8;                 /* Kaufpunkte: helles Grau im Dunkelmodus */
-    --avg-line: #9A9AA0;
-    --dot-border: #0D0D0F;
+    --buy-dot: #F5F5F6;
+    --dot-border: #131316;
     --ch-after: #3C3C42;
-    --base-line: rgba(154,154,160,0.33);
+    --base-line: rgba(154,154,160,0.34);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -210,27 +206,31 @@
     padding: var(--space-2) var(--screen-padding) var(--space-4);
   }
   .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
-  .hero-label .btc-sym { color: var(--btc); } /* ₿-Symbol + BTC-Bestand in der Identitätsfarbe */
+  .hero-label .btc-sym { color: var(--btc); } /* ₿ als Identitätsfarbe (Abweichung 7) */
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
   .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
   /* Prozentuale Veränderung direkt neben dem Portfoliowert, leicht kleiner */
   .hero-pct { font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .hero-row { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
   .chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; font-variant-numeric: tabular-nums; }
+  .hero-sub { font-size: var(--text-caption); color: var(--muted); }
   /* Semantische Farben wie in der TR-App — Vorzeichen tragen die Bedeutung zusaetzlich */
   .pos { color: var(--positive); }
   .neg { color: var(--negative); }
 
   /* ── KPI-Karten im TR-App-Stil (wie Position/Performance) ───────── */
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: var(--space-3); margin-bottom: var(--space-6); }
-  .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4); }
-  .kpi-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
+  .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-4) calc(var(--space-4) + 2px); display: flex; flex-direction: column; justify-content: flex-start; }
+  /* Klare Typo-Hierarchie: Label klein/muted, Wert deutlich groesser/fett */
+  .kpi-label { font-size: var(--text-caption); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); line-height: 1.3; }
   .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
-  .kpi-value { font-size: var(--text-h3); font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-  .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 2px; }
-  .grid4 .chip { margin-top: 2px; } /* nominale Veränderung unter „Investiert“ */
+  .kpi-value { font-size: var(--text-h2); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 3px; }
+  .grid4 .chip { margin-top: 3px; } /* nominale Veränderung unter „Investiert“ */
 
   .chart-card { margin-bottom: var(--space-6); }
-  .chart-title { font-size: var(--text-h3); font-weight: 600; margin-bottom: var(--space-3); }
+  /* Chart-Ueberschriften: Caps, groesser, fett (Punkt 10) */
+  .chart-title { font-size: 1.375rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: var(--space-3); }
   /* Zeitraum-Auswahl im TR-Stil: reine Textbuttons, aktiv = Trendfarbe */
   .range-seg { display: flex; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
   .range-seg button {
@@ -246,8 +246,7 @@
   .chart-wrap, .chart-wrap canvas {
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  /* Aktiver Scrub blockiert das Seiten-Scrollen komplett (Touch startet den Scrub sofort) */
-  .chart-wrap canvas { touch-action: none; }
+  .chart-wrap canvas { touch-action: pan-y; }
   /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
   .scrub-line {
     display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
@@ -400,11 +399,22 @@
   @media (max-width: 700px) {
     body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .hero { padding: var(--space-2) var(--screen-padding) var(--space-3); }
-    /* KPI-Karten: 2x2-Raster wie Position/Performance in der App */
-    .grid4 { grid-template-columns: repeat(2, 1fr); margin-bottom: var(--space-5); }
+    /* KPI-Karten: randloser, horizontal scrollbarer Kartenstreifen mit Scroll-Snap
+       und unsichtbarer Scrollbar — wie „Position/Performance" in der TR-App */
+    .grid4 {
+      display: flex; grid-template-columns: none; grid-auto-rows: auto;
+      gap: var(--space-3); margin: 0 calc(-1 * var(--screen-padding)) var(--space-5);
+      padding: 2px var(--screen-padding);
+      overflow-x: auto; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .grid4::-webkit-scrollbar { display: none; }
+    .grid4 .card { flex: 0 0 43%; min-width: 148px; scroll-snap-align: start; }
     #skeleton .row { grid-template-columns: repeat(2, 1fr); }
     #skeleton .row .sk { height: 74px; }
     .chart-wrap { height: 300px; }
+    /* Charts auf iOS auf die volle Bildschirmbreite ausdehnen (Punkt 12) */
+    .chart-card .chart-wrap { margin: 0 calc(-1 * var(--screen-padding)); }
     th, td { padding: 10px 6px; }
     .legend { gap: 10px; }
   }
@@ -432,10 +442,13 @@
 </div>
 
 <div id="content" style="display:none">
-  <!-- Hero: der Portfoliowert dominiert; Label zeigt den BTC-Bestand -->
-  <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
-    <div class="hero-label"><span class="btc-sym">&#8383; <span id="k-btc-head">–</span></span><span id="stand"></span></div>
+  <!-- Hero: der Portfoliowert dominiert; Label zeigt den Satsbestand -->
+  <section class="hero" aria-label="Satsbestand und Portfoliowert">
+    <div class="hero-label"><span><span class="btc-sym">&#8383;</span> <span id="k-sats-head">–</span></span><span id="stand"></span></div>
     <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
+    <div class="hero-row">
+      <span class="hero-sub" id="k-wert-sub"></span>
+    </div>
   </section>
 
   <div class="grid4 stagger">
@@ -472,17 +485,17 @@
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
     <div class="legend">
-      <span><i style="background:var(--line-price)"></i>BTC-Kurs</span>
+      <span><i style="background:var(--line-main)"></i>BTC-Kurs</span>
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
-      <span><i style="background:var(--avg-line)"></i>&Oslash; Kaufkurs</span>
+      <span><i style="background:var(--buy-dot)"></i>&Oslash; Kaufkurs</span>
     </div>
     <div class="scrub-line" id="scrub-preis"></div>
     <div class="chart-wrap"><canvas id="chartPreis"></canvas></div>
   </div>
 
   <div class="card chart-card">
-    <div class="chart-title">Stack</div>
-    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Stack">
+    <div class="chart-title">Sats-Bestand</div>
+    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Sats-Bestand">
       <button type="button" data-range="1w">1W</button>
       <button type="button" data-range="1m">1M</button>
       <button type="button" data-range="6m">6M</button>
@@ -576,6 +589,11 @@ const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
 const DAY = 864e5;
 const fmtEur = (v, d = 2) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d }) + " €";
 const fmtInt = v => Math.round(v).toLocaleString("de-DE");
+/* Kompakte Y-Achsen-Beschriftung: 70.000 → „70k", auf ganze Tausender gerundet, keine Nachkommastellen (Punkt 11) */
+const fmtAxisK = v => {
+  if (!isFinite(v)) return "";
+  return Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k";
+};
 const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -956,14 +974,14 @@ function renderKpis(market) {
   const hasInvest = totEur > 0;
 
   countTo($("k-wert"), wert, v => fmtEur(v));
-  /* BTC-Bestand im Header: Satoshis ÷ 1e8 → BTC mit 8 Nachkommastellen (z. B. ₿ 0,59341919) */
-  $("k-btc-head").textContent = btc.toLocaleString("de-DE", { minimumFractionDigits: 8, maximumFractionDigits: 8 });
+  $("k-sats-head").textContent = fmtInt(totSats);
+  $("k-wert-sub").textContent = "₿ " + btc.toLocaleString("de-DE", { minimumFractionDigits: 8 });
   const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
   if (hasInvest) {
     const pct = (wert / totEur - 1) * 100;
     countTo(pnlEl, pnl, v => (v >= 0 ? "+" : "") + fmtEur(v));
     chip.className = "chip " + (pnl >= 0 ? "pos" : "neg");
-    pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
+    pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " %";
     pctEl.className = "hero-pct " + (pnl >= 0 ? "pos" : "neg");
   } else {
     pnlEl.textContent = "–"; pnlEl.__num = null;
@@ -971,8 +989,8 @@ function renderKpis(market) {
     pctEl.textContent = ""; pctEl.className = "hero-pct";
   }
   $("k-inv").textContent = fmtEur(totEur);
-  $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc) : "–";
-  countTo($("k-kurs"), live, v => fmtEur(v));
+  $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc, 0) : "–";
+  countTo($("k-kurs"), live, v => fmtEur(v, 0));
   $("k-kurs-sub").textContent = liveOk ? "Live-Kurs" : "Kurs (Cache)";
 
   /* ATH-Kachel: persoenliches Portfoliowert-ATH ueber die gesamte Historie */
@@ -990,11 +1008,11 @@ function renderKpis(market) {
   }
   if (ath > 0) {
     const dist = (wert / ath - 1) * 100;
-    $("k-ath").textContent = fmtEur(ath);
+    $("k-ath").textContent = fmtEur(ath, 0);
     $("k-ath-date").textContent = fmtDate(athTs);
     $("k-ath-sub").innerHTML =
       '<span class="' + (dist >= -0.05 ? "pos" : "neg") + '">' +
-      (dist >= 0 ? "+" : "") + dist.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %</span>";
+      (dist >= 0 ? "+" : "") + dist.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %</span>";
   } else {
     $("k-ath").textContent = "–";
     $("k-ath-date").textContent = "";
@@ -1007,7 +1025,13 @@ function renderKpis(market) {
 
 /* ═══════════ TR-Scrubbing: Snap-Marker, Puls, Vor/Nach-Färbung ═══════════ */
 const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
+/* Gesten-Feintuning: ruhiger Scrub + saubere Trennung von vertikalem Scrollen */
+const SCRUB_HOLD_MS = 180;   /* Punkt 9: so lange halten, bis Scrub startet */
+const SCRUB_MOVE_TOL = 6;    /* Punkt 7: Mindest-Fingerweg (px) bis der Punkt wechselt */
+const SCRUB_SCROLL_TOL = 10; /* vertikale Toleranz vor Aktivierung → als Scroll werten (Punkt 8) */
+const SCRUB_ACTIVATE_DX = 14;/* klar horizontale Geste aktiviert sofort */
+const SCRUB_SNAP_PX = 22;    /* Punkt 5: Einrast-Radius auf Kaufpunkte */
+const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %";
 /* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
 const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
 function scrubHtml(date, value, delta, neg, extra) {
@@ -1030,9 +1054,26 @@ const scrubPlugin = {
     c.save();
     c.fillStyle = color;
     c.globalAlpha = 0.18 * k;                       /* Halo-Ring */
-    c.beginPath(); c.arc(el.x, el.y, 3.5 + 3.5 * k, 0, 2 * Math.PI); c.fill();
+    c.beginPath(); c.arc(el.x, el.y, 7 + 7 * k, 0, 2 * Math.PI); c.fill();
     c.globalAlpha = 1;                              /* Kern */
     c.beginPath(); c.arc(el.x, el.y, 4 + 1.5 * k, 0, 2 * Math.PI); c.fill();
+    c.restore();
+  }
+};
+/* Käufe (Punkt 4): keine Dauer-Punkte mehr — der Kaufpunkt wird nur hervorgehoben,
+   wenn der Scrub-Indikator darauf einrastet. Details laufen in der Scrub-Zeile oben.
+   Zeichnet on-canvas, verschiebt also weder Legende noch Layout. */
+const buyMarkerPlugin = {
+  id: "buyMarker",
+  afterDatasetsDraw(chart) {
+    const s = chart.$scrub, b = chart.$buys;
+    if (!s || s.i < 0 || !b || !b.info[s.i]) return;
+    const el = chart.getDatasetMeta(0).data[s.i];
+    if (!el) return;
+    const c = chart.ctx, r = Math.max(5, (b.radius[s.i] || 0) + 1.5);
+    c.save();
+    c.fillStyle = b.color; c.strokeStyle = b.border; c.lineWidth = 2;
+    c.beginPath(); c.arc(el.x, el.y, r, 0, 2 * Math.PI); c.fill(); c.stroke();
     c.restore();
   }
 };
@@ -1048,7 +1089,8 @@ const baselinePlugin = {
     const c = chart.ctx;
     c.save();
     c.strokeStyle = s.cfg.baseColor;
-    c.lineWidth = 1.5; c.lineCap = "round"; c.setLineDash([0.1, 6]);
+    /* Punkt 6: praesentere Punkte — dicker/groesser (an TR-Screenshots orientiert) */
+    c.lineWidth = 3; c.lineCap = "round"; c.setLineDash([0.1, 8]);
     c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
     c.restore();
   }
@@ -1060,16 +1102,8 @@ function attachScrub(chart, s, cfg) {
   s.t0 = 0; s.raf = 0;
   chart.$scrub = s;
   const line = $(cfg.lineId);
-  const show = i => {
-    if (!line) return;
-    if (i < 0) {
-      /* hideIdle: Zeile nur waehrend des Scrubbens zeigen (redundant zum Header) */
-      if (cfg.hideIdle) { line.innerHTML = ""; if (cfg.onIdle) cfg.onIdle(); return; }
-      i = cfg.n - 1; /* Grundzustand: letzter Punkt des Zeitraums */
-    }
-    line.innerHTML = cfg.n ? cfg.html(i) : "";
-  };
-  show(-1);
+  const show = i => { if (line) line.innerHTML = cfg.n ? cfg.html(i) : ""; };
+  show(cfg.n - 1); /* Grundzustand: letzter Punkt des Zeitraums */
   const loop = () => {
     s.raf = 0;
     if (s.i < 0 || !chart.ctx) return;
@@ -1079,7 +1113,7 @@ function attachScrub(chart, s, cfg) {
   const setIdx = i => {
     if (i === s.i) return;
     s.i = i;
-    show(i);
+    show(i < 0 ? cfg.n - 1 : i);
     chart.update("none"); /* Segmentfarben vor/nach Marker neu auswerten */
     if (i >= 0 && !REDUCED_MOTION && !s.raf) { s.t0 = performance.now(); loop(); }
   };
@@ -1089,28 +1123,71 @@ function attachScrub(chart, s, cfg) {
     const x = e.clientX - r.left;
     const { left, right } = chart.chartArea;
     if (x < left - 16 || x > right + 16) return -1;
-    const xc = Math.min(right, Math.max(left, x));
-    const v = chart.scales.x.getValueForPixel(xc);
-    let i = Math.max(0, Math.min(cfg.n - 1, Math.round(v)));
-    /* Kaufpunkte haben Vorrang: im Fangradius rastet der Scrub auf ihnen ein */
-    if (cfg.snapIdx) i = cfg.snapIdx(i, xc);
-    return i;
+    const cx = Math.min(right, Math.max(left, x));
+    let idx = Math.max(0, Math.min(cfg.n - 1, Math.round(chart.scales.x.getValueForPixel(cx))));
+    /* Punkt 5: auf den naechstgelegenen Kaufpunkt einrasten, wenn nah genug */
+    if (cfg.snap && cfg.snap.length) {
+      let best = -1, bestD = SCRUB_SNAP_PX;
+      for (const si of cfg.snap) {
+        const d = Math.abs(chart.scales.x.getPixelForValue(si) - cx);
+        if (d <= bestD) { bestD = d; best = si; }
+      }
+      if (best >= 0) idx = best;
+    }
+    return idx;
   };
   chart.canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
   const ac = chart.canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
-  let touching = false;
-  chart.canvas.addEventListener("pointerdown", e => {
-    if (e.pointerType !== "mouse") { touching = true; setIdx(idxAt(e)); }
+  const canvas = chart.canvas;
+
+  /* Desktop: Maus-Hover scrubbt direkt (kein Scroll-Konflikt) */
+  canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") setIdx(idxAt(e)); }, o);
+  canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setIdx(-1); }, o);
+
+  /* Touch: Scrub erst nach kurzem Halten (Punkt 9). Ein vertikaler Swipe scrollt die Seite
+     normal weiter (Punkt 8); erst bei Aktivierung wird das Scrollen unterbunden. Kleine
+     Fingerbewegungen wechseln den Punkt nicht sofort (ruhiger, Punkt 7). */
+  let holdTimer = 0, active = false, startX = 0, startY = 0, lastX = 0, pid = -1;
+  const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; } };
+  const activate = () => {
+    active = true;
+    canvas.style.touchAction = "none";               /* Seite waehrend Scrub nicht scrollen */
+    try { canvas.setPointerCapture(pid); } catch (_) {}
+    lastX = startX;
+    setIdx(idxAt({ clientX: startX }));
+  };
+  const stopTouch = () => {
+    clearHold();
+    if (active) { active = false; canvas.style.touchAction = ""; }
+    if (pid >= 0) { try { canvas.releasePointerCapture(pid); } catch (_) {} }
+    pid = -1;
+    setIdx(-1);
+  };
+  canvas.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse") return;
+    pid = e.pointerId; startX = e.clientX; startY = e.clientY; lastX = e.clientX; active = false;
+    clearHold();
+    holdTimer = setTimeout(() => { holdTimer = 0; activate(); }, SCRUB_HOLD_MS);
   }, o);
-  chart.canvas.addEventListener("pointermove", e => {
-    if (e.pointerType === "mouse" || touching) setIdx(idxAt(e));
+  canvas.addEventListener("pointermove", e => {
+    if (e.pointerType === "mouse") return;
+    if (!active) {
+      if (!holdTimer) return;                          /* schon verworfen/aktiv */
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      /* klar vertikale Bewegung vor dem Halten → Nutzer scrollt: Scrub verwerfen */
+      if (Math.abs(dy) > SCRUB_SCROLL_TOL && Math.abs(dy) > Math.abs(dx)) { clearHold(); pid = -1; return; }
+      /* klar horizontale Bewegung → sofort scrubben, ohne aufs Halten zu warten */
+      if (Math.abs(dx) > SCRUB_ACTIVATE_DX && Math.abs(dx) >= Math.abs(dy)) { clearHold(); activate(); setIdx(idxAt(e)); }
+      return;
+    }
+    if (Math.abs(e.clientX - lastX) < SCRUB_MOVE_TOL) return;  /* Punkt 7: Zittern ignorieren */
+    lastX = e.clientX;
+    setIdx(idxAt(e));
   }, o);
-  /* Aktiver Touch-Scrub darf kein Seiten-Scrollen ausloesen (zusaetzlich zu touch-action:none) */
-  chart.canvas.addEventListener("touchmove", e => { if (touching) e.preventDefault(); }, { signal: ac.signal, passive: false });
-  const end = () => { touching = false; setIdx(-1); };
-  chart.canvas.addEventListener("pointerup", end, o);
-  chart.canvas.addEventListener("pointercancel", end, o);
-  chart.canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") end(); }, o);
+  /* Waehrend aktivem Scrub das native Scrollen sicher unterbinden */
+  canvas.addEventListener("touchmove", e => { if (active) e.preventDefault(); }, { passive: false, signal: ac.signal });
+  canvas.addEventListener("pointerup", stopTouch, o);
+  canvas.addEventListener("pointercancel", stopTouch, o);
   /* Erst jetzt existiert chart.$scrub — neu zeichnen, damit die gepunktete
      Startwert-Linie sofort sichtbar ist (vorher erst nach dem ersten Tap) */
   chart.draw();
@@ -1129,7 +1206,6 @@ function renderCharts(market) {
     wert: cssv("--line-wert"), wertLoss: cssv("--line-wert-loss"),
     invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
     fillPos: cssv("--fill-pos"), fillNeg: cssv("--fill-neg"),
-    price: cssv("--line-price"), avg: cssv("--avg-line"),
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
     after: cssv("--ch-after"), base: cssv("--base-line"),
     btc: cssv("--btc")
@@ -1138,8 +1214,10 @@ function renderCharts(market) {
 
   const mapPt = c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close, wert: sats / 1e8 * c.close }; };
   const firstTs = ALL.length ? new Date(ALL[0].date + "T00:00:00Z").getTime() : Date.UTC(2023, 5, 6);
-  /* iOS-Speicher schonen: Punkte ausdünnen, Kauf-Tage und letzter Punkt bleiben immer erhalten */
-  const MAXPTS = 700;
+  /* iOS-Speicher schonen: Punkte ausdünnen, Kauf-Tage und letzter Punkt bleiben immer erhalten.
+     Auf schmalen Screens aggressiver ausduennen, damit dichte „Max"-Kurven clean statt gestaucht wirken (Punkt 13) */
+  const IS_NARROW = (window.innerWidth || 800) <= 700;
+  const MAXPTS = IS_NARROW ? 340 : 700;
   const buyTs = new Set(ALL.filter(b => b.eur > 0 && b.sats > 0)
     .map(b => new Date(b.date + "T00:00:00Z").getTime()));
   const thin = arr => {
@@ -1174,7 +1252,8 @@ function renderCharts(market) {
     };
   };
   /* Y-Achse: feste Schritte (10.000 € / 10 Mio Sats), auf Vielfache gerundet;
-     bei kurzen Zeiträumen automatisch feinere „schöne" Schritte (1/2/2,5/5 × 10^n) */
+     bei kurzen Zeiträumen automatisch feinere „schöne" Schritte (1/2/5 × 10^n) — bewusst
+     ohne 2,5er-Schritt, damit die kompakten „k"-Labels ganze Tausender bleiben (Punkt 11) */
   const axisBounds = (vals, prefStep) => {
     let lo = Infinity, hi = -Infinity;
     for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
@@ -1185,7 +1264,7 @@ function renderCharts(market) {
     if (ticks(step) < 2 || ticks(step) > 7) {
       const raw = (hi - lo) / 4;
       const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-      step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
+      step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
     }
     return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
   };
@@ -1193,6 +1272,8 @@ function renderCharts(market) {
     responsive: true, maintainAspectRatio: false, animation: false,
     devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
     events: [], /* Hover/Tooltip aus — Interaktion läuft über das Scrubbing */
+    /* bei voller Breite (iOS) die Achsenlabels leicht vom Bildschirmrand einruecken */
+    layout: { padding: { right: IS_NARROW ? 4 : 0, left: 2 } },
     plugins: { legend: { display: false }, tooltip: { enabled: false } },
     elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
     scales: {
@@ -1207,8 +1288,11 @@ function renderCharts(market) {
 
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   const scW = { i: -1 };
-  /* Portfoliowert: TR-Gruen ueber Investiert, dunkles Rot darunter */
+  /* Portfoliowert: BTC-Orange ueber Investiert, dunkles Rot darunter */
   const colW = i => (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
+  /* Punkt 13: auf schmalen Screens im „Max"-Zeitraum duennere/staerker geglaettete Kurve,
+     damit sie bei hoher Datendichte nicht gestaucht/zu dick wirkt */
+  const denseW = IS_NARROW && RANGES.wert === "max";
   const chW = new Chart($("chartWert"), {
     type: "line",
     plugins: [baselinePlugin, scrubPlugin],
@@ -1216,30 +1300,28 @@ function renderCharts(market) {
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
         segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)) },
         fill: { target: 1, above: C.fillPos, below: C.fillNeg },
-        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2 },
+        borderWidth: denseW ? 1.6 : 2.21, pointRadius: 0, pointHitRadius: 6, tension: denseW ? 0.35 : 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
-        segment: { borderColor: c => (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur
-          ? C.investLoss : C.invest) },
+        /* Punkt 3: gleicher Ausblend-Effekt nach dem Scrub-Marker wie bei der Portfoliowert-Kurve */
+        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after
+          : (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur ? C.investLoss : C.invest)) },
         borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
     options: { ...common,
       scales: { ...common.scales,
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
-          callback: v => fmtInt(v) + " €" } } } }
+          callback: fmtAxisK } } } }
   });
   attachScrub(chW, scW, {
     lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
     baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
-    /* Zeile ist redundant zum Header → nur waehrend des Scrubbens sichtbar */
-    hideIdle: true,
-    onIdle: () => { if (ptsW.length) $("legend-inv").textContent = fmtEur(ptsW[ptsW.length - 1].eur); },
     html: i => {
       const p = ptsW[i];
       const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
       /* Investiert-Summe steht in der Legende (laeuft beim Scrubben mit) —
          nicht mehr in der Scrub-Zeile, damit dort kein Zeilenumbruch entsteht */
-      $("legend-inv").textContent = fmtEur(p.eur);
+      $("legend-inv").textContent = fmtEur(p.eur, 0);
       return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
         pct != null ? fmtPct(pct) : "", pct != null && pct < 0, "");
     }
@@ -1255,10 +1337,11 @@ function renderCharts(market) {
       const c = chart.ctx;
       c.save();
       c.strokeStyle = C.athLine;
-      c.setLineDash([2, 5]);
-      c.lineWidth = 1;
+      /* Punkt 6: gleiche praesentere Punkte wie die Startwert-Linie */
+      c.lineCap = "round"; c.setLineDash([0.1, 8]);
+      c.lineWidth = 3;
       c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
-      c.setLineDash([]);
+      c.setLineDash([]); c.lineCap = "butt";
       c.font = "10px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       c.textBaseline = "bottom";
       c.fillStyle = C.athText;
@@ -1312,75 +1395,47 @@ function renderCharts(market) {
     if (i < 0) i = ptsK.length - 1;
     dots[i] = ptsK[i].close;
     dotInfo[i] = v;
-    dotR[i] = 1.4 + 3.15 * Math.sqrt(v.eur / vMax); /* 30 % kleiner als zuvor */
+    dotR[i] = 2 + 4.5 * Math.sqrt(v.eur / vMax);
   }
   const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
 
+  /* Kauf-Indizes für Snap (Punkt 5) und Highlight-Marker (Punkt 4) */
+  const buyIdx = [];
+  dotInfo.forEach((v, i) => { if (v) buyIdx.push(i); });
+
+  const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
   const scK = { i: -1 };
-  /* Kaufpunkt-Halos: derselbe Puls wie am Scrub-Punkt, nochmals halbiert,
-     in Farbe und Groesse an den jeweiligen Kaufpunkt gekoppelt */
-  const buyHaloPlugin = {
-    id: "buyHalo",
-    afterDatasetsDraw(chart) {
-      const meta = chart.getDatasetMeta(2);
-      if (!meta || !meta.data.length) return;
-      const s = chart.$scrub;
-      const k = (REDUCED_MOTION || !s || s.i < 0) ? 1
-        : 0.5 - 0.5 * Math.cos(((performance.now() - s.t0) % 1600) / 1600 * 2 * Math.PI);
-      const c = chart.ctx;
-      c.save();
-      c.fillStyle = C.buy;
-      for (let j = 0; j < dotR.length; j++) {
-        if (!dotR[j]) continue;
-        const el = meta.data[j];
-        if (!el) continue;
-        c.globalAlpha = 0.18 * k;
-        c.beginPath(); c.arc(el.x, el.y, dotR[j] + 1.75 + 1.75 * k, 0, 2 * Math.PI); c.fill();
-      }
-      c.restore();
-    }
-  };
   const chK = new Chart($("chartPreis"), {
     type: "line",
-    plugins: [baselinePlugin, buyHaloPlugin, scrubPlugin],
+    plugins: [baselinePlugin, scrubPlugin, buyMarkerPlugin],
     data: { labels: labelsK, datasets: [
-      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: C.price,
-        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : C.price) },
+      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: kTrendUp ? C.main : C.loss,
+        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : (kTrendUp ? C.main : C.loss)) },
         borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
-      { label: "Ø Kaufkurs", data: avgLine, borderColor: C.avg,
-        borderWidth: 1.4, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
+      { label: "Ø Kaufkurs", data: avgLine, borderColor: C.buy, borderDash: [5, 4],
+        borderWidth: 2, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
+      /* Käufe: Datensatz bleibt (Legende/Achsen unveraendert), aber ohne sichtbare Dauer-Punkte —
+         der Punkt erscheint nur beim Einrasten via buyMarkerPlugin (Punkt 4) */
       { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
-        showLine: false, pointBorderColor: C.dotBorder, pointBorderWidth: 0.75,
-        pointRadius: c => dotR[c.dataIndex] || 0,
-        pointHoverRadius: c => (dotR[c.dataIndex] || 0) + 1.5,
-        pointHitRadius: 4, order: 1 }
+        showLine: false, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0, order: 1 }
     ]},
     options: { ...common,
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
-        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: v => fmtInt(v) + " €" } } } }
+        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisK } } } }
   });
+  chK.$buys = { info: dotInfo, radius: dotR, color: C.buy, border: C.dotBorder };
   attachScrub(chK, scK, {
-    lineId: "scrub-preis", n: ptsK.length,
-    /* Auf einem Kaufpunkt uebernimmt der Marker dessen Farbe */
-    colorAt: i => (dotInfo[i] ? C.buy : C.price),
-    baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base,
-    /* Kaufpunkte haben Vorrang: innerhalb des Fangradius rastet der Scrub ein */
-    snapIdx: (i, x) => {
-      let best = -1, bd = Infinity;
-      for (let j = 0; j < dotR.length; j++) {
-        if (!dotR[j]) continue;
-        const d = Math.abs(chK.scales.x.getPixelForValue(j) - x);
-        if (d < bd) { bd = d; best = j; }
-      }
-      return best >= 0 && bd <= Math.max(14, dotR[best] + 10) ? best : i;
-    },
+    lineId: "scrub-preis", n: ptsK.length, colorAt: () => (kTrendUp ? C.main : C.loss),
+    baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base, snap: buyIdx,
     html: i => {
       const p = ptsK[i];
+      const pct = ptsK[0].close > 0 ? (p.close / ptsK[0].close - 1) * 100 : null;
       const v = dotInfo[i];
-      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false,
-        v ? "Kauf " + fmtEur(v.eur) + " · " + fmtInt(v.sats) + " Sats" : "");
+      return scrubHtml(fmtDate(p.t), fmtEur(p.close, 0),
+        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
+        v ? "Kauf " + fmtEur(v.eur, Number.isInteger(v.eur) ? 0 : 2) + " · " + fmtInt(v.sats) + " Sats" : "seit Periodenstart");
     }
   });
 
