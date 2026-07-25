@@ -217,7 +217,10 @@
     background: var(--bg); border: 0; box-shadow: none;
     margin: 0 calc(-1 * var(--screen-padding));
     padding: var(--space-2) var(--screen-padding) var(--space-4);
+    /* Desktop: Portfoliowert links, KPI-Leiste rechts daneben in derselben Kopfzeile */
+    display: flex; align-items: center; gap: var(--space-5);
   }
+  .hero-main { flex: 0 0 auto; min-width: 0; }
   .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
   .hero-label .btc-sym { color: var(--btc); } /* ₿-Symbol + BTC-Bestand in der Identitätsfarbe */
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -229,28 +232,38 @@
   .pos { color: var(--positive); }
   .neg { color: var(--negative); }
 
-  /* ── KPI-Kacheln im TR-App-Stil: zwei Kacheln, vertikal gestapelt ──
-     Jede Kachel gruppiert zwei KPIs untereinander (listenartig statt Raster). */
-  .kpi-stack { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6); }
-  .kpi-stack .card {
-    background: var(--surface-subtle); border-radius: var(--radius-lg);
-    padding: var(--space-4) var(--space-4) calc(var(--space-4) + 2px);
-    display: flex; flex-direction: column;
+  /* ── KPI-Karten: Card-Look 1:1 vom Chart-2-Popup (.chart-pop) übernommen —
+     identische Tokens: --tip-bg/--tip-border, --radius-md, --shadow-soft,
+     Padding 8px 10px, Caption-Groesse 600 in --tip-title, Sub in --tip-body 500.
+     Desktop: horizontale Leiste in der Kopfzeile; bei Platzmangel scrollt die Leiste
+     horizontal, die Kopfzeilenhoehe bleibt fix. iOS: 2x2-Grid unterhalb der Kopfzeile
+     (Umhaengen per JS, siehe placeKpiStrip()). */
+  .kpi-strip {
+    display: flex; align-items: stretch; gap: var(--space-2);
+    margin-left: auto; min-width: 0; overflow-x: auto; overflow-y: hidden;
+    padding: 4px 2px;                    /* Luft fuer Rahmen + Schatten der Karten */
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
   }
-  /* Trennung der beiden KPIs innerhalb einer Kachel: Weissraum + Hairline als Listenrhythmus */
-  .kpi-item + .kpi-item { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--hairline); }
-  /* Klare Typo-Hierarchie: Label klein/muted, Wert deutlich groesser/fett */
-  .kpi-label { font-size: var(--text-caption); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); line-height: 1.3; }
+  .kpi-strip::-webkit-scrollbar { display: none; }
+  .kpi-card {
+    flex: 0 0 auto;
+    background: var(--tip-bg); border: 1px solid var(--tip-border);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-soft);
+    padding: 8px 10px; font-size: var(--text-caption); font-weight: 600; line-height: 1.35;
+    color: var(--tip-title); font-variant-numeric: tabular-nums;
+    white-space: nowrap; text-align: left;
+  }
+  .kpi-label { display: block; color: var(--tip-body); font-weight: 500; }
   .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
-  .kpi-value { font-size: var(--text-h2); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
-  .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 3px; }
-  .kpi-stack .chip { margin-top: 3px; } /* nominale Veränderung unter „Investiert“ */
+  .kpi-value { display: block; }
+  .kpi-sub { color: var(--tip-body); font-weight: 500; }
+  .kpi-card .chip { font-size: var(--text-caption); gap: 4px; }
 
   .chart-card { margin-bottom: var(--space-6); }
   /* Chart-Ueberschriften: Caps, groesser, fett (Punkt 10) */
   .chart-title { font-size: 1.375rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: var(--space-3); }
   /* Zeitraum-Auswahl + optionale Chart-Schalter in einer Zeile */
-  .chart-controls { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+  .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
   .chart-controls .range-seg { flex: 1 1 auto; margin-bottom: 0; min-width: 0; }
   /* Schalter im Stil der Icon-Buttons der Kopfzeile — kein neues Formvokabular */
   .chart-toggle {
@@ -265,11 +278,17 @@
   .chart-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .chart-toggle:hover { border-color: var(--text); color: var(--text); }
   .chart-toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .range-seg { display: flex; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+  /* Flaechen-Schalter: nur noch das Piktogramm (kein Text, kein Tooltip) */
+  #toggle-area { width: 32px; padding: 0; justify-content: center; }
+  /* Abschneiden der Beschriftungen behoben: keine festen Breiten/kein overflow:hidden
+     mehr — Buttons passen sich der Textlaenge an (min-width: max-content) und der
+     Container darf umbrechen/mitwachsen, statt die Schrift zu verkleinern. */
+  .range-seg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
   .range-seg button {
-    flex: 1 1 auto; min-height: var(--tap); border: 0; background: none; cursor: pointer;
+    flex: 1 1 auto; min-width: max-content; white-space: nowrap;
+    min-height: var(--tap); border: 0; background: none; cursor: pointer;
     font: inherit; font-size: var(--text-label); font-weight: 500; color: var(--muted);
-    border-radius: var(--radius-sm); padding: 0;
+    border-radius: var(--radius-sm); padding: 0 var(--space-1);
     transition: color var(--duration-fast) var(--ease-standard);
   }
   /* Aktiver Zeitraum: Near-Black (Dark: Off-White) + fett — keine Trendfarbe mehr */
@@ -302,6 +321,20 @@
   .chart-pop.show { opacity: 1; }
   .chart-pop .pop-sub { display: block; color: var(--tip-body); font-weight: 500; }
   @media (prefers-reduced-motion: reduce) { .chart-pop { transition: none; } }
+  /* %-Badge (Chart 1): eigener HTML-Layer ueber der linken %-Skala auf Hoehe des
+     Kurvenendpunkts — die Achsen-Ticks selbst bleiben unveraendert darunter.
+     Farben nur aus Tokens: --positive/--negative + --on-accent (Light wie Dark ok). */
+  .pct-badge {
+    position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none;
+    transform: translateY(-50%);
+    background: var(--positive); color: var(--on-accent);
+    border-radius: var(--radius-full); padding: 2px 7px;
+    font-size: 11px; font-weight: 700; line-height: 1.5;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    display: none;
+  }
+  .pct-badge.neg { background: var(--negative); }
+  .pct-badge.show { display: block; }
   /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
   .scrub-line {
     display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
@@ -454,8 +487,13 @@
   @media (max-width: 700px) {
     body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .hero { padding: var(--space-2) var(--screen-padding) var(--space-3); }
-    /* KPI-Kacheln bleiben auch mobil vertikal gestapelt (kein Kartenstreifen mehr) */
-    .kpi-stack { margin-bottom: var(--space-5); }
+    /* KPIs als 2x2-Grid: eigener Block unterhalb der Kopfzeile, oberhalb von Chart 1
+       (das JS haengt #kpi-strip hier aus der Kopfzeile aus) */
+    .kpi-strip {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);
+      margin: 0 0 var(--space-5); padding: 0; overflow: visible;
+    }
+    .kpi-card { white-space: normal; min-width: 0; }
     #skeleton .row { grid-template-columns: 1fr; }
     #skeleton .row .sk { height: 128px; }
     .chart-wrap { height: 300px; }
@@ -488,36 +526,35 @@
 </div>
 
 <div id="content" style="display:none">
-  <!-- Hero: der Portfoliowert dominiert; Label zeigt den BTC-Bestand -->
+  <!-- Hero: der Portfoliowert dominiert; Label zeigt den BTC-Bestand.
+       Desktop: KPI-Leiste rechts daneben in der Kopfzeile; iOS: placeKpiStrip()
+       haengt #kpi-strip als eigenen Block direkt unter die Kopfzeile. -->
   <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
-    <div class="hero-label"><span class="btc-sym">&#8383; <span id="k-btc-head">–</span></span><span id="stand"></span></div>
-    <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
-  </section>
-
-  <div class="kpi-stack stagger">
-    <div class="card">
-      <div class="kpi-item">
-        <div class="kpi-label">Investiert</div>
-        <div class="kpi-value" id="k-inv"></div>
+    <div class="hero-main">
+      <div class="hero-label"><span class="btc-sym">&#8383; <span id="k-btc-head">–</span></span><span id="stand"></span></div>
+      <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
+    </div>
+    <div class="kpi-strip stagger" id="kpi-strip" aria-label="Kennzahlen">
+      <div class="kpi-card">
+        <span class="kpi-label">Investiert</span>
+        <span class="kpi-value" id="k-inv"></span>
         <div class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></div>
       </div>
-      <div class="kpi-item">
-        <div class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></div>
-        <div class="kpi-value" id="k-ath"></div>
+      <div class="kpi-card">
+        <span class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></span>
+        <span class="kpi-value" id="k-ath"></span>
         <div class="kpi-sub" id="k-ath-sub"></div>
       </div>
-    </div>
-    <div class="card">
-      <div class="kpi-item">
-        <div class="kpi-label" id="k-kurs-sub">Live-Kurs</div>
-        <div class="kpi-value" id="k-kurs"></div>
+      <div class="kpi-card">
+        <span class="kpi-label" id="k-kurs-sub">Live-Kurs</span>
+        <span class="kpi-value" id="k-kurs"></span>
       </div>
-      <div class="kpi-item">
-        <div class="kpi-label">&Oslash; Kaufkurs</div>
-        <div class="kpi-value" id="k-eca"></div>
+      <div class="kpi-card">
+        <span class="kpi-label">&Oslash; Kaufkurs</span>
+        <span class="kpi-value" id="k-eca"></span>
       </div>
     </div>
-  </div>
+  </section>
 
   <div class="card chart-card">
     <div class="chart-title">Wertentwicklung</div>
@@ -531,7 +568,6 @@
       </div>
       <button type="button" class="chart-toggle" id="toggle-area" aria-pressed="true" aria-label="Fl&auml;che zwischen den Kurven ein-/ausblenden">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-6 4 4 5-7 4 5"/><path d="M3 16l5-6 4 4 5-7 4 5v3H3z" fill="currentColor" stroke="none" opacity="0.28"/></svg>
-        Fl&auml;che
       </button>
     </div>
     <div class="legend">
@@ -539,7 +575,7 @@
       <span><i style="background:var(--line-invest)" id="legend-swatch-inv"></i>Investiert <span id="legend-inv"></span></span>
     </div>
     <div class="scrub-line" id="scrub-wert"></div>
-    <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
+    <div class="chart-wrap"><canvas id="chartWert"></canvas><div class="pct-badge" id="pct-badge" aria-hidden="true"></div></div>
   </div>
 
   <div class="card chart-card" id="card-preis">
@@ -1431,17 +1467,33 @@ function renderCharts(market) {
 
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   const scW = { i: -1 };
+  const isMaxW = RANGES.wert === "max";
+  /* Flaeche existiert nur in der Max-Ansicht — in allen anderen Zeitraeumen wird
+     der Schalter komplett ausgeblendet und die Flaeche nicht gezeichnet */
+  $("toggle-area").style.display = isMaxW ? "" : "none";
+  const areaOn = showArea && isMaxW;
   /* Trend-Faerbung: in 1W/1M/6M/1J traegt die GANZE Kurve eine Farbe — rot, wenn der
      Portfoliowert seit Periodenstart gefallen ist, sonst gruen. „Max" bleibt bei der
      bisherigen punktweisen Logik (gruen ueber Investiert, rot darunter). */
-  const trendModeW = RANGES.wert !== "max" && ptsW.length > 1;
+  const trendModeW = !isMaxW && ptsW.length > 1;
   const upW = ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true;
   const colW = i => trendModeW
     ? (upW ? C.trendUp : C.trendDown)
     : (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
+  /* Investiert-Kurve: nur in „Max" farbig; sonst im Grauton der Chart-2-Kurve
+     (--avg-line, die Oe-Kaufkurs-Linie) */
   const colInvW = i => trendModeW
-    ? (upW ? C.trendUpSoft : C.trendDownSoft)
+    ? C.avg
     : (ptsW[i].wert < ptsW[i].eur ? C.investLoss : C.invest);
+  /* Linke %-Skala: Veraenderung relativ zum ersten Wert des gewaehlten Zeitraums.
+     % ist eine lineare Transformation der €-Werte — beide Skalen beschreiben exakt
+     dieselbe Kurve: yPct.min/max sind die transformierten €-Grenzen der rechten Skala,
+     damit jeder €-Wert pixelgenau auf seinem %-Wert liegt (pro Zeitraum neu berechnet). */
+  const baseW = ptsW.length ? ptsW[0].wert : NaN;
+  const hasPct = isFinite(baseW) && baseW > 0;
+  const toPct = v => (v / baseW - 1) * 100;
+  const fmtPctAxis = v => (v > 0 ? "+" : "") +
+    v.toLocaleString("de-DE", { maximumFractionDigits: Math.abs(v) < 1 ? 2 : 1 }) + " %";
   /* Legenden-Swatches folgen der aktuellen Kurvenfarbe */
   if (ptsW.length) {
     $("legend-swatch-wert").style.background = colW(ptsW.length - 1);
@@ -1454,15 +1506,19 @@ function renderCharts(market) {
     type: "line",
     plugins: [baselinePlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
-      { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
+      /* Portfoliowert haengt an der linken %-Skala (Positionierung ueber die
+         %-Veraenderung); die rechte €-Skala ist die synchron transformierte Ansicht.
+         Fallback ohne gueltigen Basiswert: wie bisher nominal auf der €-Skala. */
+      { label: "Portfoliowert", data: hasPct ? ptsW.map(p => toPct(p.wert)) : ptsW.map(p => p.wert),
+        yAxisID: hasPct ? "yPct" : "y", borderColor: C.wert,
         /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven.
            backgroundColor nur setzen, wenn die Flaeche aktiv ist — sonst bliebe beim
            Scrubben eine Rest-Flaeche stehen, obwohl der Toggle aus ist. */
         segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)),
-                   backgroundColor: c => ((showArea && scrubAfter(scW, c)) ? C.fillAfter : undefined) },
-        /* Toggle „aus": fill:false statt transparenter Farbe — Chart.js zeichnet die
+                   backgroundColor: c => ((areaOn && scrubAfter(scW, c)) ? C.fillAfter : undefined) },
+        /* Toggle „aus" oder Nicht-Max-Zeitraum: fill:false — Chart.js zeichnet die
            Flaeche dann gar nicht erst, es bleibt keine Restdeckkraft uebrig. */
-        fill: showArea ? { target: 1, above: C.fillPos, below: C.fillNeg } : false,
+        fill: areaOn ? { target: 1, above: C.fillPos, below: C.fillNeg } : false,
         borderWidth: denseW ? 1.6 : 2.21, pointRadius: 0, pointHitRadius: 6, tension: denseW ? 0.35 : 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
         /* Punkt 3: gleicher Ausblend-Effekt nach dem Scrub-Marker wie bei der Portfoliowert-Kurve */
@@ -1471,13 +1527,48 @@ function renderCharts(market) {
     ]},
     options: { ...common,
       scales: { ...common.scales,
+        /* Rechte €-Skala: unveraendert */
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
-          callback: fmtAxisK } } } }
+          callback: fmtAxisK } },
+        /* Neue linke %-Skala: 0 % = Ausgangswert der Periode; Grenzen sind die
+           linear transformierten €-Grenzen → beide Skalen bleiben exakt synchron */
+        ...(hasPct ? { yPct: {
+          position: "left", min: toPct(bW.min), max: toPct(bW.max),
+          border: { display: false }, grid: { display: false },
+          afterBuildTicks: axis => {
+            /* „schoene" %-Ticks (1/2/5 × 10^n) innerhalb der fixen Grenzen */
+            const span = axis.max - axis.min;
+            if (!(span > 0)) return;
+            const raw = span / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+            const step = [1, 2, 5, 10].map(m => m * mag).find(s => span / s <= 5) || raw;
+            const out = [];
+            for (let v = Math.ceil(axis.min / step) * step; v <= axis.max + step / 1e6; v += step)
+              out.push({ value: v });
+            axis.ticks = out;
+          },
+          ticks: { color: C.tick, font: { size: 11 }, callback: fmtPctAxis }
+        } } : {}) } }
   });
+  /* %-Badge am linken Achsenrand: Grundzustand = Periodenende auf Hoehe des
+     Kurvenendpunkts; beim Scrubben laeuft Wert + Hoehe live mit (onShow unten). */
+  const badgeW = $("pct-badge");
+  const setBadgeW = i => {
+    const ax = chW.scales && chW.scales.yPct;
+    if (!hasPct || !ptsW.length || i < 0 || !ax || !chW.chartArea) { badgeW.classList.remove("show"); return; }
+    const pct = toPct(ptsW[i].wert);
+    badgeW.textContent = fmtPct(pct);
+    badgeW.classList.toggle("neg", pct < 0);
+    const { top, bottom } = chW.chartArea;
+    const y = ax.getPixelForValue(pct);
+    badgeW.style.top = Math.round(Math.min(bottom, Math.max(top, y))) + "px";
+    badgeW.classList.add("show");
+  };
   attachScrub(chW, scW, {
     lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
     baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
+    /* Badge: beim Scrubben %-Wert an der Hover-Position, danach zurueck zum Periodenende */
+    onShow: i => setBadgeW(i < 0 ? ptsW.length - 1 : i),
     /* Zeile ist redundant zum Header → nur waehrend des Scrubbens sichtbar */
     hideIdle: true,
     onIdle: () => { if (ptsW.length) $("legend-inv").textContent = fmtEur(ptsW[ptsW.length - 1].eur); },
@@ -1697,6 +1788,21 @@ $("toggle-area").addEventListener("click", () => {
 });
 
 /* Kopfzeile & Portfoliowert sind fixiert (sticky) — kein Ausblenden beim Scrollen */
+
+/* ═══════════ KPI-Leiste umhaengen: Desktop in der Kopfzeile, iOS als Block darunter ═══
+   Ein einziger DOM-Knoten (#kpi-strip, eindeutige IDs bleiben erhalten) — er wandert
+   je nach Breite in die Kopfzeile (Flex-Leiste) oder direkt unter sie (2x2-Grid). */
+const kpiMQ = matchMedia("(max-width: 700px)");
+function placeKpiStrip() {
+  const strip = $("kpi-strip"), hero = document.querySelector(".hero");
+  if (!strip || !hero) return;
+  if (kpiMQ.matches) {
+    if (strip.parentElement === hero) hero.insertAdjacentElement("afterend", strip);
+  } else if (strip.parentElement !== hero) hero.appendChild(strip);
+}
+if (kpiMQ.addEventListener) kpiMQ.addEventListener("change", placeKpiStrip);
+else if (kpiMQ.addListener) kpiMQ.addListener(placeKpiStrip);
+placeKpiStrip();
 
 /* ═══════════ Bewegungs-Tabelle ═══════════ */
 function renderTable() {
