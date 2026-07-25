@@ -64,6 +64,7 @@
     /* Motion */
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --duration-fast: 150ms; --duration-base: 220ms; --duration-slow: 320ms;
+    --duration-blur: 140ms;  /* Ein- und Ausblenden zusammen ≈ 280ms */
 
     --tap: 44px;
     --topbar-h: 58px;   /* Hoehe der fixierten Kopfzeile (ohne Safe-Area) */
@@ -86,6 +87,12 @@
     --line-invest-loss: rgba(179,38,30,0.5);
     --fill-pos: rgba(92,202,81,0.05);   /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
     --fill-neg: rgba(179,38,30,0.05);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
+    /* Trendfarben: EINE Quelle fuer Chart 1 und Chart 2 — nie separat setzen,
+       damit „gefallen/gestiegen" in beiden Charts exakt denselben Farbwert hat */
+    --trend-up:        var(--line-wert);
+    --trend-down:      var(--line-wert-loss);
+    --trend-up-soft:   var(--line-invest);       /* dezente Variante (Investiert-Linie) */
+    --trend-down-soft: var(--line-invest-loss);
     --line-price: var(--text);          /* Chart 2: Preiskurve neutral (Near-Black / Off-White) */
     --buy-dot: #4A4A50;                 /* Kaufpunkte: dunkles Grau im Hellmodus */
     --avg-line: #7A7A80;                /* Oe-Kaufkurs-Linie: mittleres Grau */
@@ -222,20 +229,42 @@
   .pos { color: var(--positive); }
   .neg { color: var(--negative); }
 
-  /* ── KPI-Karten im TR-App-Stil (wie Position/Performance) ───────── */
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
-  .grid4 .card { background: var(--surface-subtle); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-4) calc(var(--space-4) + 2px); display: flex; flex-direction: column; justify-content: flex-start; }
+  /* ── KPI-Kacheln im TR-App-Stil: zwei Kacheln, vertikal gestapelt ──
+     Jede Kachel gruppiert zwei KPIs untereinander (listenartig statt Raster). */
+  .kpi-stack { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6); }
+  .kpi-stack .card {
+    background: var(--surface-subtle); border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-4) calc(var(--space-4) + 2px);
+    display: flex; flex-direction: column;
+  }
+  /* Trennung der beiden KPIs innerhalb einer Kachel: Weissraum + Hairline als Listenrhythmus */
+  .kpi-item + .kpi-item { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--hairline); }
   /* Klare Typo-Hierarchie: Label klein/muted, Wert deutlich groesser/fett */
   .kpi-label { font-size: var(--text-caption); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); line-height: 1.3; }
   .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
   .kpi-value { font-size: var(--text-h2); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
   .kpi-sub { font-size: var(--text-caption); color: var(--muted); margin-top: 3px; }
-  .grid4 .chip { margin-top: 3px; } /* nominale Veränderung unter „Investiert“ */
+  .kpi-stack .chip { margin-top: 3px; } /* nominale Veränderung unter „Investiert“ */
 
   .chart-card { margin-bottom: var(--space-6); }
   /* Chart-Ueberschriften: Caps, groesser, fett (Punkt 10) */
   .chart-title { font-size: 1.375rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: var(--space-3); }
-  /* Zeitraum-Auswahl im TR-Stil: reine Textbuttons, aktiv = Trendfarbe */
+  /* Zeitraum-Auswahl + optionale Chart-Schalter in einer Zeile */
+  .chart-controls { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+  .chart-controls .range-seg { flex: 1 1 auto; margin-bottom: 0; min-width: 0; }
+  /* Schalter im Stil der Icon-Buttons der Kopfzeile — kein neues Formvokabular */
+  .chart-toggle {
+    flex: 0 0 auto; border: 1px solid var(--hairline); background: transparent; color: var(--muted);
+    border-radius: var(--radius-full); height: 32px; padding: 0 12px;
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background-color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+  }
+  .chart-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .chart-toggle:hover { border-color: var(--text); color: var(--text); }
+  .chart-toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .range-seg { display: flex; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
   .range-seg button {
     flex: 1 1 auto; min-height: var(--tap); border: 0; background: none; cursor: pointer;
@@ -250,8 +279,29 @@
   .chart-wrap, .chart-wrap canvas {
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  /* Aktiver Scrub blockiert das Seiten-Scrollen komplett (Touch startet den Scrub sofort) */
-  .chart-wrap canvas { touch-action: none; }
+  /* Seiten-Scrollen bleibt erlaubt (pan-y). Erst wenn der Scrub nach der Halte-Verzoegerung
+     aktiviert wird, setzt das Skript touch-action auf "none" und beansprucht die Geste. */
+  .chart-wrap canvas { touch-action: pan-y; }
+  /* Umschalt-Animation (z. B. Flaechen-Toggle): kurzer Weichzeichner, Kurven bleiben sichtbar */
+  .chart-wrap canvas { transition: filter var(--duration-blur) var(--ease-standard); }
+  .chart-wrap canvas.fx-blur { filter: blur(3px); }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-wrap canvas { transition: none; }
+    .chart-wrap canvas.fx-blur { filter: none; }
+  }
+  /* Kauf-Popup (Chart 2): schwebender Layer ueber dem Canvas — daher --shadow-soft erlaubt */
+  .chart-pop {
+    position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none;
+    transform: translate(-50%, -100%);
+    background: var(--tip-bg); border: 1px solid var(--tip-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft); color: var(--tip-title);
+    padding: 8px 10px; font-size: var(--text-caption); font-weight: 600; line-height: 1.35;
+    font-variant-numeric: tabular-nums; white-space: nowrap; text-align: left;
+    opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .chart-pop.show { opacity: 1; }
+  .chart-pop .pop-sub { display: block; color: var(--tip-body); font-weight: 500; }
+  @media (prefers-reduced-motion: reduce) { .chart-pop { transition: none; } }
   /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
   .scrub-line {
     display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
@@ -301,8 +351,8 @@
     background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); }
   @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
   #skeleton .sk.h1 { height: 132px; }
-  #skeleton .row { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
-  #skeleton .row .sk { height: 74px; margin: 0; }
+  #skeleton .row { display: grid; grid-template-columns: 1fr; gap: var(--space-3); margin-bottom: var(--space-5); }
+  #skeleton .row .sk { height: 128px; margin: 0; }
   #skeleton .sk.hc { height: 430px; }
   #sk-note { text-align: center; color: var(--muted); font-size: var(--text-caption); padding: 10px; min-height: 34px; }
 
@@ -404,19 +454,10 @@
   @media (max-width: 700px) {
     body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .hero { padding: var(--space-2) var(--screen-padding) var(--space-3); }
-    /* KPI-Karten: randloser, horizontal scrollbarer Kartenstreifen mit Scroll-Snap
-       und unsichtbarer Scrollbar — wie „Position/Performance" in der TR-App */
-    .grid4 {
-      display: flex; grid-template-columns: none; grid-auto-rows: auto;
-      gap: var(--space-3); margin: 0 calc(-1 * var(--screen-padding)) var(--space-5);
-      padding: 2px var(--screen-padding);
-      overflow-x: auto; scroll-snap-type: x proximity;
-      -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    .grid4::-webkit-scrollbar { display: none; }
-    .grid4 .card { flex: 0 0 43%; min-width: 148px; scroll-snap-align: start; }
-    #skeleton .row { grid-template-columns: repeat(2, 1fr); }
-    #skeleton .row .sk { height: 74px; }
+    /* KPI-Kacheln bleiben auch mobil vertikal gestapelt (kein Kartenstreifen mehr) */
+    .kpi-stack { margin-bottom: var(--space-5); }
+    #skeleton .row { grid-template-columns: 1fr; }
+    #skeleton .row .sk { height: 128px; }
     .chart-wrap { height: 300px; }
     /* Charts auf iOS auf die volle Bildschirmbreite ausdehnen (Punkt 12) */
     .chart-card .chart-wrap { margin: 0 calc(-1 * var(--screen-padding)); }
@@ -441,7 +482,7 @@
 <!-- Skeleton während des Ladens -->
 <div id="skeleton">
   <div class="sk h1"></div>
-  <div class="row"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+  <div class="row"><div class="sk"></div><div class="sk"></div></div>
   <div class="sk hc"></div>
   <div id="sk-note">Lade Kursdaten &hellip;</div>
 </div>
@@ -453,25 +494,49 @@
     <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
   </section>
 
-  <div class="grid4 stagger">
-    <div class="card"><div class="kpi-label">Investiert</div><div class="kpi-value" id="k-inv"></div><div class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></div></div>
-    <div class="card"><div class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></div><div class="kpi-value" id="k-ath"></div><div class="kpi-sub" id="k-ath-sub"></div></div>
-    <div class="card"><div class="kpi-label" id="k-kurs-sub">Live-Kurs</div><div class="kpi-value" id="k-kurs"></div></div>
-    <div class="card"><div class="kpi-label">&Oslash; Kaufkurs</div><div class="kpi-value" id="k-eca"></div></div>
+  <div class="kpi-stack stagger">
+    <div class="card">
+      <div class="kpi-item">
+        <div class="kpi-label">Investiert</div>
+        <div class="kpi-value" id="k-inv"></div>
+        <div class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></div>
+        <div class="kpi-value" id="k-ath"></div>
+        <div class="kpi-sub" id="k-ath-sub"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi-item">
+        <div class="kpi-label" id="k-kurs-sub">Live-Kurs</div>
+        <div class="kpi-value" id="k-kurs"></div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-label">&Oslash; Kaufkurs</div>
+        <div class="kpi-value" id="k-eca"></div>
+      </div>
+    </div>
   </div>
 
   <div class="card chart-card">
     <div class="chart-title">Wertentwicklung</div>
-    <div class="range-seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung">
-      <button type="button" data-range="1w">1W</button>
-      <button type="button" data-range="1m">1M</button>
-      <button type="button" data-range="6m">6M</button>
-      <button type="button" data-range="1y">1J</button>
-      <button type="button" data-range="max" class="sel">Max</button>
+    <div class="chart-controls">
+      <div class="range-seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung">
+        <button type="button" data-range="1w">1W</button>
+        <button type="button" data-range="1m">1M</button>
+        <button type="button" data-range="6m">6M</button>
+        <button type="button" data-range="1y">1J</button>
+        <button type="button" data-range="max" class="sel">Max</button>
+      </div>
+      <button type="button" class="chart-toggle" id="toggle-area" aria-pressed="true" aria-label="Fl&auml;che zwischen den Kurven ein-/ausblenden">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-6 4 4 5-7 4 5"/><path d="M3 16l5-6 4 4 5-7 4 5v3H3z" fill="currentColor" stroke="none" opacity="0.28"/></svg>
+        Fl&auml;che
+      </button>
     </div>
     <div class="legend">
-      <span><i style="background:var(--line-wert)"></i>Portfoliowert</span>
-      <span><i style="background:var(--line-invest)"></i>Investiert <span id="legend-inv"></span></span>
+      <span><i style="background:var(--line-wert)" id="legend-swatch-wert"></i>Portfoliowert</span>
+      <span><i style="background:var(--line-invest)" id="legend-swatch-inv"></i>Investiert <span id="legend-inv"></span></span>
     </div>
     <div class="scrub-line" id="scrub-wert"></div>
     <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
@@ -487,12 +552,13 @@
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
     <div class="legend">
-      <span><i style="background:var(--line-price)"></i>BTC-Kurs</span>
+      <span><i style="background:var(--line-price)" id="legend-swatch-preis"></i>BTC-Kurs</span>
       <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
       <span><i style="background:var(--avg-line)"></i>&Oslash; Kaufkurs</span>
+      <span>Investiert <span id="legend-inv-preis"></span></span>
     </div>
     <div class="scrub-line" id="scrub-preis"></div>
-    <div class="chart-wrap"><canvas id="chartPreis"></canvas></div>
+    <div class="chart-wrap"><canvas id="chartPreis"></canvas><div class="chart-pop" id="pop-preis" role="status" aria-live="off"></div></div>
   </div>
 
   <div class="card chart-card">
@@ -595,6 +661,14 @@ const fmtInt = v => Math.round(v).toLocaleString("de-DE");
 const fmtAxisK = v => {
   if (!isFinite(v)) return "";
   return Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k";
+};
+/* Sats-Achse: ab 100 Mio. Sats in ₿ statt in Millionen Sats („1₿" statt „100M").
+   Einheit immer direkt an der Zahl — kein Leerzeichen. */
+const fmtAxisSats = v => {
+  if (!isFinite(v)) return "";
+  if (Math.abs(v) >= 1e8) return (v / 1e8).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + "₿";
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + "M";
+  return fmtInt(v);
 };
 const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
@@ -1032,7 +1106,16 @@ const SCRUB_HOLD_MS = 180;   /* Punkt 9: so lange halten, bis Scrub startet */
 const SCRUB_MOVE_TOL = 6;    /* Punkt 7: Mindest-Fingerweg (px) bis der Punkt wechselt */
 const SCRUB_SCROLL_TOL = 10; /* vertikale Toleranz vor Aktivierung → als Scroll werten (Punkt 8) */
 const SCRUB_ACTIVATE_DX = 14;/* klar horizontale Geste aktiviert sofort */
-const SCRUB_SNAP_PX = 22;    /* Punkt 5: Einrast-Radius auf Kaufpunkte */
+/* Einrast-Radius auf Kaufpunkte (px). Zum Nachjustieren: nur diese Zahl aendern.
+   Halbiert gegenueber v7 (war 22) — das Snapping reagiert dadurch deutlich weniger sensibel. */
+const SCRUB_SNAP_PX = 11;
+/* Chart 2: feste Y-Achsen-Schrittweite in Euro. Zum Nachjustieren nur hier aendern. */
+const PRICE_AXIS_STEP = 20000;
+/* Gemeinsame Puls-Phase (0…1…0 in 1,6 s). Bewusst NICHT an den Scrub-Zustand gekoppelt:
+   frueher lief der Puls nur, solange etwas anderes das Canvas neu zeichnete — das war
+   auf iOS zufaellig der Fall, auf Android/Web nicht. Jetzt treibt attachPulse() das Neuzeichnen. */
+const pulseK = () => REDUCED_MOTION ? 1
+  : 0.5 - 0.5 * Math.cos((performance.now() % 1600) / 1600 * 2 * Math.PI);
 const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
 /* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
 const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
@@ -1050,8 +1133,7 @@ const scrubPlugin = {
     if (!s || s.i < 0) return;
     const el = chart.getDatasetMeta(0).data[s.i];
     if (!el) return;
-    const k = REDUCED_MOTION ? 1
-      : 0.5 - 0.5 * Math.cos(((performance.now() - s.t0) % 1600) / 1600 * 2 * Math.PI);
+    const k = pulseK();
     const c = chart.ctx, color = s.cfg.colorAt(s.i);
     c.save();
     c.fillStyle = color;
@@ -1079,15 +1161,26 @@ const buyMarkerPlugin = {
     c.restore();
   }
 };
+/* Referenzlinien liegen haeufig exakt auf der Achsen-Ober-/Untergrenze (y === top).
+   Frueher hat die Sichtbarkeitspruefung „y < top + 2" genau diese Faelle verworfen —
+   deshalb war die 1₿-Linie unsichtbar, obwohl 100M auf der Achse stand.
+   refLineY() prueft grosszuegig und rueckt die Linie minimal in die Chartflaeche. */
+function refLineY(chart, value) {
+  if (value == null || !isFinite(value)) return null;
+  const { top, bottom } = chart.chartArea;
+  const y = chart.scales.y.getPixelForValue(value);
+  if (!isFinite(y) || y < top - 1 || y > bottom + 1) return null;
+  return Math.min(bottom - 2, Math.max(top + 2, y));
+}
 /* Gepunktete Referenzlinie auf Höhe des ersten Werts im gewählten Zeitraum */
 const baselinePlugin = {
   id: "startLine",
   beforeDatasetsDraw(chart) {
     const s = chart.$scrub;
-    if (!s || s.cfg.baseValue == null || !isFinite(s.cfg.baseValue)) return;
-    const y = chart.scales.y.getPixelForValue(s.cfg.baseValue);
-    const { left, right, top, bottom } = chart.chartArea;
-    if (y < top + 2 || y > bottom - 2) return;
+    if (!s) return;
+    const y = refLineY(chart, s.cfg.baseValue);
+    if (y == null) return;
+    const { left, right } = chart.chartArea;
     const c = chart.ctx;
     c.save();
     c.strokeStyle = s.cfg.baseColor;
@@ -1097,6 +1190,31 @@ const baselinePlugin = {
     c.restore();
   }
 };
+/* Treibt die Puls-Animation plattformunabhaengig: ohne diesen Loop zeichnet Chart.js
+   nur bei Interaktion neu — der Puls lief dann je nach Engine gar nicht.
+   Gedrosselt auf ~30 fps und pausiert, sobald der Chart nicht sichtbar oder das Tab
+   im Hintergrund ist (Akku). Der Scrub-Loop hat Vorrang, damit nicht doppelt gezeichnet wird. */
+function attachPulse(chart) {
+  chart.canvas.__pulseAC?.abort();
+  if (REDUCED_MOTION) return;
+  const ac = chart.canvas.__pulseAC = new AbortController();
+  let raf = 0, visible = true, last = 0;
+  const io = "IntersectionObserver" in window
+    ? new IntersectionObserver(es => { visible = es[0].isIntersecting; }, { threshold: 0 })
+    : null;
+  if (io) io.observe(chart.canvas);
+  const loop = t => {
+    if (ac.signal.aborted) return;
+    raf = requestAnimationFrame(loop);
+    if (!visible || document.hidden) return;
+    if (chart.$scrub && chart.$scrub.raf) return;   /* Scrub zeichnet bereits jeden Frame */
+    if (t - last < 33) return;
+    last = t;
+    if (chart.ctx) chart.draw();
+  };
+  ac.signal.addEventListener("abort", () => { cancelAnimationFrame(raf); if (io) io.disconnect(); });
+  raf = requestAnimationFrame(loop);
+}
 /* Scrub-Verhalten an einen Chart binden: Maus-Hover (Desktop) bzw. Touch-Drag (Mobile),
    X-Position snappt auf den nächstgelegenen Datenpunkt; Loslassen → Grundzustand */
 function attachScrub(chart, s, cfg) {
@@ -1104,8 +1222,12 @@ function attachScrub(chart, s, cfg) {
   s.t0 = 0; s.raf = 0;
   chart.$scrub = s;
   const line = $(cfg.lineId);
-  const show = i => {
+  const show = raw => {
+    /* onShow bekommt den ROHEN Index (-1 = kein Scrub aktiv) — Popups duerfen
+       im Grundzustand nicht stehen bleiben, auch wenn die Scrub-Zeile es tut */
+    if (cfg.onShow) cfg.onShow(raw);
     if (!line) return;
+    let i = raw;
     if (i < 0) {
       /* hideIdle: Zeile nur waehrend des Scrubbens zeigen (redundant zum Header) */
       if (cfg.hideIdle) { line.innerHTML = ""; if (cfg.onIdle) cfg.onIdle(); return; }
@@ -1204,6 +1326,8 @@ function attachScrub(chart, s, cfg) {
 }
 
 /* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
+/* Chart 1: Fläche zwischen Portfoliowert und Investiert ein-/ausblendbar */
+let showArea = true;
 function renderCharts(market) {
   const { candles, live } = market;
   const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1219,7 +1343,10 @@ function renderCharts(market) {
     price: cssv("--line-price"), avg: cssv("--avg-line"),
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
     after: cssv("--ch-after"), fillAfter: cssv("--fill-after"), base: cssv("--base-line"),
-    btc: cssv("--btc")
+    btc: cssv("--btc"),
+    /* Trendfarben aus EINER Quelle — garantiert identische Werte in Chart 1 und Chart 2 */
+    trendUp: cssv("--trend-up"), trendDown: cssv("--trend-down"),
+    trendUpSoft: cssv("--trend-up-soft"), trendDownSoft: cssv("--trend-down-soft")
   };
   Chart.defaults.font.family = cssv("--font-family");
 
@@ -1265,14 +1392,15 @@ function renderCharts(market) {
   /* Y-Achse: feste Schritte (10.000 € / 10 Mio Sats), auf Vielfache gerundet;
      bei kurzen Zeiträumen automatisch feinere „schöne" Schritte (1/2/5 × 10^n) — bewusst
      ohne 2,5er-Schritt, damit die kompakten „k"-Labels ganze Tausender bleiben (Punkt 11) */
-  const axisBounds = (vals, prefStep) => {
+  const axisBounds = (vals, prefStep, forceStep) => {
     let lo = Infinity, hi = -Infinity;
     for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
     if (!isFinite(lo)) { lo = 0; hi = 1; }
     if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
     let step = prefStep;
     const ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
-    if (ticks(step) < 2 || ticks(step) > 7) {
+    /* forceStep: Schrittweite ist gesetzt und wird nicht automatisch verfeinert */
+    if (!forceStep && (ticks(step) < 2 || ticks(step) > 7)) {
       const raw = (hi - lo) / 4;
       const mag = Math.pow(10, Math.floor(Math.log10(raw)));
       step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
@@ -1293,14 +1421,32 @@ function renderCharts(market) {
     }
   };
 
-  Chart.getChart("chartWert")?.destroy();
-  Chart.getChart("chartSats")?.destroy();
-  Chart.getChart("chartPreis")?.destroy();
+  /* Laufende Animations-Loops vor dem Zerstoeren stoppen — sonst zeichnet ein
+     rAF-Tick auf einem bereits zerstoerten Chart weiter */
+  ["chartWert", "chartSats", "chartPreis"].forEach(id => {
+    const el = $(id);
+    if (el) el.__pulseAC?.abort();
+    Chart.getChart(id)?.destroy();
+  });
 
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   const scW = { i: -1 };
-  /* Portfoliowert: TR-Gruen ueber Investiert, dunkles Rot darunter */
-  const colW = i => (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
+  /* Trend-Faerbung: in 1W/1M/6M/1J traegt die GANZE Kurve eine Farbe — rot, wenn der
+     Portfoliowert seit Periodenstart gefallen ist, sonst gruen. „Max" bleibt bei der
+     bisherigen punktweisen Logik (gruen ueber Investiert, rot darunter). */
+  const trendModeW = RANGES.wert !== "max" && ptsW.length > 1;
+  const upW = ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true;
+  const colW = i => trendModeW
+    ? (upW ? C.trendUp : C.trendDown)
+    : (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
+  const colInvW = i => trendModeW
+    ? (upW ? C.trendUpSoft : C.trendDownSoft)
+    : (ptsW[i].wert < ptsW[i].eur ? C.investLoss : C.invest);
+  /* Legenden-Swatches folgen der aktuellen Kurvenfarbe */
+  if (ptsW.length) {
+    $("legend-swatch-wert").style.background = colW(ptsW.length - 1);
+    $("legend-swatch-inv").style.background = colInvW(ptsW.length - 1);
+  }
   /* Punkt 13: auf schmalen Screens im „Max"-Zeitraum duennere/staerker geglaettete Kurve,
      damit sie bei hoher Datendichte nicht gestaucht/zu dick wirkt */
   const denseW = IS_NARROW && RANGES.wert === "max";
@@ -1309,16 +1455,19 @@ function renderCharts(market) {
     plugins: [baselinePlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
       { label: "Portfoliowert", data: ptsW.map(p => p.wert), borderColor: C.wert,
-        /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven */
+        /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven.
+           backgroundColor nur setzen, wenn die Flaeche aktiv ist — sonst bliebe beim
+           Scrubben eine Rest-Flaeche stehen, obwohl der Toggle aus ist. */
         segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)),
-                   backgroundColor: c => (scrubAfter(scW, c) ? C.fillAfter : undefined) },
-        fill: { target: 1, above: C.fillPos, below: C.fillNeg },
+                   backgroundColor: c => ((showArea && scrubAfter(scW, c)) ? C.fillAfter : undefined) },
+        /* Toggle „aus": fill:false statt transparenter Farbe — Chart.js zeichnet die
+           Flaeche dann gar nicht erst, es bleibt keine Restdeckkraft uebrig. */
+        fill: showArea ? { target: 1, above: C.fillPos, below: C.fillNeg } : false,
         borderWidth: denseW ? 1.6 : 2.21, pointRadius: 0, pointHitRadius: 6, tension: denseW ? 0.35 : 0.2 },
       { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
         /* Punkt 3: gleicher Ausblend-Effekt nach dem Scrub-Marker wie bei der Portfoliowert-Kurve */
-        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after
-          : (ptsW[c.p1DataIndex].wert < ptsW[c.p1DataIndex].eur ? C.investLoss : C.invest)) },
-        borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true }
+        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colInvW(c.p1DataIndex)) },
+        borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true, fill: false }
     ]},
     options: { ...common,
       scales: { ...common.scales,
@@ -1343,13 +1492,17 @@ function renderCharts(market) {
     }
   });
 
-  /* Wholecoiner-Ziel: dezente Markierung bei 1 BTC (100 Mio. Sats) */
+  /* Wholecoiner-Ziel: dezente Markierung bei 1₿ (100 Mio. Sats).
+     Bugfix: liegt die Marke exakt auf der Achsen-Obergrenze (y === chartArea.top, der
+     Normalfall sobald die Achse bis 100M reicht), wurde sie zuvor als „ausserhalb"
+     verworfen. refLineY() rueckt sie stattdessen 2px in die Flaeche; das Label rutscht
+     unter die Linie, wenn oben kein Platz ist. */
   const wholecoinerPlugin = {
     id: "wholecoiner",
     afterDatasetsDraw(chart) {
-      const y = chart.scales.y.getPixelForValue(1e8);
-      const { left, right, top, bottom } = chart.chartArea;
-      if (y < top + 2 || y > bottom - 2) return;
+      const y = refLineY(chart, 1e8);
+      if (y == null) return;
+      const { left, right, top } = chart.chartArea;
       const c = chart.ctx;
       c.save();
       c.strokeStyle = C.athLine;
@@ -1359,9 +1512,10 @@ function renderCharts(market) {
       c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
       c.setLineDash([]); c.lineCap = "butt";
       c.font = "10px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      c.textBaseline = "bottom";
       c.fillStyle = C.athText;
-      c.fillText("1 BTC", left + 6, y - 4);
+      const below = y - 4 < top + 11;
+      c.textBaseline = below ? "top" : "bottom";
+      c.fillText("1₿", left + 6, below ? y + 5 : y - 4);
       c.restore();
     }
   };
@@ -1380,7 +1534,7 @@ function renderCharts(market) {
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsS) } },
         y: { ...common.scales.y, min: bS.min, max: bS.max, ticks: { ...common.scales.y.ticks, stepSize: bS.step,
-        callback: v => (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M" } } } }
+        callback: fmtAxisSats } } } }
   });
   attachScrub(chS, scS, {
     lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.btc,
@@ -1419,19 +1573,27 @@ function renderCharts(market) {
   const buyIdx = [];
   dotInfo.forEach((v, i) => { if (v) buyIdx.push(i); });
 
+  /* Trendrichtung des angezeigten Zeitraums — identische Logik und identische
+     Farbwerte wie in Chart 1 (beides kommt aus --trend-up / --trend-down) */
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
-  const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)), 10000);
+  const trendModeK = RANGES.preis !== "max" && ptsK.length > 1;
+  const colK = () => trendModeK ? (kTrendUp ? C.trendUp : C.trendDown) : C.price;
+  $("legend-swatch-preis").style.background = colK();
+  /* Y-Achse fest in 20.000-€-Schritten (PRICE_AXIS_STEP), auch wenn daraus bei
+     kurzen Zeitraeumen nur wenige Ticks werden — bewusst so gefordert. */
+  const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)),
+                        PRICE_AXIS_STEP, true);
   const scK = { i: -1 };
   /* Kaufpunkt-Halos: derselbe Puls wie am Scrub-Punkt, nochmals halbiert,
-     in Farbe und Groesse an den jeweiligen Kaufpunkt gekoppelt */
+     in Farbe und Groesse an den jeweiligen Kaufpunkt gekoppelt.
+     Bugfix: der Puls haengt nicht mehr am Scrub-Zustand — attachPulse() sorgt dafuer,
+     dass er auf jeder Plattform durchgaengig laeuft. */
   const buyHaloPlugin = {
     id: "buyHalo",
     afterDatasetsDraw(chart) {
       const meta = chart.getDatasetMeta(2);
       if (!meta || !meta.data.length) return;
-      const s = chart.$scrub;
-      const k = (REDUCED_MOTION || !s || s.i < 0) ? 1
-        : 0.5 - 0.5 * Math.cos(((performance.now() - s.t0) % 1600) / 1600 * 2 * Math.PI);
+      const k = pulseK();
       const c = chart.ctx;
       c.save();
       c.fillStyle = C.buy;
@@ -1449,8 +1611,8 @@ function renderCharts(market) {
     type: "line",
     plugins: [baselinePlugin, buyHaloPlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
-      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: C.price,
-        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : C.price) },
+      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: colK(),
+        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : colK()) },
         borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.avg,
         borderWidth: 1.4, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
@@ -1467,19 +1629,40 @@ function renderCharts(market) {
         y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisK } } } }
   });
   chK.$buys = { info: dotInfo, radius: dotR, color: C.buy, border: C.dotBorder };
+
+  /* Kauf-Popup: erscheint, sobald der Scrub-Indikator auf einem Kaufpunkt einrastet.
+     Zeile 1: „500 € @ 62.345 €", Zeile 2: „1.234.567 Sats". */
+  const popK = $("pop-preis");
+  popK.classList.remove("show");
+  const showBuyPop = i => {
+    const v = i >= 0 ? dotInfo[i] : null;
+    if (!v) { popK.classList.remove("show"); return; }
+    const el = chK.getDatasetMeta(0).data[i];
+    if (!el) { popK.classList.remove("show"); return; }
+    popK.innerHTML = esc(fmtEur(v.eur, 0)) + " @ " + esc(fmtEur(ptsK[i].close, 0)) +
+      '<span class="pop-sub">' + esc(fmtInt(v.sats)) + " Sats</span>";
+    popK.classList.add("show");
+    /* horizontal im Chart halten, damit das Popup an den Raendern nicht abgeschnitten wird */
+    const wrapW = popK.parentElement.clientWidth, half = popK.offsetWidth / 2;
+    popK.style.left = Math.round(Math.min(wrapW - half - 4, Math.max(half + 4, el.x))) + "px";
+    popK.style.top = Math.round(Math.max(popK.offsetHeight + 4, el.y - 12)) + "px";
+  };
+
   attachScrub(chK, scK, {
     lineId: "scrub-preis", n: ptsK.length,
-    /* Auf einem Kaufpunkt uebernimmt der Marker dessen Farbe; Preiskurve theme-schwarz/weiss */
-    colorAt: i => (dotInfo[i] ? C.buy : C.price),
+    /* Auf einem Kaufpunkt uebernimmt der Marker dessen Farbe; sonst die Kurvenfarbe */
+    colorAt: i => (dotInfo[i] ? C.buy : colK()),
     baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base, snap: buyIdx,
+    onShow: showBuyPop,
     html: i => {
       const p = ptsK[i];
-      const v = dotInfo[i];
-      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false,
-        v ? "Kauf " + fmtEur(v.eur) + " · " + fmtInt(v.sats) + " Sats" : "");
+      /* Legende zeigt den bis zu diesem Zeitpunkt kumuliert investierten Betrag */
+      $("legend-inv-preis").textContent = fmtEur(p.eur);
+      /* Kaufdetails stehen jetzt im Popup — die Scrub-Zeile bleibt schlank */
+      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false, "");
     }
   });
-
+  attachPulse(chK);
 }
 
 /* ═══════════ Zeitraum-Buttons (pro Chart, ersetzen den Zoom) ═══════════ */
@@ -1490,6 +1673,28 @@ document.querySelectorAll(".range-seg").forEach(seg => seg.addEventListener("cli
   seg.querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b));
   if (lastMarket) renderCharts(lastMarket);
 }));
+
+/* ═══════════ Flächen-Schalter (Chart 1) ═══════════
+   Beim Umschalten zeichnen die Kurven kurz weich (≈140ms rein, 140ms raus) — sie
+   bleiben dabei durchgehend sichtbar, es ist nur ein Uebergang, kein Ausblenden. */
+function blurSwap(canvas, apply) {
+  if (REDUCED_MOTION || !canvas) { apply(); return; }
+  canvas.classList.add("fx-blur");
+  const ms = parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue("--duration-blur")) || 140;
+  setTimeout(() => {
+    apply();
+    /* Canvas wird beim Neuaufbau wiederverwendet — Klasse liegt noch am selben Element */
+    requestAnimationFrame(() => $("chartWert").classList.remove("fx-blur"));
+  }, ms);
+}
+$("toggle-area").addEventListener("click", () => {
+  const btn = $("toggle-area");
+  showArea = !showArea;
+  btn.setAttribute("aria-pressed", showArea ? "true" : "false");
+  if (!lastMarket) return;
+  blurSwap($("chartWert"), () => renderCharts(lastMarket));
+});
 
 /* Kopfzeile & Portfoliowert sind fixiert (sticky) — kein Ausblenden beim Scrollen */
 
