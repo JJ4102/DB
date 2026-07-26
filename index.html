@@ -26,20 +26,32 @@
     --surface:        #FFFFFF;
     --surface-subtle: #F7F7F8;
     --hairline:       #ECECEE;
-    /* Text */
+    /* Text — Graustufen auf WCAG-AA-Niveau (gemessen gegen --bg):
+       --muted 5,2:1, --text-tertiary 4,5:1. Die alten Werte (#8A8A8E / #B7B7BC)
+       lagen bei 3,4:1 bzw. 2,0:1 und waren fuer Labels/Achsen nicht zulaessig. */
     --text:           #0A0A0B;   /* Near-Black, kein reines Schwarz */
-    --muted:          #8A8A8E;
-    --text-tertiary:  #B7B7BC;
+    --muted:          #6C6C71;
+    --text-tertiary:  #75757A;
     --on-accent:      #FFFFFF;
     /* Akzent = Near-Black (TR: keine Markenfarbe fuer Primaeraktionen) */
     --accent:         #0A0A0B;
     --accent-hover:   #2A2A2E;
-    /* Semantik — sattes TR-Grün/Rot (wie in der App) */
+    /* Semantik — sattes TR-Grün/Rot (wie in der App) fuer FLAECHEN und LINIEN */
     --positive:       #21B84A;
     --negative:       #E5301D;
     --warning:        #E0A800;
-    /* Pro-Asset-Farbe: Bitcoin-Orange (gleiche Farbe fuer auf & ab) */
+    /* Semantik als TEXT: dieselbe Bedeutung, aber kontraststark genug fuer Schrift.
+       --positive erreicht auf Weiss nur 2,6:1 — als Zahlenfarbe unbrauchbar.
+       Regel: Farbe auf Flaeche/Linie = --positive/--negative,
+              Farbe auf Schrift      = --positive-text/--negative-text. */
+    --positive-text:  #0E7A38;
+    --negative-text:  #C7261A;
+    /* Pro-Asset-Farbe: Bitcoin-Orange (gleiche Farbe fuer auf & ab).
+       --btc bleibt der Markenwert (Icons, Manifest). --btc-ink ist die Schriftvariante
+       fuer das ₿-Zeichen im Hero: #F7931A auf Weiss kommt nur auf 2,3:1 und ist als
+       Glyphe unlesbar; --btc-ink erreicht 3,7:1 und bleibt eindeutig Bitcoin-Orange. */
     --btc:            #F7931A;
+    --btc-ink:        #C86E08;
     --orange:         var(--btc);
     --red:            var(--negative);
     --ok:             var(--positive);
@@ -71,13 +83,15 @@
 
     /* Chart-Tokens (JS liest sie per getComputedStyle) — Standard: neutral */
     --ch-grid: transparent;
-    --ch-tick: #8A8A8E;
+    --ch-tick: #6C6C71;
     --tip-bg: #FFFFFF;
     --tip-border: #ECECEE;
     --tip-title: #0A0A0B;
-    --tip-body: #8A8A8E;
-    --ath-line: rgba(138,138,142,0.35);
-    --ath-text: rgba(138,138,142,0.9);
+    --tip-body: #6C6C71;
+    --ath-line: rgba(108,108,113,0.45);
+    --ath-text: #6C6C71;
+    /* Endpunkt-Beschriftung der Kurven (ersetzt die Legendenzeilen) */
+    --ch-endlabel: #6C6C71;
     --line-main: var(--positive);    /* Chart 3: semantisch wie in der TR-App */
     --line-loss: var(--negative);
     --tr-green: #5CCA51;                /* TR-Chartgruen, aus den App-Screenshots gesampelt (hell wie dunkel identisch) */
@@ -93,7 +107,12 @@
     --trend-down:      var(--line-wert-loss);
     --trend-up-soft:   var(--line-invest);       /* dezente Variante (Investiert-Linie) */
     --trend-down-soft: var(--line-invest-loss);
+    --line-sats: var(--tr-green);       /* Chart 3: Sats-Bestand gruen (Abweichung 1) — nicht mehr BTC-Orange */
     --line-price: var(--text);          /* Chart 2: Preiskurve neutral (Near-Black / Off-White) */
+    /* Wholecoiner-Fortschritt unter der Hero-Zahl: bewusst NICHT orange
+       (Abweichung 7 — Orange bleibt dem ₿-Symbol vorbehalten) */
+    --progress-track: var(--hairline);
+    --progress-fill:  var(--text);
     --buy-dot: #4A4A50;                 /* Kaufpunkte: dunkles Grau im Hellmodus */
     --avg-line: #7A7A80;                /* Oe-Kaufkurs-Linie: mittleres Grau */
     --dot-border: #FFFFFF;
@@ -110,21 +129,26 @@
     --hairline:       #2C2C31;
     --text:           #F5F5F6;   /* Off-White */
     --muted:          #9A9AA0;
-    --text-tertiary:  #5E5E64;
+    --text-tertiary:  #82828A;   /* war #5E5E64 = 2,9:1 — jetzt 4,9:1 */
+    --btc-ink:        #F7931A;   /* im Dunkelmodus reicht das Original (8,1:1) */
     --on-accent:      #0A0A0B;
     --accent:         #F5F5F6;
     --accent-hover:   #D6D6D9;
     --positive:       #34D158;
     --negative:       #FF453A;
     --warning:        #F5C24B;
+    /* Im Dunkelmodus erfuellen die Semantikfarben schon als Text AA (9,2:1 / 5,4:1) */
+    --positive-text:  #34D158;
+    --negative-text:  #FF453A;
     --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
     --ch-tick: #9A9AA0;
     --tip-bg: #202024;
     --tip-border: #2C2C31;
     --tip-title: #F5F5F6;
     --tip-body: #9A9AA0;
-    --ath-line: rgba(154,154,160,0.35);
-    --ath-text: rgba(154,154,160,0.9);
+    --ath-line: rgba(154,154,160,0.45);
+    --ath-text: #9A9AA0;
+    --ch-endlabel: #9A9AA0;
     --line-wert-loss: #C4372B;
     --line-invest: rgba(92,202,81,0.55);
     --line-invest-loss: rgba(196,55,43,0.55);
@@ -167,6 +191,7 @@
   }
   .head-right { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
   .iconbtn {
+    position: relative;
     border: 1px solid var(--hairline); background: transparent; color: var(--text);
     border-radius: var(--radius-full); min-width: 34px; height: 34px; padding: 0 12px;
     font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
@@ -175,6 +200,8 @@
                 background-color var(--duration-fast) var(--ease-standard),
                 color var(--duration-fast) var(--ease-standard);
   }
+  /* Trefferflaeche auf 44px ziehen, ohne den Button optisch zu vergroessern */
+  .iconbtn::after { content: ""; position: absolute; inset: -5px; border-radius: inherit; }
   .iconbtn:hover { border-color: var(--text); }
   .iconbtn.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .iconbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -195,8 +222,9 @@
     font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
     display: flex; align-items: center; justify-content: center; user-select: none;
   }
+  /* inset: -5px → 44px Trefferflaeche bei 34px sichtbarem Avatar */
   .person-select {
-    position: absolute; inset: 0; width: 100%; height: 100%;
+    position: absolute; inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px);
     appearance: none; -webkit-appearance: none; border: 0; background: transparent;
     color: transparent; opacity: 0; cursor: pointer; font: inherit;
   }
@@ -219,49 +247,92 @@
     padding: var(--space-2) var(--screen-padding) var(--space-4);
     /* Desktop: Portfoliowert links, KPI-Leiste rechts daneben in derselben Kopfzeile */
     display: flex; align-items: center; gap: var(--space-5);
+    transition: padding var(--duration-base) var(--ease-standard);
   }
-  .hero-main { flex: 0 0 auto; min-width: 0; }
-  .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; }
-  .hero-label .btc-sym { color: var(--btc); } /* ₿-Symbol + BTC-Bestand in der Identitätsfarbe */
-  #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
-  .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+
+  /* ── Kollabierter Zustand: sobald gescrollt wird, schrumpft der Hero auf eine
+     Zeile zusammen, statt als zweite Sticky-Ebene in voller Hoehe stehen zu bleiben.
+     Der Portfoliowert bleibt sichtbar — nur der Kontext tritt zurueck. ── */
+  .hero-collapse { overflow: hidden;
+    transition: max-height var(--duration-base) var(--ease-standard),
+                opacity var(--duration-fast) var(--ease-standard),
+                margin-bottom var(--duration-base) var(--ease-standard);
+    max-height: 120px; opacity: 1; }
+  html.condensed .hero { padding-top: var(--space-1); padding-bottom: var(--space-2); }
+  html.condensed .hero-value { font-size: var(--text-h1); }
+  html.condensed .hero-pct { font-size: var(--text-h3); }
+  html.condensed .hero-collapse { max-height: 0; opacity: 0; margin-bottom: 0; }
+  /* Auf dem Desktop sitzt die KPI-Leiste IN der Kopfzeile — sie faehrt mit ein.
+     Der Kindselektor greift bewusst nur dort: auf iOS haengt placeKpiStrip() die
+     Leiste unter den Hero, wo sie ohnehin normal wegscrollt. */
+  .hero > .kpi-strip { max-height: 140px; opacity: 1;
+    transition: max-height var(--duration-base) var(--ease-standard),
+                opacity var(--duration-fast) var(--ease-standard); }
+  html.condensed .hero > .kpi-strip { max-height: 0; opacity: 0; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero, .hero-value, .hero-collapse { transition: none; }
+  }
+  /* Breite folgt dem Inhalt — die Fortschrittsleiste ist damit exakt so breit
+     wie die Zahl darueber, statt quer ueber den ganzen Desktop zu laufen. */
+  .hero-main { flex: 0 1 auto; min-width: 0; }
+  .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+  /* Nur das ₿-Zeichen traegt die Identitaetsfarbe (Abweichung 7) — die Zahl daneben
+     bleibt Text, sonst waere der Bestand mit 2,3:1 kaum lesbar. */
+  .hero-label .btc-sym { color: var(--btc-ink); font-weight: 700; }
+  .hero-label .btc-amount { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; white-space: nowrap; }
+  .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums;
+    transition: font-size var(--duration-base) var(--ease-standard); }
   /* Prozentuale Veränderung direkt neben dem Portfoliowert, leicht kleiner */
   .hero-pct { font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; font-variant-numeric: tabular-nums; }
-  /* Semantische Farben wie in der TR-App — Vorzeichen tragen die Bedeutung zusaetzlich */
-  .pos { color: var(--positive); }
-  .neg { color: var(--negative); }
+  /* Semantische Farben wie in der TR-App — Vorzeichen tragen die Bedeutung zusaetzlich.
+     Als Schrift immer die -text-Variante (AA), nie die Flaechenfarbe. */
+  .pos { color: var(--positive-text); }
+  .neg { color: var(--negative-text); }
 
-  /* ── KPI-Karten: Card-Look 1:1 vom Chart-2-Popup (.chart-pop) übernommen —
-     identische Tokens: --tip-bg/--tip-border, --radius-md, --shadow-soft,
-     Padding 8px 10px, Caption-Groesse 600 in --tip-title, Sub in --tip-body 500.
-     Desktop: horizontale Leiste in der Kopfzeile; bei Platzmangel scrollt die Leiste
-     horizontal, die Kopfzeilenhoehe bleibt fix. iOS: 2x2-Grid unterhalb der Kopfzeile
+  /* ── Wholecoiner-Fortschritt: der eine Weg, den dieses Dashboard erzaehlt ──
+     Eine 3px-Hairline unter der Hero-Zahl, gefuellt bis zum Anteil am ganzen Coin.
+     Keine Beschriftung, keine Farbe — dieselbe Marke, die Chart 3 als 1₿-Linie zeigt. */
+  .wc { position: relative; height: 3px; margin-top: var(--space-3); border-radius: var(--radius-full);
+        background: var(--progress-track); overflow: hidden; }
+  .wc-fill { position: absolute; inset: 0 auto 0 0; width: 0;
+             background: var(--progress-fill); border-radius: inherit;
+             transition: width var(--duration-slow) var(--ease-standard); }
+  .wc-cap { margin-top: 6px; font-size: 11px; font-weight: 500; color: var(--muted);
+            font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .wc-fill { transition: none; } }
+
+  /* ── KPI-Karten: flach auf --surface-subtle, wie die Position/Performance-Karten
+     der TR-App. Kein Rahmen, kein Schatten — Schatten bleibt schwebenden Layern
+     (Sheet, Toast, Chart-Popup) vorbehalten. Innerhalb der Karte gilt dieselbe
+     Hierarchie wie im Hero: kleines graues Label, Zahl darunter fett.
+     Desktop: horizontale Leiste in der Kopfzeile; iOS: 2x2-Grid unterhalb
      (Umhaengen per JS, siehe placeKpiStrip()). */
   .kpi-strip {
     display: flex; align-items: stretch; gap: var(--space-2);
     margin-left: auto; min-width: 0; overflow-x: auto; overflow-y: hidden;
-    padding: 4px 2px;                    /* Luft fuer Rahmen + Schatten der Karten */
     scrollbar-width: none; -webkit-overflow-scrolling: touch;
   }
   .kpi-strip::-webkit-scrollbar { display: none; }
   .kpi-card {
     flex: 0 0 auto;
-    background: var(--tip-bg); border: 1px solid var(--tip-border);
-    border-radius: var(--radius-md); box-shadow: var(--shadow-soft);
-    padding: 8px 10px; font-size: var(--text-caption); font-weight: 600; line-height: 1.35;
-    color: var(--tip-title); font-variant-numeric: tabular-nums;
-    white-space: nowrap; text-align: left;
+    background: var(--surface-subtle); border: 0; box-shadow: none;
+    border-radius: var(--radius-lg);
+    padding: 10px var(--space-3);
+    font-variant-numeric: tabular-nums; white-space: nowrap; text-align: left;
   }
-  .kpi-label { display: block; color: var(--tip-body); font-weight: 500; }
-  .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
-  .kpi-value { display: block; }
-  .kpi-sub { color: var(--tip-body); font-weight: 500; }
-  .kpi-card .chip { font-size: var(--text-caption); gap: 4px; }
+  .kpi-label { display: block; font-size: var(--text-caption); font-weight: 500; color: var(--muted); line-height: 1.3; }
+  .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+  .kpi-value { display: block; font-size: var(--text-h3); font-weight: 700; color: var(--text); line-height: 1.3; margin-top: 1px; }
+  .kpi-sub { font-size: var(--text-caption); font-weight: 600; color: var(--muted); line-height: 1.3; }
+  .kpi-card .chip { font-size: var(--text-caption); font-weight: 600; gap: 4px; }
 
-  .chart-card { margin-bottom: var(--space-6); }
-  /* Chart-Ueberschriften: Caps, groesser, fett (Punkt 10) */
-  .chart-title { font-size: 1.375rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: var(--space-3); }
+  .chart-card { margin-bottom: var(--space-7); }
+  /* Chart-Ueberschriften: Sektionstitel nach Style Guide (h2/600, Sentence Case).
+     Vorher 1.375rem/700 in Versalien — drei davon konkurrierten mit der Hero-Zahl,
+     obwohl die Ueberschrift nur benennt, was die Zahl darunter zeigt. */
+  .chart-title { font-size: var(--text-h2); font-weight: 600; letter-spacing: 0; margin-bottom: var(--space-3); }
   /* Zeitraum-Auswahl + optionale Chart-Schalter in einer Zeile */
   .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
   .chart-controls .range-seg { flex: 1 1 auto; margin-bottom: 0; min-width: 0; }
@@ -276,10 +347,14 @@
                 color var(--duration-fast) var(--ease-standard);
   }
   .chart-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  .chart-toggle:hover { border-color: var(--text); color: var(--text); }
-  .chart-toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .chart-toggle:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+  .chart-toggle[aria-pressed="true"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  /* Ausserhalb von „Max" gibt es keine Flaeche — der Schalter bleibt an seinem Platz
+     und wird deaktiviert, statt zu verschwinden (springende Bedienleiste vermeiden). */
+  .chart-toggle:disabled { opacity: 0.35; cursor: default; }
   /* Flaechen-Schalter: nur noch das Piktogramm (kein Text, kein Tooltip) */
-  #toggle-area { width: 32px; padding: 0; justify-content: center; }
+  #toggle-area { position: relative; width: 32px; padding: 0; justify-content: center; }
+  #toggle-area::after { content: ""; position: absolute; inset: -6px; border-radius: inherit; }
   /* Abschneiden der Beschriftungen behoben: keine festen Breiten/kein overflow:hidden
      mehr — Buttons passen sich der Textlaenge an (min-width: max-content) und der
      Container darf umbrechen/mitwachsen, statt die Schrift zu verkleinern. */
@@ -321,21 +396,9 @@
   .chart-pop.show { opacity: 1; }
   .chart-pop .pop-sub { display: block; color: var(--tip-body); font-weight: 500; }
   @media (prefers-reduced-motion: reduce) { .chart-pop { transition: none; } }
-  /* %-Badge (Chart 1): eigener HTML-Layer ueber der linken %-Skala auf Hoehe des
-     Kurvenendpunkts — die Achsen-Ticks selbst bleiben unveraendert darunter.
-     Farben nur aus Tokens: --positive/--negative + --on-accent (Light wie Dark ok). */
-  .pct-badge {
-    position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none;
-    transform: translateY(-50%);
-    background: var(--positive); color: var(--on-accent);
-    border-radius: var(--radius-full); padding: 2px 7px;
-    font-size: 11px; font-weight: 700; line-height: 1.5;
-    font-variant-numeric: tabular-nums; white-space: nowrap;
-    display: none;
-  }
-  .pct-badge.neg { background: var(--negative); }
-  .pct-badge.show { display: block; }
-  /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben */
+  /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben.
+     Sie ersetzt seit v10 auch die Legendenzeilen: die Kurven sind direkt an ihrem
+     rechten Endpunkt beschriftet (siehe endLabelPlugin), die Werte stehen hier. */
   .scrub-line {
     display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
     min-height: 26px; margin-bottom: var(--space-2);
@@ -345,8 +408,6 @@
   .scrub-value { font-weight: 700; color: var(--text); }
   .scrub-delta { font-weight: 600; }
   .scrub-extra { color: var(--muted); font-size: var(--text-caption); }
-  .legend { display: flex; gap: var(--space-4); font-size: var(--text-caption); color: var(--muted); margin-bottom: var(--space-3); flex-wrap: wrap; }
-  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
   /* ── Bewegungsliste: Hairline-Rows, keine Box ───────────────────── */
   details { margin-top: var(--space-6); }
@@ -380,6 +441,11 @@
   #skeleton .sk::after { content: ""; position: absolute; inset: 0;
     background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%);
     animation: shimmer 1.4s infinite; }
+  /* Shimmer und Sync-Puls sind Auto-Play-Animationen — bei reduzierter Bewegung aus */
+  @media (prefers-reduced-motion: reduce) {
+    #skeleton .sk::after { animation: none; display: none; }
+    .dot.pend { animation: none; }
+  }
   html[data-theme="dark"] #skeleton .sk::after {
     background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); }
   @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
@@ -423,7 +489,8 @@
     .sheet.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
   }
   .sheet h2 { font-size: var(--text-h2); font-weight: 600; margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center; }
-  .sheet h2 button { border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .sheet h2 button { border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer;
+    width: var(--tap); height: var(--tap); display: flex; align-items: center; justify-content: center; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0; }
   .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
   .f-row.one { grid-template-columns: 1fr; }
   .f-field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
@@ -438,15 +505,15 @@
   .masked { -webkit-text-security: disc; }
   .masked.show { -webkit-text-security: none; }
   .f-field .with-eye { position: relative; }
-  .f-field .with-eye input { padding-right: 44px; }
-  .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  .f-field .with-eye input { padding-right: 48px; }
+  .eye { position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
     border: none; background: none; color: var(--muted);
-    width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    width: var(--tap); height: var(--tap); cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .eye svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .f-hint { font-size: var(--text-caption); color: var(--muted); margin: -4px 0 10px; }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--space-3); }
   .seg button {
-    flex: 1 1 auto; min-height: 38px; font: inherit; font-size: 12px; font-weight: 600;
+    flex: 1 1 auto; min-height: var(--tap); font: inherit; font-size: 12px; font-weight: 600;
     border: 1px solid var(--hairline); background: transparent; color: var(--muted);
     border-radius: var(--radius-full); padding: 6px 12px; cursor: pointer;
     transition: background-color var(--duration-fast) var(--ease-standard),
@@ -465,11 +532,11 @@
   .btn:disabled { opacity: 0.4; }
   .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--hairline); }
   .btn.ghost:hover { background: transparent; border-color: var(--text); }
-  .btn.danger { background: transparent; border: 1px solid var(--hairline); color: var(--negative); }
+  .btn.danger { background: transparent; border: 1px solid var(--hairline); color: var(--negative-text); }
   .btn.danger:hover { background: transparent; border-color: var(--negative); }
   .f-msg { font-size: var(--text-caption); margin-top: 10px; min-height: 16px; color: var(--muted); }
-  .f-msg.err { color: var(--negative); }
-  .f-msg.ok { color: var(--positive); }
+  .f-msg.err { color: var(--negative-text); }
+  .f-msg.ok { color: var(--positive-text); }
   .divider { border: none; border-top: 1px solid var(--hairline); margin: var(--space-4) 0; }
 
   /* Toast: schwebender Layer */
@@ -500,7 +567,11 @@
     /* Charts auf iOS auf die volle Bildschirmbreite ausdehnen (Punkt 12) */
     .chart-card .chart-wrap { margin: 0 calc(-1 * var(--screen-padding)); }
     th, td { padding: 10px 6px; }
-    .legend { gap: 10px; }
+    /* Auf dem iPhone ist hero-main das einzige Kind — Leiste laeuft ueber die Breite */
+    .hero-main { flex: 1 1 100%; }
+    /* Kollabierter Hero auf dem iPhone: der Wert bleibt gross genug, um Hero zu sein */
+    html.condensed .hero-value { font-size: var(--text-h2); }
+    html.condensed .hero-pct { font-size: var(--text-label); }
   }
 </style>
 </head>
@@ -531,8 +602,16 @@
        haengt #kpi-strip als eigenen Block direkt unter die Kopfzeile. -->
   <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
     <div class="hero-main">
-      <div class="hero-label"><span class="btc-sym">&#8383; <span id="k-btc-head">–</span></span><span id="stand"></span></div>
+      <div class="hero-label hero-collapse"><span><span class="btc-sym">&#8383;</span> <span class="btc-amount" id="k-btc-head">–</span></span><span id="stand"></span></div>
       <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
+      <!-- Wholecoiner-Fortschritt: Anteil am ganzen Coin, dieselbe Marke wie die
+           1₿-Linie in Chart 3. Ohne Beschriftung an der Leiste selbst. -->
+      <div class="hero-collapse">
+        <div class="wc" id="wc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Fortschritt zum ganzen Bitcoin">
+          <div class="wc-fill" id="wc-fill"></div>
+        </div>
+        <div class="wc-cap" id="wc-pct"></div>
+      </div>
     </div>
     <div class="kpi-strip stagger" id="kpi-strip" aria-label="Kennzahlen">
       <div class="kpi-card">
@@ -570,12 +649,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-6 4 4 5-7 4 5"/><path d="M3 16l5-6 4 4 5-7 4 5v3H3z" fill="currentColor" stroke="none" opacity="0.28"/></svg>
       </button>
     </div>
-    <div class="legend">
-      <span><i style="background:var(--line-wert)" id="legend-swatch-wert"></i>Portfoliowert</span>
-      <span><i style="background:var(--line-invest)" id="legend-swatch-inv"></i>Investiert <span id="legend-inv"></span></span>
-    </div>
     <div class="scrub-line" id="scrub-wert"></div>
-    <div class="chart-wrap"><canvas id="chartWert"></canvas><div class="pct-badge" id="pct-badge" aria-hidden="true"></div></div>
+    <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
   </div>
 
   <div class="card chart-card" id="card-preis">
@@ -587,19 +662,13 @@
       <button type="button" data-range="1y">1J</button>
       <button type="button" data-range="max" class="sel">Max</button>
     </div>
-    <div class="legend">
-      <span><i style="background:var(--line-price)" id="legend-swatch-preis"></i>BTC-Kurs</span>
-      <span><i style="background:var(--buy-dot);border-radius:50%"></i>Einzelner Kauf</span>
-      <span><i style="background:var(--avg-line)"></i>&Oslash; Kaufkurs</span>
-      <span>Investiert <span id="legend-inv-preis"></span></span>
-    </div>
     <div class="scrub-line" id="scrub-preis"></div>
     <div class="chart-wrap"><canvas id="chartPreis"></canvas><div class="chart-pop" id="pop-preis" role="status" aria-live="off"></div></div>
   </div>
 
   <div class="card chart-card">
-    <div class="chart-title">Stack</div>
-    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Stack">
+    <div class="chart-title">Sats-Bestand</div>
+    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Sats-Bestand">
       <button type="button" data-range="1w">1W</button>
       <button type="button" data-range="1m">1M</button>
       <button type="button" data-range="6m">6M</button>
@@ -665,8 +734,8 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
   <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
-  <button type="button" class="btn" id="s-paste">Einrichtungs-Code &uuml;bernehmen (aus Zwischenablage)</button>
-  <div class="f-hint" style="margin:6px 0 12px">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &mdash; verbindet ohne Tippen.</div>
+  <button type="button" class="btn" id="s-paste">Code aus Zwischenablage einf&uuml;gen</button>
+  <div class="f-hint" style="margin:6px 0 12px">Den Code erzeugst du am anderen Ger&auml;t mit &bdquo;Einrichtungs-Code kopieren&ldquo;. Verbindet dieses Ger&auml;t ohne Tippen.</div>
   <hr class="divider">
   <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label>
     <div class="with-eye"><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Anzeigen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
@@ -677,9 +746,11 @@
   <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
   <div class="f-msg" id="s-msg"></div>
   <hr class="divider">
-  <button type="button" class="btn ghost" id="s-copycode">Einrichtungs-Code kopieren (f&uuml;r 2. Ger&auml;t)</button>
+  <button type="button" class="btn ghost" id="s-copycode">Einrichtungs-Code kopieren</button>
+  <div class="f-hint" style="margin:6px 0 12px">F&uuml;r ein zweites Ger&auml;t &mdash; dort unter &bdquo;Code aus Zwischenablage einf&uuml;gen&ldquo;.</div>
   <button type="button" class="btn ghost" id="s-sync-now">Jetzt synchronisieren</button>
-  <button type="button" class="btn ghost" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
+  <button type="button" class="btn ghost" id="s-backup">Backup herunterladen</button>
+  <div class="f-hint" style="margin:6px 0 12px">Die Datei ist unverschl&uuml;sselt. Leg sie an einen Ort, dem du vertraust.</div>
   <button type="button" class="btn danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button>
 </div>
 
@@ -874,6 +945,10 @@ function setSyncCfg(cfg) {
 function syncStatus(state, text) {
   $("sync-dot").className = "dot" + (state ? " " + state : "");
   $("sync-text").textContent = text;
+  /* Der Punkt allein traegt die Bedeutung nur ueber Farbe — auf Touch gibt es kein
+     Hover fuer den title. Deshalb wandert der Klartext zusaetzlich ins aria-label. */
+  $("sync-chip").setAttribute("aria-label", "Sync: " + text);
+  $("sync-chip").title = "Sync: " + text + " – tippen für Details";
 }
 async function ghApi(path, opts = {}) {
   const cfg = syncCfg();
@@ -1088,6 +1163,18 @@ function renderKpis(market) {
   countTo($("k-wert"), wert, v => fmtEur(v));
   /* BTC-Bestand im Header: Satoshis ÷ 1e8 → BTC mit 8 Nachkommastellen (z. B. ₿ 0,59341919) */
   $("k-btc-head").textContent = btc.toLocaleString("de-DE", { minimumFractionDigits: 8, maximumFractionDigits: 8 });
+  /* Wholecoiner-Fortschritt: Anteil am ganzen Coin, bei 100 % gedeckelt.
+     Bewusst ohne eigene Farbe — die Leiste ist Struktur, keine Statusmeldung. */
+  const wcPct = Math.max(0, Math.min(100, btc * 100));
+  $("wc-fill").style.width = wcPct.toFixed(2) + "%";
+  $("wc-pct").textContent = btc >= 1
+    ? "Ganzer Coin erreicht"
+    : wcPct.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " % von 1 ₿";
+  const wcBar = $("wc-bar");
+  wcBar.setAttribute("aria-valuenow", Math.round(wcPct));
+  wcBar.setAttribute("aria-valuetext",
+    btc.toLocaleString("de-DE", { maximumFractionDigits: 4 }) + " von 1 Bitcoin");
+
   const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
   if (hasInvest) {
     const pct = (wert / totEur - 1) * 100;
@@ -1223,6 +1310,46 @@ const baselinePlugin = {
     /* Punkt 6: praesentere Punkte — dicker/groesser (an TR-Screenshots orientiert) */
     c.lineWidth = 3; c.lineCap = "round"; c.setLineDash([0.1, 8]);
     c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+    c.restore();
+  }
+};
+/* ═══════════ Endpunkt-Beschriftung statt Legendenzeile ═══════════
+   Jede Kurve traegt ihren Namen dort, wo sie endet — wie eine handschriftliche
+   Notiz am Kurvenende. Ersetzt die frueheren Legenden ueber Chart 1 und 2:
+   dieselbe Information, aber am Ort des Objekts statt in einer eigenen Zeile,
+   und ohne die farbigen Swatch-Quadrate.
+   chart.$endLabels = [{ ds: <Dataset-Index>, text, color }] */
+const endLabelPlugin = {
+  id: "endLabels",
+  afterDatasetsDraw(chart) {
+    const defs = chart.$endLabels;
+    if (!defs || !defs.length || !chart.chartArea) return;
+    const c = chart.ctx, { top, bottom, right } = chart.chartArea;
+    c.save();
+    c.font = "600 11px " + (Chart.defaults.font.family || "Inter, sans-serif");
+    c.textAlign = "right";
+    c.textBaseline = "middle";
+    const used = [];
+    for (const d of defs) {
+      const meta = chart.getDatasetMeta(d.ds);
+      if (!meta || !meta.data || !meta.data.length) continue;
+      /* letzten Punkt mit gueltigem Wert suchen (Ø-Kaufkurs beginnt erst spaeter) */
+      let el = null;
+      for (let i = meta.data.length - 1; i >= 0; i--) {
+        const p = meta.data[i];
+        if (p && isFinite(p.y) && chart.data.datasets[d.ds].data[i] != null) { el = p; break; }
+      }
+      if (!el) continue;
+      /* Label ueber den Endpunkt setzen; kollidiert es mit einem bereits
+         gesetzten Label, weicht es nach unten aus. */
+      let y = el.y - 10;
+      if (y < top + 7) y = el.y + 12;
+      while (used.some(u => Math.abs(u - y) < 13)) y += 13;
+      y = Math.min(bottom - 7, Math.max(top + 7, y));
+      used.push(y);
+      c.fillStyle = d.color;
+      c.fillText(d.text, right - 4, y);
+    }
     c.restore();
   }
 };
@@ -1379,7 +1506,7 @@ function renderCharts(market) {
     price: cssv("--line-price"), avg: cssv("--avg-line"),
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
     after: cssv("--ch-after"), fillAfter: cssv("--fill-after"), base: cssv("--base-line"),
-    btc: cssv("--btc"),
+    btc: cssv("--btc"), sats: cssv("--line-sats"), endLabel: cssv("--ch-endlabel"),
     /* Trendfarben aus EINER Quelle — garantiert identische Werte in Chart 1 und Chart 2 */
     trendUp: cssv("--trend-up"), trendDown: cssv("--trend-down"),
     trendUpSoft: cssv("--trend-up-soft"), trendDownSoft: cssv("--trend-down-soft")
@@ -1468,9 +1595,13 @@ function renderCharts(market) {
   const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
   const scW = { i: -1 };
   const isMaxW = RANGES.wert === "max";
-  /* Flaeche existiert nur in der Max-Ansicht — in allen anderen Zeitraeumen wird
-     der Schalter komplett ausgeblendet und die Flaeche nicht gezeichnet */
-  $("toggle-area").style.display = isMaxW ? "" : "none";
+  /* Flaeche existiert nur in der Max-Ansicht. Der Schalter bleibt trotzdem stehen und
+     wird nur deaktiviert — ein Bedienelement, das je nach Zeitraum verschwindet,
+     laesst die ganze Leiste springen. */
+  const areaBtn = $("toggle-area");
+  areaBtn.disabled = !isMaxW;
+  areaBtn.setAttribute("aria-pressed", (showArea && isMaxW) ? "true" : "false");
+  areaBtn.title = isMaxW ? "" : "Fläche gibt es nur im Zeitraum „Max“";
   const areaOn = showArea && isMaxW;
   /* Trend-Faerbung: in 1W/1M/6M/1J traegt die GANZE Kurve eine Farbe — rot, wenn der
      Portfoliowert seit Periodenstart gefallen ist, sonst gruen. „Max" bleibt bei der
@@ -1485,32 +1616,21 @@ function renderCharts(market) {
   const colInvW = i => trendModeW
     ? C.avg
     : (ptsW[i].wert < ptsW[i].eur ? C.investLoss : C.invest);
-  /* Linke %-Skala: Veraenderung relativ zum ersten Wert des gewaehlten Zeitraums.
-     % ist eine lineare Transformation der €-Werte — beide Skalen beschreiben exakt
-     dieselbe Kurve: yPct.min/max sind die transformierten €-Grenzen der rechten Skala,
-     damit jeder €-Wert pixelgenau auf seinem %-Wert liegt (pro Zeitraum neu berechnet). */
+  /* v10: die linke %-Skala ist entfallen. Dieselbe Prozentzahl stand zuvor dreimal
+     auf dem Schirm — Achse, Badge am Kurvenende und Hero-Zeile. Sie lebt jetzt nur
+     noch dort, wo sie sich auf einen konkreten Punkt bezieht: im Hero (Gesamt) und
+     in der Scrub-Zeile (angefasster Punkt). Die Kurve haengt wieder an der €-Skala. */
   const baseW = ptsW.length ? ptsW[0].wert : NaN;
-  const hasPct = isFinite(baseW) && baseW > 0;
-  const toPct = v => (v / baseW - 1) * 100;
-  const fmtPctAxis = v => (v > 0 ? "+" : "") +
-    v.toLocaleString("de-DE", { maximumFractionDigits: Math.abs(v) < 1 ? 2 : 1 }) + " %";
-  /* Legenden-Swatches folgen der aktuellen Kurvenfarbe */
-  if (ptsW.length) {
-    $("legend-swatch-wert").style.background = colW(ptsW.length - 1);
-    $("legend-swatch-inv").style.background = colInvW(ptsW.length - 1);
-  }
   /* Punkt 13: auf schmalen Screens im „Max"-Zeitraum duennere/staerker geglaettete Kurve,
      damit sie bei hoher Datendichte nicht gestaucht/zu dick wirkt */
   const denseW = IS_NARROW && RANGES.wert === "max";
   const chW = new Chart($("chartWert"), {
     type: "line",
-    plugins: [baselinePlugin, scrubPlugin],
+    plugins: [baselinePlugin, endLabelPlugin, scrubPlugin],
     data: { labels: labelsW, datasets: [
-      /* Portfoliowert haengt an der linken %-Skala (Positionierung ueber die
-         %-Veraenderung); die rechte €-Skala ist die synchron transformierte Ansicht.
-         Fallback ohne gueltigen Basiswert: wie bisher nominal auf der €-Skala. */
-      { label: "Portfoliowert", data: hasPct ? ptsW.map(p => toPct(p.wert)) : ptsW.map(p => p.wert),
-        yAxisID: hasPct ? "yPct" : "y", borderColor: C.wert,
+      /* Portfoliowert nominal auf der €-Skala rechts (die %-Hilfsskala ist entfallen) */
+      { label: "Portfoliowert", data: ptsW.map(p => p.wert),
+        borderColor: C.wert,
         /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven.
            backgroundColor nur setzen, wenn die Flaeche aktiv ist — sonst bliebe beim
            Scrubben eine Rest-Flaeche stehen, obwohl der Toggle aus ist. */
@@ -1527,59 +1647,29 @@ function renderCharts(market) {
     ]},
     options: { ...common,
       scales: { ...common.scales,
-        /* Rechte €-Skala: unveraendert */
+        /* Eine einzige Skala, rechts (Abweichung 3) */
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
-          callback: fmtAxisK } },
-        /* Neue linke %-Skala: 0 % = Ausgangswert der Periode; Grenzen sind die
-           linear transformierten €-Grenzen → beide Skalen bleiben exakt synchron */
-        ...(hasPct ? { yPct: {
-          position: "left", min: toPct(bW.min), max: toPct(bW.max),
-          border: { display: false }, grid: { display: false },
-          afterBuildTicks: axis => {
-            /* „schoene" %-Ticks (1/2/5 × 10^n) innerhalb der fixen Grenzen */
-            const span = axis.max - axis.min;
-            if (!(span > 0)) return;
-            const raw = span / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
-            const step = [1, 2, 5, 10].map(m => m * mag).find(s => span / s <= 5) || raw;
-            const out = [];
-            for (let v = Math.ceil(axis.min / step) * step; v <= axis.max + step / 1e6; v += step)
-              out.push({ value: v });
-            axis.ticks = out;
-          },
-          ticks: { color: C.tick, font: { size: 11 }, callback: fmtPctAxis }
-        } } : {}) } }
+          callback: fmtAxisK } } } }
   });
-  /* %-Badge am linken Achsenrand: Grundzustand = Periodenende auf Hoehe des
-     Kurvenendpunkts; beim Scrubben laeuft Wert + Hoehe live mit (onShow unten). */
-  const badgeW = $("pct-badge");
-  const setBadgeW = i => {
-    const ax = chW.scales && chW.scales.yPct;
-    if (!hasPct || !ptsW.length || i < 0 || !ax || !chW.chartArea) { badgeW.classList.remove("show"); return; }
-    const pct = toPct(ptsW[i].wert);
-    badgeW.textContent = fmtPct(pct);
-    badgeW.classList.toggle("neg", pct < 0);
-    const { top, bottom } = chW.chartArea;
-    const y = ax.getPixelForValue(pct);
-    badgeW.style.top = Math.round(Math.min(bottom, Math.max(top, y))) + "px";
-    badgeW.classList.add("show");
-  };
+  /* Endpunkt-Beschriftung statt Legende: Kurvennamen am rechten Kurvenende */
+  chW.$endLabels = [
+    { ds: 0, text: "Portfoliowert", color: C.endLabel },
+    { ds: 1, text: "Investiert", color: C.endLabel }
+  ];
   attachScrub(chW, scW, {
     lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
     baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
-    /* Badge: beim Scrubben %-Wert an der Hover-Position, danach zurueck zum Periodenende */
-    onShow: i => setBadgeW(i < 0 ? ptsW.length - 1 : i),
     /* Zeile ist redundant zum Header → nur waehrend des Scrubbens sichtbar */
     hideIdle: true,
-    onIdle: () => { if (ptsW.length) $("legend-inv").textContent = fmtEur(ptsW[ptsW.length - 1].eur); },
     html: i => {
       const p = ptsW[i];
       const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
-      /* Investiert-Summe steht in der Legende (laeuft beim Scrubben mit) —
-         nicht mehr in der Scrub-Zeile, damit dort kein Zeilenumbruch entsteht */
-      $("legend-inv").textContent = fmtEur(p.eur);
+      /* Der investierte Betrag stand frueher in der Legende — seit die Legende weg ist,
+         laeuft er hier mit (und steht dauerhaft in der KPI-Kachel „Investiert"). */
       return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
-        pct != null ? fmtPct(pct) : "", pct != null && pct < 0, "");
+        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
+        "investiert " + fmtEur(p.eur, 0));
     }
   });
 
@@ -1612,13 +1702,14 @@ function renderCharts(market) {
   };
   const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
   const scS = { i: -1 };
-  /* Sats-Bestand: Kurve in BTC-Orange */
+  /* Sats-Bestand: gruen (Abweichung 1). Vorher lief die Kurve in BTC-Orange —
+     das widersprach Abweichung 7, die Orange dem ₿-Symbol vorbehaelt. */
   const chS = new Chart($("chartSats"), {
     type: "line",
     plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
     data: { labels: labelsS, datasets: [
-      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.btc,
-        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.btc) },
+      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.sats,
+        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.sats) },
         borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, stepped: true }
     ]},
     options: { ...common,
@@ -1628,7 +1719,7 @@ function renderCharts(market) {
         callback: fmtAxisSats } } } }
   });
   attachScrub(chS, scS, {
-    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.btc,
+    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.sats,
     baseValue: ptsS.length ? ptsS[0].sats : null, baseColor: C.base,
     html: i => {
       const p = ptsS[i];
@@ -1669,7 +1760,6 @@ function renderCharts(market) {
   const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
   const trendModeK = RANGES.preis !== "max" && ptsK.length > 1;
   const colK = () => trendModeK ? (kTrendUp ? C.trendUp : C.trendDown) : C.price;
-  $("legend-swatch-preis").style.background = colK();
   /* Y-Achse fest in 20.000-€-Schritten (PRICE_AXIS_STEP), auch wenn daraus bei
      kurzen Zeitraeumen nur wenige Ticks werden — bewusst so gefordert. */
   const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)),
@@ -1700,7 +1790,7 @@ function renderCharts(market) {
   };
   const chK = new Chart($("chartPreis"), {
     type: "line",
-    plugins: [baselinePlugin, buyHaloPlugin, scrubPlugin],
+    plugins: [baselinePlugin, buyHaloPlugin, endLabelPlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
       { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: colK(),
         segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : colK()) },
@@ -1720,6 +1810,12 @@ function renderCharts(market) {
         y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisK } } } }
   });
   chK.$buys = { info: dotInfo, radius: dotR, color: C.buy, border: C.dotBorder };
+  /* Endpunkt-Beschriftung statt Legende. „Einzelner Kauf" braucht keinen Eintrag:
+     die Punkte erklaeren sich beim Antippen ueber das Popup. */
+  chK.$endLabels = [
+    { ds: 0, text: "BTC-Kurs", color: C.endLabel },
+    { ds: 1, text: "Ø Kaufkurs", color: C.endLabel }
+  ];
 
   /* Kauf-Popup: erscheint, sobald der Scrub-Indikator auf einem Kaufpunkt einrastet.
      Zeile 1: „500 € @ 62.345 €", Zeile 2: „1.234.567 Sats". */
@@ -1747,10 +1843,10 @@ function renderCharts(market) {
     onShow: showBuyPop,
     html: i => {
       const p = ptsK[i];
-      /* Legende zeigt den bis zu diesem Zeitpunkt kumuliert investierten Betrag */
-      $("legend-inv-preis").textContent = fmtEur(p.eur);
-      /* Kaufdetails stehen jetzt im Popup — die Scrub-Zeile bleibt schlank */
-      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false, "");
+      /* Kaufdetails stehen im Popup — hier nur Datum, Kurs und der bis dahin
+         kumuliert investierte Betrag (stand frueher in der Legende). */
+      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false,
+        p.eur > 0 ? "investiert " + fmtEur(p.eur, 0) : "");
     }
   });
   attachPulse(chK);
@@ -1787,7 +1883,29 @@ $("toggle-area").addEventListener("click", () => {
   blurSwap($("chartWert"), () => renderCharts(lastMarket));
 });
 
-/* Kopfzeile & Portfoliowert sind fixiert (sticky) — kein Ausblenden beim Scrollen */
+/* ═══════════ Hero kollabiert beim Scrollen ═══════════
+   Kopfzeile und Portfoliowert bleiben sticky, aber der Hero schrumpft nach den ersten
+   Pixeln auf eine Zeile: Bestand, Zeitstempel und Fortschrittsleiste treten zurueck,
+   der Wert bleibt. Zwei Sticky-Ebenen in voller Hoehe kosten sonst dauerhaft
+   ueber ein Sechstel des iPhone-Viewports. Hysterese (24/8 px) verhindert Flackern. */
+(function heroCondense() {
+  const root = document.documentElement;
+  let ticking = false, on = false;
+  const apply = () => {
+    ticking = false;
+    const y = window.scrollY || window.pageYOffset || 0;
+    const next = on ? y > 8 : y > 24;
+    if (next === on) return;
+    on = next;
+    root.classList.toggle("condensed", on);
+  };
+  addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(apply);
+  }, { passive: true });
+  apply();
+})();
 
 /* ═══════════ KPI-Leiste umhaengen: Desktop in der Kopfzeile, iOS als Block darunter ═══
    Ein einziger DOM-Knoten (#kpi-strip, eindeutige IDs bleiben erhalten) — er wandert
