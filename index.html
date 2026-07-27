@@ -94,12 +94,13 @@
     --ch-endlabel: #6C6C71;
     --line-main: var(--positive);    /* Chart 3: semantisch wie in der TR-App */
     --line-loss: var(--negative);
-    --tr-green: #5CCA51;                /* TR-Chartgruen, aus den App-Screenshots gesampelt (hell wie dunkel identisch) */
-    --line-wert: var(--tr-green);       /* Chart 1: Portfoliowert ueber Investiert */
-    --line-wert-loss: #B3261E;          /* Chart 1: Portfoliowert unter Investiert (dunkles Rot) */
-    --line-invest: rgba(92,202,81,0.5);       /* Investiert: dezent, Farbe der anliegenden Flaeche */
+    /* v11: Chart-1-Gruen = exakt das Header-Gruen (--positive-text, modusabhaengig).
+       Die rgba-Varianten (Investiert-Linie, Flaeche) sind daraus abgeleitet. */
+    --line-wert: var(--positive-text);  /* Chart 1: Portfoliowert ueber Referenz */
+    --line-wert-loss: #B3261E;          /* Chart 1: Portfoliowert unter Referenz (dunkles Rot) */
+    --line-invest: rgba(14,122,56,0.5);       /* Investiert: dezent, Farbe der anliegenden Flaeche */
     --line-invest-loss: rgba(179,38,30,0.5);
-    --fill-pos: rgba(92,202,81,0.05);   /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
+    --fill-pos: rgba(14,122,56,0.05);   /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
     --fill-neg: rgba(179,38,30,0.05);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
     /* Trendfarben: EINE Quelle fuer Chart 1 und Chart 2 — nie separat setzen,
        damit „gefallen/gestiegen" in beiden Charts exakt denselben Farbwert hat */
@@ -107,12 +108,8 @@
     --trend-down:      var(--line-wert-loss);
     --trend-up-soft:   var(--line-invest);       /* dezente Variante (Investiert-Linie) */
     --trend-down-soft: var(--line-invest-loss);
-    --line-sats: var(--tr-green);       /* Chart 3: Sats-Bestand gruen (Abweichung 1) — nicht mehr BTC-Orange */
+    --line-sats: var(--btc);            /* v11: Chart 3 wieder vollstaendig in Original-BTC-Orange (#F7931A) */
     --line-price: var(--text);          /* Chart 2: Preiskurve neutral (Near-Black / Off-White) */
-    /* Wholecoiner-Fortschritt unter der Hero-Zahl: bewusst NICHT orange
-       (Abweichung 7 — Orange bleibt dem ₿-Symbol vorbehalten) */
-    --progress-track: var(--hairline);
-    --progress-fill:  var(--text);
     --buy-dot: #4A4A50;                 /* Kaufpunkte: dunkles Grau im Hellmodus */
     --avg-line: #7A7A80;                /* Oe-Kaufkurs-Linie: mittleres Grau */
     --dot-border: #FFFFFF;
@@ -150,9 +147,9 @@
     --ath-text: #9A9AA0;
     --ch-endlabel: #9A9AA0;
     --line-wert-loss: #C4372B;
-    --line-invest: rgba(92,202,81,0.55);
+    --line-invest: rgba(52,209,88,0.55);
     --line-invest-loss: rgba(196,55,43,0.55);
-    --fill-pos: rgba(92,202,81,0.07);
+    --fill-pos: rgba(52,209,88,0.07);
     --fill-neg: rgba(196,55,43,0.08);
     --buy-dot: #C2C2C8;                 /* Kaufpunkte: helles Grau im Dunkelmodus */
     --avg-line: #9A9AA0;
@@ -276,10 +273,10 @@
      wie die Zahl darueber, statt quer ueber den ganzen Desktop zu laufen. */
   .hero-main { flex: 0 1 auto; min-width: 0; }
   .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
-  /* Nur das ₿-Zeichen traegt die Identitaetsfarbe (Abweichung 7) — die Zahl daneben
-     bleibt Text, sonst waere der Bestand mit 2,3:1 kaum lesbar. */
-  .hero-label .btc-sym { color: var(--btc-ink); font-weight: 700; }
-  .hero-label .btc-amount { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* v11: ₿-Zeichen UND Bestandszahl im originalen Bitcoin-Orange (#F7931A, --btc) —
+     bewusste Entscheidung fuer den Markenwert in beiden Modi. */
+  .hero-label .btc-sym { color: var(--btc); font-weight: 700; }
+  .hero-label .btc-amount { color: var(--btc); font-weight: 600; font-variant-numeric: tabular-nums; }
   #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; white-space: nowrap; }
   .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums;
     transition: font-size var(--duration-base) var(--ease-standard); }
@@ -291,17 +288,8 @@
   .pos { color: var(--positive-text); }
   .neg { color: var(--negative-text); }
 
-  /* ── Wholecoiner-Fortschritt: der eine Weg, den dieses Dashboard erzaehlt ──
-     Eine 3px-Hairline unter der Hero-Zahl, gefuellt bis zum Anteil am ganzen Coin.
-     Keine Beschriftung, keine Farbe — dieselbe Marke, die Chart 3 als 1₿-Linie zeigt. */
-  .wc { position: relative; height: 3px; margin-top: var(--space-3); border-radius: var(--radius-full);
-        background: var(--progress-track); overflow: hidden; }
-  .wc-fill { position: absolute; inset: 0 auto 0 0; width: 0;
-             background: var(--progress-fill); border-radius: inherit;
-             transition: width var(--duration-slow) var(--ease-standard); }
-  .wc-cap { margin-top: 6px; font-size: 11px; font-weight: 500; color: var(--muted);
-            font-variant-numeric: tabular-nums; }
-  @media (prefers-reduced-motion: reduce) { .wc-fill { transition: none; } }
+  /* v11: Wholecoiner-Fortschrittsbalken entfernt — die Umrechnung ist ueber die
+     ₿-Zahl im Header und die Wholecoiner-Linie in Chart 3 nachvollziehbar. */
 
   /* ── KPI-Karten: flach auf --surface-subtle, wie die Position/Performance-Karten
      der TR-App. Kein Rahmen, kein Schatten — Schatten bleibt schwebenden Layern
@@ -604,14 +592,6 @@
     <div class="hero-main">
       <div class="hero-label hero-collapse"><span><span class="btc-sym">&#8383;</span> <span class="btc-amount" id="k-btc-head">–</span></span><span id="stand"></span></div>
       <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
-      <!-- Wholecoiner-Fortschritt: Anteil am ganzen Coin, dieselbe Marke wie die
-           1₿-Linie in Chart 3. Ohne Beschriftung an der Leiste selbst. -->
-      <div class="hero-collapse">
-        <div class="wc" id="wc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Fortschritt zum ganzen Bitcoin">
-          <div class="wc-fill" id="wc-fill"></div>
-        </div>
-        <div class="wc-cap" id="wc-pct"></div>
-      </div>
     </div>
     <div class="kpi-strip stagger" id="kpi-strip" aria-label="Kennzahlen">
       <div class="kpi-card">
@@ -1163,17 +1143,7 @@ function renderKpis(market) {
   countTo($("k-wert"), wert, v => fmtEur(v));
   /* BTC-Bestand im Header: Satoshis ÷ 1e8 → BTC mit 8 Nachkommastellen (z. B. ₿ 0,59341919) */
   $("k-btc-head").textContent = btc.toLocaleString("de-DE", { minimumFractionDigits: 8, maximumFractionDigits: 8 });
-  /* Wholecoiner-Fortschritt: Anteil am ganzen Coin, bei 100 % gedeckelt.
-     Bewusst ohne eigene Farbe — die Leiste ist Struktur, keine Statusmeldung. */
-  const wcPct = Math.max(0, Math.min(100, btc * 100));
-  $("wc-fill").style.width = wcPct.toFixed(2) + "%";
-  $("wc-pct").textContent = btc >= 1
-    ? "Ganzer Coin erreicht"
-    : wcPct.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " % von 1 ₿";
-  const wcBar = $("wc-bar");
-  wcBar.setAttribute("aria-valuenow", Math.round(wcPct));
-  wcBar.setAttribute("aria-valuetext",
-    btc.toLocaleString("de-DE", { maximumFractionDigits: 4 }) + " von 1 Bitcoin");
+  /* v11: Wholecoiner-Fortschrittsbalken entfernt (inkl. „x % von 1 ₿"-Zeile). */
 
   const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
   if (hasInvest) {
@@ -1232,14 +1202,16 @@ const SCRUB_ACTIVATE_DX = 14;/* klar horizontale Geste aktiviert sofort */
 /* Einrast-Radius auf Kaufpunkte (px). Zum Nachjustieren: nur diese Zahl aendern.
    Halbiert gegenueber v7 (war 22) — das Snapping reagiert dadurch deutlich weniger sensibel. */
 const SCRUB_SNAP_PX = 11;
-/* Chart 2: feste Y-Achsen-Schrittweite in Euro. Zum Nachjustieren nur hier aendern. */
-const PRICE_AXIS_STEP = 20000;
+/* v11: Die feste Chart-2-Schrittweite (PRICE_AXIS_STEP, 20.000 €) ist entfallen —
+   beide €-Achsen (Chart 1 + 2) skalieren jetzt dynamisch eng an der Wertspanne. */
 /* Gemeinsame Puls-Phase (0…1…0 in 1,6 s). Bewusst NICHT an den Scrub-Zustand gekoppelt:
    frueher lief der Puls nur, solange etwas anderes das Canvas neu zeichnete — das war
    auf iOS zufaellig der Fall, auf Android/Web nicht. Jetzt treibt attachPulse() das Neuzeichnen. */
 const pulseK = () => REDUCED_MOTION ? 1
   : 0.5 - 0.5 * Math.cos((performance.now() % 1600) / 1600 * 2 * Math.PI);
 const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
+/* v11: %-Endlabel am Kurvenende — 1 Dezimale, konsistent zur Hero-Anzeige */
+const fmtPct1 = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %";
 /* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
 const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
 function scrubHtml(date, value, delta, neg, extra) {
@@ -1507,6 +1479,7 @@ function renderCharts(market) {
     buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
     after: cssv("--ch-after"), fillAfter: cssv("--fill-after"), base: cssv("--base-line"),
     btc: cssv("--btc"), sats: cssv("--line-sats"), endLabel: cssv("--ch-endlabel"),
+    posText: cssv("--positive-text"), negText: cssv("--negative-text"),
     /* Trendfarben aus EINER Quelle — garantiert identische Werte in Chart 1 und Chart 2 */
     trendUp: cssv("--trend-up"), trendDown: cssv("--trend-down"),
     trendUpSoft: cssv("--trend-up-soft"), trendDownSoft: cssv("--trend-down-soft")
@@ -1570,6 +1543,42 @@ function renderCharts(market) {
     }
     return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
   };
+  /* v11: enge, dynamische €-Skala fuer Chart 1 + 2 — die Schrittweite folgt der
+     tatsaechlichen Wertspanne der Periode (1/2/5 × 10^n, ganzzahlig, Ziel 3–6 Ticks),
+     statt einer festen, zu breiten Skala (frueher z. B. 40k/50k/60k bei 49k–51k). */
+  const tightBounds = vals => {
+    let lo = Infinity, hi = -Infinity;
+    for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
+    const raw = (hi - lo) / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    let step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 6) || 10 * mag;
+    step = Math.max(1, Math.round(step));            /* nur ganze Zahlen auf der Achse */
+    return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
+  };
+  /* v11: €-Achsenlabel — „k"-Kurzform nur, wenn die Schrittweite ganze Tausender
+     ergibt (sonst volle ganze Zahl, z. B. „49.500" statt gerundet „50k") */
+  const fmtAxisTight = b => v => (b.step >= 1000 && b.step % 1000 === 0) ? fmtAxisK(v) : fmtInt(v);
+  /* v11: linke %-Skala (nur 1W/1M/6M/1J) — reine Umbeschriftung der €-Skala relativ
+     zum Periodenstart. Schritte: Vielfache von 5 (Werte enden auf 0/5); bei kleinen
+     Spannen unter ~10 Prozentpunkten feinere ganze Schritte (1 %/2 %). */
+  const pctScaleOpts = (base, b) => {
+    if (!(base > 0)) return null;
+    const lo = (b.min / base - 1) * 100, hi = (b.max / base - 1) * 100;
+    const span = hi - lo;
+    const step = span >= 10
+      ? ([5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2500, 5000].find(s => span / s <= 6) || 10000)
+      : (span >= 4 ? 2 : 1);
+    const tv = [];
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) tv.push(Math.round(v));
+    return {
+      type: "linear", position: "left", min: lo, max: hi,
+      border: { display: false }, grid: { display: false },
+      afterBuildTicks: ax => { ax.ticks = tv.map(v => ({ value: v })); },
+      ticks: { color: C.tick, font: { size: 11 }, callback: v => v + " %" }
+    };
+  };
   const common = {
     responsive: true, maintainAspectRatio: false, animation: false,
     devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
@@ -1592,7 +1601,8 @@ function renderCharts(market) {
     Chart.getChart(id)?.destroy();
   });
 
-  const bW = axisBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)), 10000);
+  /* v11: enge, dynamische €-Skala statt fester 10k-Schritte */
+  const bW = tightBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)));
   const scW = { i: -1 };
   const isMaxW = RANGES.wert === "max";
   /* Flaeche existiert nur in der Max-Ansicht. Der Schalter bleibt trotzdem stehen und
@@ -1603,24 +1613,27 @@ function renderCharts(market) {
   areaBtn.setAttribute("aria-pressed", (showArea && isMaxW) ? "true" : "false");
   areaBtn.title = isMaxW ? "" : "Fläche gibt es nur im Zeitraum „Max“";
   const areaOn = showArea && isMaxW;
-  /* Trend-Faerbung: in 1W/1M/6M/1J traegt die GANZE Kurve eine Farbe — rot, wenn der
-     Portfoliowert seit Periodenstart gefallen ist, sonst gruen. „Max" bleibt bei der
-     bisherigen punktweisen Logik (gruen ueber Investiert, rot darunter). */
+  /* v11: Segment-Faerbung in 1W/1M/6M/1J — punktweise gegen den Periodenstart
+     (die gepunktete Referenzlinie): oberhalb gruen, unterhalb rot. Dieselbe
+     punktweise Logik wie in „Max", dort bleibt die Referenz die Investiert-Kurve. */
   const trendModeW = !isMaxW && ptsW.length > 1;
-  const upW = ptsW.length > 1 ? ptsW[ptsW.length - 1].wert >= ptsW[0].wert : true;
+  const baseW = ptsW.length ? ptsW[0].wert : NaN;
   const colW = i => trendModeW
-    ? (upW ? C.trendUp : C.trendDown)
+    ? (ptsW[i].wert < baseW ? C.trendDown : C.trendUp)
     : (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
   /* Investiert-Kurve: nur in „Max" farbig; sonst im Grauton der Chart-2-Kurve
      (--avg-line, die Oe-Kaufkurs-Linie) */
   const colInvW = i => trendModeW
     ? C.avg
     : (ptsW[i].wert < ptsW[i].eur ? C.investLoss : C.invest);
-  /* v10: die linke %-Skala ist entfallen. Dieselbe Prozentzahl stand zuvor dreimal
-     auf dem Schirm — Achse, Badge am Kurvenende und Hero-Zeile. Sie lebt jetzt nur
-     noch dort, wo sie sich auf einen konkreten Punkt bezieht: im Hero (Gesamt) und
-     in der Scrub-Zeile (angefasster Punkt). Die Kurve haengt wieder an der €-Skala. */
-  const baseW = ptsW.length ? ptsW[0].wert : NaN;
+  /* v11: %-Anzeige — 1W–1J relativ zum Periodenstart (linke %-Achse + Endlabel);
+     „Max": nur Endlabel mit der Gesamtrendite vs. Investiert (wie im Hero),
+     eine lineare %-Achse gibt es dort bewusst nicht (Investiert waechst ueber die Zeit). */
+  const lastW = ptsW[ptsW.length - 1];
+  const pctEndW = isMaxW
+    ? (lastW && lastW.eur > 0 ? (lastW.wert / lastW.eur - 1) * 100 : null)
+    : (lastW && baseW > 0 ? (lastW.wert / baseW - 1) * 100 : null);
+  const pctAxisW = trendModeW ? pctScaleOpts(baseW, bW) : null;
   /* Punkt 13: auf schmalen Screens im „Max"-Zeitraum duennere/staerker geglaettete Kurve,
      damit sie bei hoher Datendichte nicht gestaucht/zu dick wirkt */
   const denseW = IS_NARROW && RANGES.wert === "max";
@@ -1647,19 +1660,21 @@ function renderCharts(market) {
     ]},
     options: { ...common,
       scales: { ...common.scales,
-        /* Eine einzige Skala, rechts (Abweichung 3) */
+        /* v11: rechts die enge €-Skala; links (nur 1W–1J) die %-Skala */
         y: { ...common.scales.y, min: bW.min, max: bW.max,
           ticks: { ...common.scales.y.ticks, stepSize: bW.step,
-          callback: fmtAxisK } } } }
+          callback: fmtAxisTight(bW) } },
+        ...(pctAxisW ? { pct: pctAxisW } : {}) } }
   });
-  /* Endpunkt-Beschriftung statt Legende: Kurvennamen am rechten Kurvenende */
-  chW.$endLabels = [
-    { ds: 0, text: "Portfoliowert", color: C.endLabel },
-    { ds: 1, text: "Investiert", color: C.endLabel }
-  ];
+  /* v11: keine Kurvennamen mehr im Chart — am Kurvenende steht nur noch die
+     prozentuale Veraenderung (farbig, 1 Dezimale) */
+  chW.$endLabels = pctEndW != null
+    ? [{ ds: 0, text: fmtPct1(pctEndW), color: pctEndW < 0 ? C.negText : C.posText }]
+    : [];
   attachScrub(chW, scW, {
     lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
-    baseValue: ptsW.length ? ptsW[0].wert : null, baseColor: C.base,
+    /* v11: gepunktete Periodenstart-Linie nur in 1W–1J; in „Max" entfaellt sie */
+    baseValue: (!isMaxW && ptsW.length) ? ptsW[0].wert : null, baseColor: C.base,
     /* Zeile ist redundant zum Header → nur waehrend des Scrubbens sichtbar */
     hideIdle: true,
     html: i => {
@@ -1696,14 +1711,14 @@ function renderCharts(market) {
       c.fillStyle = C.athText;
       const below = y - 4 < top + 11;
       c.textBaseline = below ? "top" : "bottom";
-      c.fillText("1₿", left + 6, below ? y + 5 : y - 4);
+      /* v11: Label „Wholecoiner" statt des doppelten „1₿" (rechts steht 1₿ ohnehin auf der Achse) */
+      c.fillText("Wholecoiner", left + 6, below ? y + 5 : y - 4);
       c.restore();
     }
   };
   const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
   const scS = { i: -1 };
-  /* Sats-Bestand: gruen (Abweichung 1). Vorher lief die Kurve in BTC-Orange —
-     das widersprach Abweichung 7, die Orange dem ₿-Symbol vorbehaelt. */
+  /* v11: Sats-Bestand wieder vollstaendig in Original-BTC-Orange (--line-sats → --btc). */
   const chS = new Chart($("chartSats"), {
     type: "line",
     plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
@@ -1755,15 +1770,22 @@ function renderCharts(market) {
   const buyIdx = [];
   dotInfo.forEach((v, i) => { if (v) buyIdx.push(i); });
 
-  /* Trendrichtung des angezeigten Zeitraums — identische Logik und identische
-     Farbwerte wie in Chart 1 (beides kommt aus --trend-up / --trend-down) */
-  const kTrendUp = ptsK.length > 1 ? ptsK[ptsK.length - 1].close >= ptsK[0].close : true;
+  /* v11: Segment-Faerbung wie Chart 1 — punktweise gegen den Periodenstart
+     (gepunktete Linie): oberhalb gruen, unterhalb rot. Identische Farbwerte
+     (--trend-up/--trend-down). „Max" bleibt neutral (--line-price). */
   const trendModeK = RANGES.preis !== "max" && ptsK.length > 1;
-  const colK = () => trendModeK ? (kTrendUp ? C.trendUp : C.trendDown) : C.price;
-  /* Y-Achse fest in 20.000-€-Schritten (PRICE_AXIS_STEP), auch wenn daraus bei
-     kurzen Zeitraeumen nur wenige Ticks werden — bewusst so gefordert. */
-  const bP = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)),
-                        PRICE_AXIS_STEP, true);
+  const isMaxK = RANGES.preis === "max";
+  const baseK = ptsK.length ? ptsK[0].close : NaN;
+  const colK = i => trendModeK
+    ? ((i != null && ptsK[i] && ptsK[i].close < baseK) ? C.trendDown : C.trendUp)
+    : C.price;
+  /* v11: enge, dynamische €-Skala statt fester 20.000-€-Schritte */
+  const bP = tightBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)));
+  /* v11: %-Anzeige — 1W–1J relativ zum Periodenstart-Kurs (linke %-Achse + Endlabel);
+     „Max": nur Endlabel mit der Gesamtveraenderung seit dem ersten Kurs der Historie. */
+  const lastK = ptsK[ptsK.length - 1];
+  const pctEndK = (lastK && baseK > 0) ? (lastK.close / baseK - 1) * 100 : null;
+  const pctAxisK = trendModeK ? pctScaleOpts(baseK, bP) : null;
   const scK = { i: -1 };
   /* Kaufpunkt-Halos: derselbe Puls wie am Scrub-Punkt, nochmals halbiert,
      in Farbe und Groesse an den jeweiligen Kaufpunkt gekoppelt.
@@ -1792,8 +1814,8 @@ function renderCharts(market) {
     type: "line",
     plugins: [baselinePlugin, buyHaloPlugin, endLabelPlugin, scrubPlugin],
     data: { labels: labelsK, datasets: [
-      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: colK(),
-        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : colK()) },
+      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: colK(ptsK.length - 1),
+        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : colK(c.p1DataIndex)) },
         borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
       { label: "Ø Kaufkurs", data: avgLine, borderColor: C.avg,
         borderWidth: 1.4, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
@@ -1807,15 +1829,16 @@ function renderCharts(market) {
     options: { ...common,
       scales: { ...common.scales,
         x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
-        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisK } } } }
+        /* v11: rechts die enge €-Skala; links (nur 1W–1J) die %-Skala */
+        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisTight(bP) } },
+        ...(pctAxisK ? { pct: pctAxisK } : {}) } }
   });
   chK.$buys = { info: dotInfo, radius: dotR, color: C.buy, border: C.dotBorder };
-  /* Endpunkt-Beschriftung statt Legende. „Einzelner Kauf" braucht keinen Eintrag:
-     die Punkte erklaeren sich beim Antippen ueber das Popup. */
-  chK.$endLabels = [
-    { ds: 0, text: "BTC-Kurs", color: C.endLabel },
-    { ds: 1, text: "Ø Kaufkurs", color: C.endLabel }
-  ];
+  /* v11: keine Kurvennamen mehr im Chart — nur die prozentuale Veraenderung
+     am Ende der Kurs-Kurve (farbig, 1 Dezimale) */
+  chK.$endLabels = pctEndK != null
+    ? [{ ds: 0, text: fmtPct1(pctEndK), color: pctEndK < 0 ? C.negText : C.posText }]
+    : [];
 
   /* Kauf-Popup: erscheint, sobald der Scrub-Indikator auf einem Kaufpunkt einrastet.
      Zeile 1: „500 € @ 62.345 €", Zeile 2: „1.234.567 Sats". */
@@ -1838,8 +1861,9 @@ function renderCharts(market) {
   attachScrub(chK, scK, {
     lineId: "scrub-preis", n: ptsK.length,
     /* Auf einem Kaufpunkt uebernimmt der Marker dessen Farbe; sonst die Kurvenfarbe */
-    colorAt: i => (dotInfo[i] ? C.buy : colK()),
-    baseValue: ptsK.length ? ptsK[0].close : null, baseColor: C.base, snap: buyIdx,
+    colorAt: i => (dotInfo[i] ? C.buy : colK(i)),
+    /* v11: gepunktete Periodenstart-Linie nur in 1W–1J; in „Max" entfaellt sie */
+    baseValue: (!isMaxK && ptsK.length) ? ptsK[0].close : null, baseColor: C.base, snap: buyIdx,
     onShow: showBuyPop,
     html: i => {
       const p = ptsK[i];

@@ -1,5 +1,5 @@
 /* Bitcoin Dashboard – Service Worker: App-Hülle offlinefähig halten */
-const CACHE = "btc-dash-v11";
+const CACHE = "btc-dash-v12";
 const SHELL = [
   "./",
   "./index.html",
