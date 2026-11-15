@@ -439,8 +439,9 @@ const sign = v => (v >= 0 ? "+" : "");
 const fmtEur = v => num(v) + " €";
 const fmtPct = v => sign(v) + num(v) + " %";
 const fmtInt = v => Math.round(v).toLocaleString("de-DE");
-/* Kompakte Y-Achse: 70.000 → „70k" */
-const fmtAxisK = v => (!isFinite(v) ? "" : Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k");
+/* Kompakte Y-Achse: 70.000 → „70k"; bei Schritten unter 1.000 mit Nachkommastellen („3,6k"), damit sich keine Beschriftung wiederholt */
+const fmtAxisK = step => v => (!isFinite(v) ? "" : Math.abs(v) < 1000 ? fmtInt(v)
+  : (v / 1000).toLocaleString("de-DE", { maximumFractionDigits: step >= 1000 ? 0 : step >= 100 ? 1 : 2 }) + "k");
 const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
 const dayTs = d => new Date(d + "T00:00:00Z").getTime();
@@ -922,6 +923,54 @@ function dottedLine(chart, value, text) {
 }
 const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => dottedLine(ch, ch.$scrub && ch.$scrub.cfg.base) };
 const wholecoinerPlugin = { id: "wholecoiner", afterDatasetsDraw: ch => dottedLine(ch, 1e8, "1 BTC") };
+/* Wertentwicklung: Fläche zwischen Wert- und Investiert-Linie – grün, wo der Wert darüber liegt, rot darunter;
+   kräftig an der Wert-Linie, zur Investiert-Linie auslaufend. Hinter dem Scrub-Marker grau. */
+const betweenPlugin = {
+  id: "between",
+  beforeDatasetsDraw(chart) {
+    const s = chart.$scrub, a = chart.chartArea, b = s && s.cfg.between, P = chart.getDatasetMeta(0).data;
+    if (!b || !a || P.length < 2) return;
+    const c = chart.ctx, n = P.length, X = P.map(p => p.x), yV = P.map(p => p.y);
+    const yI = b.eur.map(v => chart.scales.y.getPixelForValue(v));
+    /* Wert-Kurve als ein durchgehender Pfad (Chart.js teilt die Linie bei Farbwechseln in Teilpfade) */
+    const curve = () => {
+      c.moveTo(X[0], yV[0]);
+      for (let i = 1; i < n; i++) {
+        const p = P[i - 1], q = P[i];
+        if (isFinite(p.cp2x) && isFinite(q.cp1x)) c.bezierCurveTo(p.cp2x, p.cp2y, q.cp1x, q.cp1y, q.x, q.y);
+        else c.lineTo(q.x, q.y);
+      }
+    };
+    const close = y => { c.lineTo(X[n - 1], y); c.lineTo(X[0], y); c.closePath(); c.clip(); };
+    const xStop = s.i >= 0 ? X[s.i] : Infinity;
+    const pass = (gain, col) => {
+      c.save();
+      c.beginPath(); c.rect(a.left, a.top, a.right - a.left, a.bottom - a.top); c.clip();
+      /* Zeichenbereich = Schnittmenge: unter der oberen und über der unteren der beiden Linien */
+      c.beginPath(); curve(); close(gain ? a.bottom + 50 : a.top - 50);
+      c.beginPath(); c.moveTo(X[0], yI[0]);
+      for (let i = 1; i < n; i++) { c.lineTo(X[i], yI[i - 1]); c.lineTo(X[i], yI[i]); }
+      close(gain ? a.top - 50 : a.bottom + 50);
+      /* 1 px breite Streifen, jeder mit eigenem Verlauf von der Wert- zur Investiert-Linie */
+      for (let x = Math.floor(X[0]), i = 0; x < X[n - 1]; x++) {
+        while (i < n - 2 && X[i + 1] <= x) i++;
+        const f = Math.max(0, Math.min(1, (x - X[i]) / (X[i + 1] - X[i] || 1))), v = yV[i] + (yV[i + 1] - yV[i]) * f;
+        const inv = Math.max(a.top, Math.min(a.bottom, yI[i])); /* „Investiert" außerhalb der Skala → Verlauf endet am Rand */
+        if (gain ? v >= inv : v <= inv) continue;
+        if (x >= xStop) c.fillStyle = s.C.fillAfter;
+        else {
+          const g = c.createLinearGradient(0, v, 0, inv);
+          g.addColorStop(0, col + "55"); g.addColorStop(1, col + "08");
+          c.fillStyle = g;
+        }
+        c.fillRect(x, Math.min(v, inv) - 3, 1, Math.abs(v - inv) + 6);
+      }
+      c.restore();
+    };
+    pass(true, s.C.pos);
+    pass(false, s.C.neg);
+  }
+};
 /* Aktiver Punkt: senkrechte Linie + Marker mit Ring in Kartenfarbe */
 const scrubPlugin = {
   id: "scrub",
@@ -1101,31 +1150,36 @@ function renderCharts({ candles }) {
   };
   const span = pts => [pts[0], pts[pts.length - 1]];
 
-  /* ── Wertentwicklung: Farbe folgt dem Ergebnis des Zeitraums (wie Kopfzeile und Kurs-Chart) ── */
+  /* ── Wertentwicklung: Linie und Fläche zeigen die Lage zu „Investiert" (grün darüber, rot darunter);
+        die Kopfzeile nennt das Ergebnis des gewählten Zeitraums ── */
   const ptsW = thin(inRange("wert", firstTs)).map(mapPt), scW = { i: -1 };
   const [w0, w1] = span(ptsW), depW = w1.eur - w0.eur;
   const gW = w1.wert - w0.wert - depW;                 /* Wertänderung abzüglich Einzahlungen */
   const baseW = w0.wert + Math.max(0, depW), pctW = baseW > 0 ? gW / baseW * 100 : null;
-  const negW = gW < 0, colW = negW ? C.neg : C.pos;
-  $("legend-wert-dot").style.background = negW ? "var(--neg)" : "var(--pos)";
+  const negW = gW < 0, upW = i => ptsW[i].wert >= ptsW[i].eur, colAtW = i => (upW(i) ? C.pos : C.neg);
+  /* Legende folgt dem gezeigten Punkt: Farbe des Portfoliowerts und Stand von „Investiert" */
+  const legendW = i => {
+    $("legend-wert-dot").style.background = upW(i) ? "var(--pos)" : "var(--neg)";
+    $("legend-inv").textContent = fmtEur(ptsW[i].eur);
+  };
   /* Achse folgt dem Portfoliowert; nur bei Max zählt „Investiert" mit. Was außerhalb liegt, wird nicht gezeichnet */
   const yW = axisBounds(ptsW.flatMap(p => (RANGES.wert === "max" ? [p.wert, p.eur] : [p.wert])), 10000);
   const invW = ptsW.map(p => (p.eur >= yW.min && p.eur <= yW.max ? p.eur : null));
   const dense = narrow && RANGES.wert === "max"; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
-  attachScrub(make("chartWert", ptsW, yW, fmtAxisK, [
-    line(ptsW.map(p => p.wert), () => colW, scW, { label: "Portfoliowert", fill: "start", backgroundColor: grad(colW),
-      borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 }),
+  attachScrub(make("chartWert", ptsW, yW, fmtAxisK(yW.step), [
+    line(ptsW.map(p => p.wert), colAtW, scW, { label: "Portfoliowert", borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 }),
     line(invW, () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })
-  ], [baselinePlugin, scrubPlugin]), scW, {
-    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: () => colW, base: w0.wert,
+  ], [betweenPlugin, baselinePlugin, scrubPlugin]), scW, {
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: w0.wert,
+    between: { eur: ptsW.map(p => p.eur) },
     idle: () => {
-      $("legend-inv").textContent = fmtEur(w1.eur);
+      legendW(ptsW.length - 1);
       return scrubHtml(sign(gW) + fmtEur(gW), pctW != null ? fmtPct(pctW) : "", negW,
         (negW ? "Verlust · " : "Gewinn · ") + RANGE_NAME[RANGES.wert], negW ? "neg" : "pos");
     },
     html: i => {
       const p = ptsW[i], pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
-      $("legend-inv").textContent = fmtEur(p.eur);
+      legendW(i);
       return scrubHtml(fmtEur(p.wert), pct != null ? fmtPct(pct) : "", pct < 0, fmtDate(p.t));
     }
   }, C);
@@ -1167,7 +1221,8 @@ function renderCharts({ candles }) {
   }
   const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
   const [k0, k1] = span(ptsK), kPct = (k1.close / k0.close - 1) * 100, colK = kPct < 0 ? C.neg : C.pos;
-  attachScrub(make("chartPreis", ptsK, axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000), fmtAxisK, [
+  const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000);
+  attachScrub(make("chartPreis", ptsK, yK, fmtAxisK(yK.step), [
     line(ptsK.map(p => p.close), () => colK, scK, { label: "BTC-Kurs", tension: .2, order: 3, fill: "start", backgroundColor: grad(colK) }),
     { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, borderDash: [4, 4], pointRadius: 0, spanGaps: true, order: 2 },
     { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
