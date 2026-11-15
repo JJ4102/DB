@@ -8,659 +8,304 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bitcoin">
-<meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" id="theme-color" content="#F2F2F7">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <title>Bitcoin Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
 <style>
-  /* ══ Design-Tokens: Trade-Republic-inspiriert — ruhig, editorial, borderless ══ */
+  /* ══ Design-Tokens nach Apples Human Interface Guidelines ══
+     Systemschrift, semantische Systemfarben, gruppierte Hintergründe (Inhaltsebene),
+     Liquid Glass nur für Bedienelemente (Toolbar, Plus-Button, Toast). */
   :root {
     color-scheme: light;
-    /* Neutrals */
-    --bg:             #FFFFFF;
-    --surface:        #FFFFFF;
-    --surface-subtle: #F7F7F8;
-    --hairline:       #ECECEE;
-    /* Text — Graustufen auf WCAG-AA-Niveau (gemessen gegen --bg):
-       --muted 5,2:1, --text-tertiary 4,5:1. Die alten Werte (#8A8A8E / #B7B7BC)
-       lagen bei 3,4:1 bzw. 2,0:1 und waren fuer Labels/Achsen nicht zulaessig. */
-    --text:           #0A0A0B;   /* Near-Black, kein reines Schwarz */
-    --muted:          #6C6C71;
-    --text-tertiary:  #75757A;
-    --on-accent:      #FFFFFF;
-    /* Akzent = Near-Black (TR: keine Markenfarbe fuer Primaeraktionen) */
-    --accent:         #0A0A0B;
-    --accent-hover:   #2A2A2E;
-    /* Semantik — sattes TR-Grün/Rot (wie in der App) fuer FLAECHEN und LINIEN */
-    --positive:       #21B84A;
-    --negative:       #E5301D;
-    --warning:        #E0A800;
-    /* Semantik als TEXT: dieselbe Bedeutung, aber kontraststark genug fuer Schrift.
-       --positive erreicht auf Weiss nur 2,6:1 — als Zahlenfarbe unbrauchbar.
-       Regel: Farbe auf Flaeche/Linie = --positive/--negative,
-              Farbe auf Schrift      = --positive-text/--negative-text. */
-    --positive-text:  #0E7A38;
-    --negative-text:  #C7261A;
-    /* Pro-Asset-Farbe: Bitcoin-Orange (gleiche Farbe fuer auf & ab).
-       --btc bleibt der Markenwert (Icons, Manifest). --btc-ink ist die Schriftvariante
-       fuer das ₿-Zeichen im Hero: #F7931A auf Weiss kommt nur auf 2,3:1 und ist als
-       Glyphe unlesbar; --btc-ink erreicht 3,7:1 und bleibt eindeutig Bitcoin-Orange. */
-    --btc:            #F7931A;
-    --btc-ink:        #C86E08;
-    --orange:         var(--btc);
-    --red:            var(--negative);
-    --ok:             var(--positive);
-    --warn:           var(--warning);
-
-    /* Typografie */
-    --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --text-hero: 3rem;      --text-display: 2.125rem; --text-h1: 1.625rem;
-    --text-h2: 1.25rem;     --text-h3: 1.0625rem;     --text-body: 1rem;
-    --text-label: 0.875rem; --text-caption: 0.8125rem;
-
-    /* Spacing (4px-Raster) */
-    --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
-    --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
-    --screen-padding: 20px;
-
-    /* Form */
-    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px; --radius-full: 9999px;
-    /* Elevation: Standard = KEIN Schatten; soft nur fuer schwebende Layer */
-    --shadow-soft: 0 1px 2px rgba(10,10,11,0.04), 0 8px 24px rgba(10,10,11,0.06);
-
-    /* Motion */
-    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-    --duration-fast: 150ms; --duration-base: 220ms; --duration-slow: 320ms;
-    --duration-blur: 140ms;  /* Ein- und Ausblenden zusammen ≈ 280ms */
-
-    --tap: 44px;
-    --topbar-h: 58px;   /* Hoehe der fixierten Kopfzeile (ohne Safe-Area) */
-
-    /* Chart-Tokens (JS liest sie per getComputedStyle) — Standard: neutral */
-    --ch-grid: transparent;
-    --ch-tick: #6C6C71;
-    --tip-bg: #FFFFFF;
-    --tip-border: #ECECEE;
-    --tip-title: #0A0A0B;
-    --tip-body: #6C6C71;
-    --ath-line: rgba(108,108,113,0.45);
-    --ath-text: #6C6C71;
-    /* Endpunkt-Beschriftung der Kurven (ersetzt die Legendenzeilen) */
-    --ch-endlabel: #6C6C71;
-    --line-main: var(--positive);    /* Chart 3: semantisch wie in der TR-App */
-    --line-loss: var(--negative);
-    /* v11: Chart-1-Gruen = exakt das Header-Gruen (--positive-text, modusabhaengig).
-       Die rgba-Varianten (Investiert-Linie, Flaeche) sind daraus abgeleitet. */
-    --line-wert: var(--positive-text);  /* Chart 1: Portfoliowert ueber Referenz */
-    --line-wert-loss: #B3261E;          /* Chart 1: Portfoliowert unter Referenz (dunkles Rot) */
-    --line-invest: rgba(14,122,56,0.5);       /* Investiert: dezent, Farbe der anliegenden Flaeche */
-    --line-invest-loss: rgba(179,38,30,0.5);
-    --fill-pos: rgba(14,122,56,0.05);   /* Flaeche zwischen den Kurven, Wert ueber Investiert — nur minimal hervorgehoben */
-    --fill-neg: rgba(179,38,30,0.05);   /* Flaeche zwischen den Kurven, Wert unter Investiert */
-    /* Trendfarben: EINE Quelle fuer Chart 1 und Chart 2 — nie separat setzen,
-       damit „gefallen/gestiegen" in beiden Charts exakt denselben Farbwert hat */
-    --trend-up:        var(--line-wert);
-    --trend-down:      var(--line-wert-loss);
-    --trend-up-soft:   var(--line-invest);       /* dezente Variante (Investiert-Linie) */
-    --trend-down-soft: var(--line-invest-loss);
-    --line-sats: var(--btc);            /* v11: Chart 3 wieder vollstaendig in Original-BTC-Orange (#F7931A) */
-    --line-price: var(--text);          /* Chart 2: Preiskurve neutral (Near-Black / Off-White) */
-    --buy-dot: #4A4A50;                 /* Kaufpunkte: dunkles Grau im Hellmodus */
-    --avg-line: #7A7A80;                /* Oe-Kaufkurs-Linie: mittleres Grau */
-    --dot-border: #FFFFFF;
-    /* Scrubbing: blasser Kurventeil nach dem Marker + Startwert-Linie */
-    --ch-after: #D6D6DA;
-    --fill-after: rgba(140,140,146,0.05);  /* Flaechen-Fade nach dem Scrub-Marker */
-    --base-line: rgba(138,138,142,0.32);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+    /* Textstile (iOS „Large": 1rem = 17pt) */
+    --title2: 1.294rem; --title3: 1.176rem; --sub: .882rem; --foot: .765rem; --cap: max(11px, .706rem);
+    /* Hintergründe: gruppiert */
+    --bg: #F2F2F7; --card: #FFFFFF; --elev: #F2F2F7; --elev-card: #FFFFFF;
+    --fill: rgba(120,120,128,.12); --fill-strong: rgba(120,120,128,.2);
+    /* Labels & Trennlinien */
+    --label: #000000; --label2: rgba(60,60,67,.76); --label3: rgba(60,60,67,.3); --sep: rgba(60,60,67,.2);
+    /* Akzent (Interaktion) */
+    --accent: #1464E8; --accent-fill: #1464E8;
+    /* Systemfarben für Grafik … */
+    --pos: #34C759; --neg: #FF383C; --btc: #F7931A; --warn: #FFCC00; --ch-gray: #8E8E93;
+    /* … und kontraststärkere Varianten für Text (≥ 4,5:1) */
+    --pos-text: #00802E; --neg-text: #D70F28; --btc-text: #B84D00;
+    --ch-after: #C7C7CC; --ch-fill-after: rgba(142,142,147,.1);
+    --seg-thumb: #FFFFFF;
+    /* Materialien */
+    --bar: rgba(242,242,247,.86);
+    --glass: rgba(255,255,255,.62); --glass-edge: rgba(255,255,255,.7);
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.1);
+    --blur: blur(24px) saturate(180%);
+    --r: 22px; --pad: 16px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
   }
   html[data-theme="dark"] {
     color-scheme: dark;
-    --bg:             #131316;   /* sehr dunkles Grau, dezent ueber reinem Schwarz (iOS-Dark-Konvention) */
-    --surface:        #131316;
-    --surface-subtle: #202024;   /* KPI-Karten heben sich klar vom Hintergrund ab */
-    --hairline:       #2C2C31;
-    --text:           #F5F5F6;   /* Off-White */
-    --muted:          #9A9AA0;
-    --text-tertiary:  #82828A;   /* war #5E5E64 = 2,9:1 — jetzt 4,9:1 */
-    --btc-ink:        #F7931A;   /* im Dunkelmodus reicht das Original (8,1:1) */
-    --on-accent:      #0A0A0B;
-    --accent:         #F5F5F6;
-    --accent-hover:   #D6D6D9;
-    --positive:       #34D158;
-    --negative:       #FF453A;
-    --warning:        #F5C24B;
-    /* Im Dunkelmodus erfuellen die Semantikfarben schon als Text AA (9,2:1 / 5,4:1) */
-    --positive-text:  #34D158;
-    --negative-text:  #FF453A;
-    --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
-    --ch-tick: #9A9AA0;
-    --tip-bg: #202024;
-    --tip-border: #2C2C31;
-    --tip-title: #F5F5F6;
-    --tip-body: #9A9AA0;
-    --ath-line: rgba(154,154,160,0.45);
-    --ath-text: #9A9AA0;
-    --ch-endlabel: #9A9AA0;
-    --line-wert-loss: #C4372B;
-    --line-invest: rgba(52,209,88,0.55);
-    --line-invest-loss: rgba(196,55,43,0.55);
-    --fill-pos: rgba(52,209,88,0.07);
-    --fill-neg: rgba(196,55,43,0.08);
-    --buy-dot: #C2C2C8;                 /* Kaufpunkte: helles Grau im Dunkelmodus */
-    --avg-line: #9A9AA0;
-    --dot-border: #131316;
-    --ch-after: #3C3C42;
-    --fill-after: rgba(154,154,160,0.07); /* Flaechen-Fade nach dem Scrub-Marker */
-    --base-line: rgba(154,154,160,0.34);
+    --bg: #000000; --card: #1C1C1E; --elev: #1C1C1E; --elev-card: #2C2C2E;
+    --fill: rgba(120,120,128,.24); --fill-strong: rgba(120,120,128,.36);
+    --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --sep: rgba(84,84,88,.65);
+    --accent: #0091FF; --accent-fill: #0071F0;
+    --pos: #30D158; --neg: #FF4245; --btc: #FF9230; --warn: #FFD600;
+    --pos-text: #30D158; --neg-text: #FF4245; --btc-text: #FF9230;
+    --ch-after: #48484A; --ch-fill-after: rgba(142,142,147,.12);
+    --seg-thumb: #636366;
+    --bar: rgba(0,0,0,.78);
+    --glass: rgba(58,58,60,.6); --glass-edge: rgba(255,255,255,.14);
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.45);
   }
+  @media (prefers-contrast: more) {
+    :root { --pos: #008932; --neg: #E9152D; --label2: rgba(60,60,67,.9); --sep: rgba(60,60,67,.5); }
+    html[data-theme="dark"] { --pos: #4AD968; --neg: #FF6165; --label2: rgba(235,235,245,.8); --sep: rgba(120,120,128,.9); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root, html[data-theme="dark"] { --bar: var(--bg); --glass: var(--card); --blur: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (min-width: 700px) { :root { --pad: 24px; } }
+  /* iOS: Dynamic Type – Schriftgröße folgt der Systemeinstellung */
+  @supports (font: -apple-system-body) and (-webkit-touch-callout: none) { html { font: -apple-system-body; } }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { background: var(--bg); overflow-x: clip; }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); overflow-x: clip; -webkit-text-size-adjust: 100%; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-family);
-    font-size: var(--text-body);
-    line-height: 1.5;
-    font-feature-settings: "tnum";
-    padding: 0 var(--screen-padding) calc(var(--space-7) + env(safe-area-inset-bottom));
-    width: 100%;
-    max-width: 1080px;
-    margin: 0 auto;
-    overflow-x: clip;
-    -webkit-text-size-adjust: 100%;
+    background: var(--bg); color: var(--label); font-family: var(--font); font-size: 1rem; line-height: 1.3;
+    font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    max-width: 1120px; margin: 0 auto; padding: 0 var(--pad) calc(96px + env(safe-area-inset-bottom));
   }
-  :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: var(--radius-sm); }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible { outline: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .icon { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pos { color: var(--pos-text); }
+  .neg { color: var(--neg-text); }
+  .card { background: var(--card); border-radius: var(--r); }
+  .glass { background: var(--glass); border: .5px solid var(--glass-edge); box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 
-  /* ── Kopfzeile: ruhig, sticky — bleibt beim Scrollen dauerhaft sichtbar ── */
-  header {
-    position: sticky; top: 0; z-index: 15;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    margin: 0 calc(-1 * var(--screen-padding));
-    padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-padding) var(--space-3);
-    background: var(--bg);
-  }
-  .head-right { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
-  .iconbtn {
-    position: relative;
-    border: 1px solid var(--hairline); background: transparent; color: var(--text);
-    border-radius: var(--radius-full); min-width: 34px; height: 34px; padding: 0 12px;
-    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    transition: border-color var(--duration-fast) var(--ease-standard),
-                background-color var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard);
-  }
-  /* Trefferflaeche auf 44px ziehen, ohne den Button optisch zu vergroessern */
-  .iconbtn::after { content: ""; position: absolute; inset: -5px; border-radius: inherit; }
-  .iconbtn:hover { border-color: var(--text); }
-  .iconbtn.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .iconbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  /* Sync-Status: nur der Punkt (Details in den Einstellungen) */
-  #sync-chip { width: 34px; padding: 0; color: var(--muted); }
-  #theme-toggle { width: 34px; padding: 0; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex: 0 0 8px; transition: background var(--duration-base) var(--ease-standard); }
-  .dot.ok { background: var(--positive); }
-  .dot.pend { background: var(--warning); animation: pulse 1.2s var(--ease-standard) infinite; }
-  .dot.err { background: var(--negative); }
-  @keyframes pulse { 50% { opacity: 0.35; } }
+  /* ── Kopfbereich: Toolbar + Portfoliowert, fixiert; Inhalt scrollt weichgezeichnet darunter ── */
+  header, .hero { background: var(--bar); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    position: sticky; margin: 0 calc(-1 * var(--pad)); }
+  header { top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between;
+    padding: calc(8px + env(safe-area-inset-top)) var(--pad) 8px; }
+  .toolbar { display: flex; border-radius: 99px; }
+  .tb { width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--label);
+    display: grid; place-items: center; transition: background-color .15s; }
+  @media (hover: hover) { .tb:hover { background: var(--fill); } #fab:hover { filter: brightness(1.1); } tbody tr:hover td { background: var(--fill); } }
+  .tb:active { background: var(--fill-strong); }
+  html[data-theme="dark"] .moon, html:not([data-theme="dark"]) .sun { display: none; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--label3); }
+  .dot.ok { background: var(--pos); }
+  .dot.pend { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+  .dot.err { background: var(--neg); }
+  @keyframes pulse { 50% { opacity: .4; } }
+  .avatar { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    font-size: var(--sub); font-weight: 600; }
+  .avatar select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .avatar:has(select:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-  /* Personen-Auswahl: runder Avatar mit Initialen (TR-Stil); Select liegt unsichtbar darueber */
-  .avatar-wrap { position: relative; width: 34px; height: 34px; flex: 0 0 auto; }
-  .avatar {
-    width: 34px; height: 34px; border-radius: var(--radius-full);
-    background: var(--accent); color: var(--on-accent);
-    font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-    display: flex; align-items: center; justify-content: center; user-select: none;
-  }
-  /* inset: -5px → 44px Trefferflaeche bei 34px sichtbarem Avatar */
-  .person-select {
-    position: absolute; inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px);
-    appearance: none; -webkit-appearance: none; border: 0; background: transparent;
-    color: transparent; opacity: 0; cursor: pointer; font: inherit;
-  }
-  .avatar-wrap:has(.person-select:focus-visible) .avatar { outline: 2px solid var(--text); outline-offset: 2px; }
+  .hero { top: calc(60px + env(safe-area-inset-top)); z-index: 14; padding: 4px var(--pad) 12px; margin-bottom: 12px; }
+  .hero::after { content: ""; position: absolute; inset: 100% 0 auto; height: 12px; pointer-events: none;
+    background: linear-gradient(var(--bar), transparent); }
+  .hero-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    font-size: var(--sub); color: var(--label2); margin-bottom: 2px; }
+  .hero-label b { color: var(--btc-text); font-weight: 600; }
+  #stand { font-size: var(--foot); }
+  .hero-value { font-family: ui-rounded, var(--font); font-size: clamp(2rem, 9vw, 3rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+  .hero-pct { font-size: var(--title3); letter-spacing: 0; white-space: nowrap; }
+  #content { animation: rise .4s var(--ease); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 
-  /* ── Karten: borderless, flach — Gruppierung durch Weissraum ────── */
-  .card { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
-  .reveal .card, .reveal .hero, .reveal details { animation: rise var(--duration-base) var(--ease-standard) both; }
-  .reveal .stagger > *:nth-child(2) { animation-delay: 40ms; }
-  .reveal .stagger > *:nth-child(3) { animation-delay: 80ms; }
-  .reveal .stagger > *:nth-child(4) { animation-delay: 120ms; }
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .reveal * { animation: none !important; } }
-
-  /* ── Hero-Metric: die Zahl ist der Held ─────────────────────────── */
-  .hero {
-    position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top)); z-index: 14;
-    background: var(--bg); border: 0; box-shadow: none;
-    margin: 0 calc(-1 * var(--screen-padding));
-    padding: var(--space-2) var(--screen-padding) var(--space-4);
-    /* Desktop: Portfoliowert links, KPI-Leiste rechts daneben in derselben Kopfzeile */
-    display: flex; align-items: center; gap: var(--space-5);
-    transition: padding var(--duration-base) var(--ease-standard);
+  /* ── Kennzahlen: iPhone = gruppierte Liste, Desktop = vier Kacheln ── */
+  .kpis { margin-bottom: 16px; }
+  .kpi { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 50px; margin-left: 16px; padding: 8px 16px 8px 0; }
+  .kpi + .kpi { border-top: .5px solid var(--sep); }
+  .kpi-l small { font-size: var(--foot); color: var(--label2); margin-left: 4px; }
+  .kpi-r { display: flex; flex-direction: column; align-items: flex-end; font-size: var(--foot); font-weight: 500; color: var(--label2); }
+  .kpi-r b { font-size: 1rem; font-weight: 600; color: var(--label); }
+  @media (min-width: 700px) {
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: none; }
+    .kpi { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; margin: 0; padding: 16px;
+      border: 0 !important; background: var(--card); border-radius: var(--r); }
+    .kpi-l { font-size: var(--foot); color: var(--label2); }
+    .kpi-r { align-items: flex-start; }
+    .kpi-r b { font-size: var(--title3); font-weight: 700; }
   }
 
-  /* ── Kollabierter Zustand: sobald gescrollt wird, schrumpft der Hero auf eine
-     Zeile zusammen, statt als zweite Sticky-Ebene in voller Hoehe stehen zu bleiben.
-     Der Portfoliowert bleibt sichtbar — nur der Kontext tritt zurueck. ── */
-  .hero-collapse { overflow: hidden;
-    transition: max-height var(--duration-base) var(--ease-standard),
-                opacity var(--duration-fast) var(--ease-standard),
-                margin-bottom var(--duration-base) var(--ease-standard);
-    max-height: 120px; opacity: 1; }
-  html.condensed .hero { padding-top: var(--space-1); padding-bottom: var(--space-2); }
-  html.condensed .hero-value { font-size: var(--text-h1); }
-  html.condensed .hero-pct { font-size: var(--text-h3); }
-  html.condensed .hero-collapse { max-height: 0; opacity: 0; margin-bottom: 0; }
-  /* Auf dem Desktop sitzt die KPI-Leiste IN der Kopfzeile — sie faehrt mit ein.
-     Der Kindselektor greift bewusst nur dort: auf iOS haengt placeKpiStrip() die
-     Leiste unter den Hero, wo sie ohnehin normal wegscrollt. */
-  .hero > .kpi-strip { max-height: 140px; opacity: 1;
-    transition: max-height var(--duration-base) var(--ease-standard),
-                opacity var(--duration-fast) var(--ease-standard); }
-  html.condensed .hero > .kpi-strip { max-height: 0; opacity: 0; overflow: hidden; }
-  @media (prefers-reduced-motion: reduce) {
-    .hero, .hero-value, .hero-collapse { transition: none; }
-  }
-  /* Breite folgt dem Inhalt — die Fortschrittsleiste ist damit exakt so breit
-     wie die Zahl darueber, statt quer ueber den ganzen Desktop zu laufen. */
-  .hero-main { flex: 0 1 auto; min-width: 0; }
-  .hero-label { font-size: var(--text-label); font-weight: 500; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
-  /* v11: ₿-Zeichen UND Bestandszahl im originalen Bitcoin-Orange (#F7931A, --btc) —
-     bewusste Entscheidung fuer den Markenwert in beiden Modi. */
-  .hero-label .btc-sym { color: var(--btc); font-weight: 700; }
-  .hero-label .btc-amount { color: var(--btc); font-weight: 600; font-variant-numeric: tabular-nums; }
-  #stand { font-size: var(--text-caption); color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; white-space: nowrap; }
-  .hero-value { font-size: clamp(2.125rem, 8vw, var(--text-hero)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums;
-    transition: font-size var(--duration-base) var(--ease-standard); }
-  /* Prozentuale Veränderung direkt neben dem Portfoliowert, leicht kleiner */
-  .hero-pct { font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; font-variant-numeric: tabular-nums; }
-  /* Semantische Farben wie in der TR-App — Vorzeichen tragen die Bedeutung zusaetzlich.
-     Als Schrift immer die -text-Variante (AA), nie die Flaechenfarbe. */
-  .pos { color: var(--positive-text); }
-  .neg { color: var(--negative-text); }
+  /* ── Diagramm-Karten ── */
+  .charts { display: grid; gap: 16px; }
+  .chart { padding: 16px; min-width: 0; }
+  .chart h2 { font-size: var(--title3); font-weight: 700; margin-bottom: 12px; }
+  .scrub { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-height: 1.9rem; margin: 14px 0 6px; }
+  .scrub-value { font-family: ui-rounded, var(--font); font-size: var(--title2); font-weight: 700; }
+  .scrub-delta { font-size: var(--sub); font-weight: 600; }
+  .scrub-cap { font-size: var(--foot); color: var(--label2); }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--foot); color: var(--label2); margin-top: 12px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .legend i.dash { width: 12px; height: 2px; border-radius: 1px; vertical-align: middle; }
+  @media (min-width: 700px) { .chart-wrap { height: 320px; } }
+  @media (min-width: 900px) { .charts { grid-template-columns: 1fr 1fr; } .chart:first-child { grid-column: 1 / -1; } }
 
-  /* v11: Wholecoiner-Fortschrittsbalken entfernt — die Umrechnung ist ueber die
-     ₿-Zahl im Header und die Wholecoiner-Linie in Chart 3 nachvollziehbar. */
+  /* ── Segmented Control (Zeitraum, Typ, Richtung) ── */
+  .seg { position: relative; isolation: isolate; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    padding: 2px; border-radius: 99px; background: var(--fill); }
+  .seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px;
+    width: calc((100% - 4px) / var(--n, 5)); border-radius: 99px; background: var(--seg-thumb);
+    box-shadow: 0 1px 4px rgba(0,0,0,.14); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .3s var(--ease); }
+  .seg button { min-height: 36px; padding: 0 2px; border: 0; border-radius: 99px; background: none; font-size: var(--foot); font-weight: 500; }
+  .seg button.sel { font-weight: 600; }
 
-  /* ── KPI-Karten: flach auf --surface-subtle, wie die Position/Performance-Karten
-     der TR-App. Kein Rahmen, kein Schatten — Schatten bleibt schwebenden Layern
-     (Sheet, Toast, Chart-Popup) vorbehalten. Innerhalb der Karte gilt dieselbe
-     Hierarchie wie im Hero: kleines graues Label, Zahl darunter fett.
-     Desktop: horizontale Leiste in der Kopfzeile; iOS: 2x2-Grid unterhalb
-     (Umhaengen per JS, siehe placeKpiStrip()). */
-  .kpi-strip {
-    display: flex; align-items: stretch; gap: var(--space-2);
-    margin-left: auto; min-width: 0; overflow-x: auto; overflow-y: hidden;
-    scrollbar-width: none; -webkit-overflow-scrolling: touch;
-  }
-  .kpi-strip::-webkit-scrollbar { display: none; }
-  .kpi-card {
-    flex: 0 0 auto;
-    background: var(--surface-subtle); border: 0; box-shadow: none;
-    border-radius: var(--radius-lg);
-    padding: 10px var(--space-3);
-    font-variant-numeric: tabular-nums; white-space: nowrap; text-align: left;
-  }
-  .kpi-label { display: block; font-size: var(--text-caption); font-weight: 500; color: var(--muted); line-height: 1.3; }
-  .kpi-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
-  .kpi-value { display: block; font-size: var(--text-h3); font-weight: 700; color: var(--text); line-height: 1.3; margin-top: 1px; }
-  .kpi-sub { font-size: var(--text-caption); font-weight: 600; color: var(--muted); line-height: 1.3; }
-  .kpi-card .chip { font-size: var(--text-caption); font-weight: 600; gap: 4px; }
-
-  .chart-card { margin-bottom: var(--space-7); }
-  /* Chart-Ueberschriften: Sektionstitel nach Style Guide (h2/600, Sentence Case).
-     Vorher 1.375rem/700 in Versalien — drei davon konkurrierten mit der Hero-Zahl,
-     obwohl die Ueberschrift nur benennt, was die Zahl darunter zeigt. */
-  .chart-title { font-size: var(--text-h2); font-weight: 600; letter-spacing: 0; margin-bottom: var(--space-3); }
-  /* Zeitraum-Auswahl + optionale Chart-Schalter in einer Zeile */
-  .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
-  .chart-controls .range-seg { flex: 1 1 auto; margin-bottom: 0; min-width: 0; }
-  /* Schalter im Stil der Icon-Buttons der Kopfzeile — kein neues Formvokabular */
-  .chart-toggle {
-    flex: 0 0 auto; border: 1px solid var(--hairline); background: transparent; color: var(--muted);
-    border-radius: var(--radius-full); height: 32px; padding: 0 12px;
-    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 6px;
-    transition: background-color var(--duration-fast) var(--ease-standard),
-                border-color var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard);
-  }
-  .chart-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  .chart-toggle:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
-  .chart-toggle[aria-pressed="true"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  /* Ausserhalb von „Max" gibt es keine Flaeche — der Schalter bleibt an seinem Platz
-     und wird deaktiviert, statt zu verschwinden (springende Bedienleiste vermeiden). */
-  .chart-toggle:disabled { opacity: 0.35; cursor: default; }
-  /* Flaechen-Schalter: nur noch das Piktogramm (kein Text, kein Tooltip) */
-  #toggle-area { position: relative; width: 32px; padding: 0; justify-content: center; }
-  #toggle-area::after { content: ""; position: absolute; inset: -6px; border-radius: inherit; }
-  /* Abschneiden der Beschriftungen behoben: keine festen Breiten/kein overflow:hidden
-     mehr — Buttons passen sich der Textlaenge an (min-width: max-content) und der
-     Container darf umbrechen/mitwachsen, statt die Schrift zu verkleinern. */
-  .range-seg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-  .range-seg button {
-    flex: 1 1 auto; min-width: max-content; white-space: nowrap;
-    min-height: var(--tap); border: 0; background: none; cursor: pointer;
-    font: inherit; font-size: var(--text-label); font-weight: 500; color: var(--muted);
-    border-radius: var(--radius-sm); padding: 0 var(--space-1);
-    transition: color var(--duration-fast) var(--ease-standard);
-  }
-  /* Aktiver Zeitraum: Near-Black (Dark: Off-White) + fett — keine Trendfarbe mehr */
-  .range-seg button.sel { color: var(--text); font-weight: 700; }
-  .chart-wrap { position: relative; height: 360px; }
-  /* Langes Verweilen auf dem Chart darf keine Textauswahl/Callout triggern */
-  .chart-wrap, .chart-wrap canvas {
-    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
-  }
-  /* Seiten-Scrollen bleibt erlaubt (pan-y). Erst wenn der Scrub nach der Halte-Verzoegerung
-     aktiviert wird, setzt das Skript touch-action auf "none" und beansprucht die Geste. */
-  .chart-wrap canvas { touch-action: pan-y; }
-  /* Umschalt-Animation (z. B. Flaechen-Toggle): kurzer Weichzeichner, Kurven bleiben sichtbar */
-  .chart-wrap canvas { transition: filter var(--duration-blur) var(--ease-standard); }
-  .chart-wrap canvas.fx-blur { filter: blur(3px); }
-  @media (prefers-reduced-motion: reduce) {
-    .chart-wrap canvas { transition: none; }
-    .chart-wrap canvas.fx-blur { filter: none; }
-  }
-  /* Kauf-Popup (Chart 2): schwebender Layer ueber dem Canvas — daher --shadow-soft erlaubt */
-  .chart-pop {
-    position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none;
-    transform: translate(-50%, -100%);
-    background: var(--tip-bg); border: 1px solid var(--tip-border); border-radius: var(--radius-md);
-    box-shadow: var(--shadow-soft); color: var(--tip-title);
-    padding: 8px 10px; font-size: var(--text-caption); font-weight: 600; line-height: 1.35;
-    font-variant-numeric: tabular-nums; white-space: nowrap; text-align: left;
-    opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard);
-  }
-  .chart-pop.show { opacity: 1; }
-  .chart-pop .pop-sub { display: block; color: var(--tip-body); font-weight: 500; }
-  @media (prefers-reduced-motion: reduce) { .chart-pop { transition: none; } }
-  /* Scrub-Zeile: Datum · Wert · Δ des aktiven Punkts — aktualisiert live beim Scrubben.
-     Sie ersetzt seit v10 auch die Legendenzeilen: die Kurven sind direkt an ihrem
-     rechten Endpunkt beschriftet (siehe endLabelPlugin), die Werte stehen hier. */
-  .scrub-line {
-    display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
-    min-height: 26px; margin-bottom: var(--space-2);
-    font-size: var(--text-label); font-variant-numeric: tabular-nums;
-  }
-  .scrub-date { color: var(--muted); font-weight: 500; }
-  .scrub-value { font-weight: 700; color: var(--text); }
-  .scrub-delta { font-weight: 600; }
-  .scrub-extra { color: var(--muted); font-size: var(--text-caption); }
-
-  /* ── Bewegungsliste: Hairline-Rows, keine Box ───────────────────── */
-  details { margin-top: var(--space-6); }
-  summary {
-    font-size: var(--text-h3); font-weight: 600; cursor: pointer; padding: var(--space-3) 0;
-    background: none; border: 0; border-top: 1px solid var(--hairline); border-radius: 0; box-shadow: none;
-    list-style: none; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between;
-  }
+  /* ── Bewegungen ── */
+  details { margin-top: 16px; padding: 0 16px; }
+  summary { display: flex; align-items: center; justify-content: space-between; min-height: 52px; font-weight: 600; cursor: pointer; list-style: none; }
   summary::-webkit-details-marker { display: none; }
-  summary::after { content: "+"; color: var(--muted); font-weight: 400; }
-  details[open] summary::after { content: "\2013"; }
-  table { width: 100%; border-collapse: collapse; font-size: var(--text-caption); margin-top: var(--space-1); background: transparent; border: 0; border-radius: 0; }
-  th, td { text-align: right; padding: var(--space-3) var(--space-2); border-bottom: 1px solid var(--hairline); }
+  summary span span { color: var(--label2); font-weight: 400; margin-left: 6px; }
+  summary .icon { color: var(--label3); transition: transform .25s var(--ease); }
+  details[open] summary .icon { transform: rotate(90deg); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--sub); }
+  th, td { text-align: right; padding: 12px 6px; border-top: .5px solid var(--sep); }
   th:first-child, td:first-child { text-align: left; padding-left: 0; }
   th:last-child, td:last-child { padding-right: 0; }
-  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 500; }
-  td { font-variant-numeric: tabular-nums; }
-  tr:last-child td { border-bottom: none; }
-  tbody tr { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard); }
-  tbody tr:hover { background: var(--surface-subtle); }
-  .tag { font-size: 11px; color: var(--muted); }
-  .typ { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-    border-radius: var(--radius-sm); padding: 2px 8px; background: var(--surface-subtle); border: 0; color: var(--muted); }
+  th { font-size: var(--foot); font-weight: 400; color: var(--label2); }
+  tbody tr { cursor: pointer; }
+  .tag { font-size: var(--foot); color: var(--label2); }
+  .typ { font-size: var(--cap); font-weight: 600; border-radius: 99px; padding: 3px 9px; background: var(--fill); color: var(--label2); }
 
-  footer { font-size: var(--text-caption); color: var(--muted); margin-top: var(--space-7); text-align: center; line-height: 1.7; }
-  footer button { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; padding: 4px; }
+  footer { font-size: var(--foot); color: var(--label2); margin-top: 32px; text-align: center; line-height: 1.8; }
+  footer button { background: none; border: 0; color: var(--accent); padding: 4px; }
 
-  /* ── Skeleton-Ladezustand ───────────────────────────────────────── */
-  #skeleton .sk { border-radius: var(--radius-lg); background: var(--surface-subtle); border: 0;
-    position: relative; overflow: hidden; margin-bottom: var(--space-3); }
-  #skeleton .sk::after { content: ""; position: absolute; inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%);
-    animation: shimmer 1.4s infinite; }
-  /* Shimmer und Sync-Puls sind Auto-Play-Animationen — bei reduzierter Bewegung aus */
-  @media (prefers-reduced-motion: reduce) {
-    #skeleton .sk::after { animation: none; display: none; }
-    .dot.pend { animation: none; }
-  }
-  html[data-theme="dark"] #skeleton .sk::after {
-    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); }
-  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  #skeleton .sk.h1 { height: 132px; }
-  #skeleton .row { display: grid; grid-template-columns: 1fr; gap: var(--space-3); margin-bottom: var(--space-5); }
-  #skeleton .row .sk { height: 128px; margin: 0; }
-  #skeleton .sk.hc { height: 430px; }
-  #sk-note { text-align: center; color: var(--muted); font-size: var(--text-caption); padding: 10px; min-height: 34px; }
+  /* ── Ladezustand ── */
+  .sk { border-radius: var(--r); background: var(--card); margin-bottom: 16px; animation: pulse 1.4s ease-in-out infinite; }
+  #sk-note { text-align: center; color: var(--label2); font-size: var(--foot); padding: 10px; }
 
-  /* ── Plus-Button (FAB): Akzentflaeche, schwebender Layer ────────── */
-  #fab {
-    position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom));
-    width: 56px; height: 56px; border-radius: var(--radius-full); border: 0;
-    background: var(--accent); color: var(--on-accent); cursor: pointer;
-    box-shadow: var(--shadow-soft); z-index: 20;
-    display: flex; align-items: center; justify-content: center;
-    transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
-  }
-  #fab svg { display: block; width: 28px; height: 28px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
-  #fab:hover { background: var(--accent-hover); }
-  #fab:active { transform: scale(0.96); }
-
-  /* ── Sheet/Modal: schwebender Layer — einzige Ebene mit Schatten ── */
-  .overlay { position: fixed; inset: 0; background: rgba(10,10,11,0.4); z-index: 30;
-    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
-  .overlay.open { opacity: 1; pointer-events: auto; }
-  .sheet {
-    position: fixed; z-index: 31; left: 50%; bottom: 0; transform: translate(-50%, 105%);
-    width: min(520px, 100%); max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
-    background: var(--bg); border: 0;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: var(--shadow-soft);
-    padding: var(--space-4) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
-    transition: transform var(--duration-slow) var(--ease-standard);
-  }
-  .sheet.open { transform: translate(-50%, 0); }
+  /* ── Plus-Button: einzige farbige Glasfläche (Primäraktion) ── */
+  #fab { position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+    width: 56px; height: 56px; border-radius: 50%; border: .5px solid rgba(255,255,255,.3); background: var(--accent-fill); color: #FFFFFF;
+    box-shadow: var(--glass-shadow); display: grid; place-items: center; transition: transform .15s var(--ease), filter .15s; }
+  #fab .icon { width: 26px; height: 26px; stroke-width: 2.2; }
+  #fab:active { transform: scale(.94); }
   @media (min-width: 700px) {
-    .sheet { bottom: auto; top: 50%; border-radius: var(--radius-xl);
-      transform: translate(-50%, -46%) scale(0.98); opacity: 0; pointer-events: none;
-      transition: transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard); }
-    .sheet.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+    /* macOS: keine Bedienelemente am unteren Fensterrand – der Button sitzt in der Toolbar */
+    #fab { top: 8px; bottom: auto; width: 44px; height: 44px; right: max(var(--pad), calc((100vw - 1120px) / 2 + var(--pad))); }
+    #fab .icon { width: 21px; height: 21px; }
+    .toolbar { margin-right: 56px; }
   }
-  .sheet h2 { font-size: var(--text-h2); font-weight: 600; margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center; }
-  .sheet h2 button { border: none; background: none; color: var(--muted); font-size: 20px; cursor: pointer;
-    width: var(--tap); height: var(--tap); display: flex; align-items: center; justify-content: center; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0; }
-  .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-  .f-row.one { grid-template-columns: 1fr; }
-  .f-field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
-  .f-field input, .f-field select {
-    width: 100%; min-height: var(--tap); font: inherit; font-size: var(--text-label); color: var(--text);
-    background: var(--surface-subtle); border: 1px solid transparent; border-radius: var(--radius-md);
-    padding: 8px 12px; outline: none;
-    transition: border-color var(--duration-fast) var(--ease-standard);
+
+  /* ── Sheets ── */
+  .overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; z-index: 31; left: 50%; bottom: 0; width: min(540px, 100%); max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--elev); border-radius: 28px 28px 0 0; padding: 6px 16px calc(20px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 105%); transition: transform .45s var(--ease); box-shadow: var(--glass-shadow); }
+  .sheet.open { transform: translate(-50%, 0); }
+  .sheet-top { touch-action: none; }
+  .grab { display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 0 auto; }
+  .sheet-head { position: relative; display: flex; align-items: center; justify-content: center; min-height: 56px; margin-bottom: 8px; }
+  .sheet-head h2 { font-size: 1rem; font-weight: 600; }
+  .sheet-head .tb { position: absolute; left: 0; background: var(--fill); }
+  @media (min-width: 700px) {
+    .sheet { bottom: auto; top: 50%; border-radius: 28px; padding-top: 10px; opacity: 0; pointer-events: none;
+      transform: translate(-50%, -48%) scale(.97); transition: transform .3s var(--ease), opacity .3s; }
+    .sheet.open { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
+    .grab { display: none; }
   }
-  .f-field input::placeholder { color: var(--text-tertiary); }
-  .f-field input:focus, .f-field select:focus { border-color: var(--text); }
+  .group { background: var(--elev-card); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; width: calc(100% - 16px); min-height: 50px; margin-left: 16px; padding-right: 16px;
+    border: 0; background: none; text-align: left; }
+  .row + .row { border-top: .5px solid var(--sep); }
+  button.row { color: var(--accent); }
+  button.row.danger { color: var(--neg-text); justify-content: center; }
+  .row input, .row select { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; text-align: right; -webkit-appearance: none; appearance: none; }
+  .row select { flex: 0 1 auto; margin-left: auto; color: var(--accent); cursor: pointer; }
+  .row input::placeholder { color: var(--label3); }
+  .row input::-webkit-date-and-time-value { text-align: right; }
   .masked { -webkit-text-security: disc; }
   .masked.show { -webkit-text-security: none; }
-  .f-field .with-eye { position: relative; }
-  .f-field .with-eye input { padding-right: 48px; }
-  .eye { position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
-    border: none; background: none; color: var(--muted);
-    width: var(--tap); height: var(--tap); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .eye svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  .f-hint { font-size: var(--text-caption); color: var(--muted); margin: -4px 0 10px; }
-  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--space-3); }
-  .seg button {
-    flex: 1 1 auto; min-height: var(--tap); font: inherit; font-size: 12px; font-weight: 600;
-    border: 1px solid var(--hairline); background: transparent; color: var(--muted);
-    border-radius: var(--radius-full); padding: 6px 12px; cursor: pointer;
-    transition: background-color var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard),
-                border-color var(--duration-fast) var(--ease-standard);
-  }
-  .seg button.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .btn {
-    min-height: var(--tap); width: 100%; font: inherit; font-size: var(--text-label); font-weight: 700;
-    border: none; border-radius: var(--radius-full); cursor: pointer; margin-top: 6px;
-    background: var(--accent); color: var(--on-accent); box-shadow: none;
-    transition: background-color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
-  }
-  .btn:hover { background: var(--accent-hover); }
-  .btn:active { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; }
-  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--hairline); }
-  .btn.ghost:hover { background: transparent; border-color: var(--text); }
-  .btn.danger { background: transparent; border: 1px solid var(--hairline); color: var(--negative-text); }
-  .btn.danger:hover { background: transparent; border-color: var(--negative); }
-  .f-msg { font-size: var(--text-caption); margin-top: 10px; min-height: 16px; color: var(--muted); }
-  .f-msg.err { color: var(--negative-text); }
-  .f-msg.ok { color: var(--positive-text); }
-  .divider { border: none; border-top: 1px solid var(--hairline); margin: var(--space-4) 0; }
+  .eye { width: 44px; height: 44px; margin-right: -12px; border: 0; background: none; color: var(--label2); display: grid; place-items: center; }
+  .seg + .seg, .seg + .group { margin-top: 10px; }
+  .note { font-size: var(--foot); color: var(--label2); padding: 0 16px; margin: -2px 0 16px; }
+  .btn { width: 100%; min-height: 50px; border: 0; border-radius: 99px; background: var(--accent-fill); color: #FFFFFF; font-weight: 600;
+    transition: opacity .15s; }
+  .btn:active { opacity: .75; }
+  .f-msg { font-size: var(--foot); text-align: center; color: var(--label2); min-height: 1.2rem; margin: 10px 0; }
+  .f-msg.err { color: var(--neg-text); }
+  .f-msg.ok { color: var(--pos-text); }
 
-  /* Toast: schwebender Layer */
-  #toast {
-    position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
-    background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--radius-full);
-    box-shadow: var(--shadow-soft); color: var(--text); font-size: var(--text-caption); font-weight: 600;
-    padding: 10px 18px; opacity: 0; pointer-events: none;
-    transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard);
-    z-index: 40; white-space: nowrap;
-  }
+  #toast { position: fixed; z-index: 40; left: 50%; top: calc(64px + env(safe-area-inset-top)); width: max-content; max-width: calc(100vw - 32px);
+    border-radius: 99px; padding: 12px 20px; font-size: var(--sub); font-weight: 500; text-align: center;
+    opacity: 0; pointer-events: none; transform: translate(-50%, -20px); transition: opacity .3s, transform .3s var(--ease); }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
-
-  /* ── iPhone-Layout ──────────────────────────────────────────────── */
-  @media (max-width: 700px) {
-    body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-    .hero { padding: var(--space-2) var(--screen-padding) var(--space-3); }
-    /* KPIs als 2x2-Grid: eigener Block unterhalb der Kopfzeile, oberhalb von Chart 1
-       (das JS haengt #kpi-strip hier aus der Kopfzeile aus) */
-    .kpi-strip {
-      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);
-      margin: 0 0 var(--space-5); padding: 0; overflow: visible;
-    }
-    .kpi-card { white-space: normal; min-width: 0; }
-    #skeleton .row { grid-template-columns: 1fr; }
-    #skeleton .row .sk { height: 128px; }
-    .chart-wrap { height: 300px; }
-    /* Charts auf iOS auf die volle Bildschirmbreite ausdehnen (Punkt 12) */
-    .chart-card .chart-wrap { margin: 0 calc(-1 * var(--screen-padding)); }
-    th, td { padding: 10px 6px; }
-    /* Auf dem iPhone ist hero-main das einzige Kind — Leiste laeuft ueber die Breite */
-    .hero-main { flex: 1 1 100%; }
-    /* Kollabierter Hero auf dem iPhone: der Wert bleibt gross genug, um Hero zu sein */
-    html.condensed .hero-value { font-size: var(--text-h2); }
-    html.condensed .hero-pct { font-size: var(--text-label); }
-  }
 </style>
 </head>
 <body>
 <header id="topbar">
-  <div class="avatar-wrap">
-    <span class="avatar" id="person-avatar" aria-hidden="true">&ndash;</span>
-    <select id="person-select" class="person-select" aria-label="Person wählen"></select>
+  <div class="avatar glass">
+    <span id="person-avatar" aria-hidden="true">&ndash;</span>
+    <select id="person-select" aria-label="Person wählen"></select>
   </div>
-  <div class="head-right">
-    <button type="button" class="iconbtn" id="sync-chip" title="Sync-Status – tippen für Details" aria-label="Sync-Status"><i class="dot" id="sync-dot"></i><span id="sync-text" class="sr-only">Lokal</span></button>
-    <button type="button" class="iconbtn" id="theme-toggle" aria-label="Design wechseln"><svg id="theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg id="theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
-    <button type="button" class="iconbtn" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <div class="toolbar glass">
+    <button type="button" class="tb" id="sync-chip" title="Sync-Status" aria-label="Sync-Status"><i class="dot" id="sync-dot"></i><span id="sync-text" class="sr-only">Lokal</span></button>
+    <button type="button" class="tb" id="theme-toggle" aria-label="Design wechseln">
+      <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+    <button type="button" class="tb" id="settings-btn" aria-label="Einstellungen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.5"/><circle cx="8" cy="17" r="2.5"/></svg></button>
   </div>
 </header>
 
-<!-- Skeleton während des Ladens -->
 <div id="skeleton">
-  <div class="sk h1"></div>
-  <div class="row"><div class="sk"></div><div class="sk"></div></div>
-  <div class="sk hc"></div>
+  <div class="sk" style="height:110px"></div>
+  <div class="sk" style="height:200px"></div>
+  <div class="sk" style="height:420px"></div>
   <div id="sk-note">Lade Kursdaten &hellip;</div>
 </div>
 
-<div id="content" style="display:none">
-  <!-- Hero: der Portfoliowert dominiert; Label zeigt den BTC-Bestand.
-       Desktop: KPI-Leiste rechts daneben in der Kopfzeile; iOS: placeKpiStrip()
-       haengt #kpi-strip als eigenen Block direkt unter die Kopfzeile. -->
+<main id="content" hidden>
   <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
-    <div class="hero-main">
-      <div class="hero-label hero-collapse"><span><span class="btc-sym">&#8383;</span> <span class="btc-amount" id="k-btc-head">–</span></span><span id="stand"></span></div>
-      <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
-    </div>
-    <div class="kpi-strip stagger" id="kpi-strip" aria-label="Kennzahlen">
-      <div class="kpi-card">
-        <span class="kpi-label">Investiert</span>
-        <span class="kpi-value" id="k-inv"></span>
-        <div class="chip" id="k-pnl-chip"><span id="k-pnl">–</span></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label kpi-label-row"><span>ATH</span><span id="k-ath-date"></span></span>
-        <span class="kpi-value" id="k-ath"></span>
-        <div class="kpi-sub" id="k-ath-sub"></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label" id="k-kurs-sub">Live-Kurs</span>
-        <span class="kpi-value" id="k-kurs"></span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">&Oslash; Kaufkurs</span>
-        <span class="kpi-value" id="k-eca"></span>
-      </div>
-    </div>
+    <div class="hero-label"><b>&#8383; <span id="k-btc-head">–</span></b><span id="stand"></span></div>
+    <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
   </section>
 
-  <div class="card chart-card">
-    <div class="chart-title">Wertentwicklung</div>
-    <div class="chart-controls">
-      <div class="range-seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung">
-        <button type="button" data-range="1w">1W</button>
-        <button type="button" data-range="1m">1M</button>
-        <button type="button" data-range="6m">6M</button>
-        <button type="button" data-range="1y">1J</button>
-        <button type="button" data-range="max" class="sel">Max</button>
-      </div>
-      <button type="button" class="chart-toggle" id="toggle-area" aria-pressed="true" aria-label="Fl&auml;che zwischen den Kurven ein-/ausblenden">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-6 4 4 5-7 4 5"/><path d="M3 16l5-6 4 4 5-7 4 5v3H3z" fill="currentColor" stroke="none" opacity="0.28"/></svg>
-      </button>
-    </div>
-    <div class="scrub-line" id="scrub-wert"></div>
-    <div class="chart-wrap"><canvas id="chartWert"></canvas></div>
+  <div class="kpis card">
+    <div class="kpi"><div class="kpi-l">Investiert</div><div class="kpi-r"><b id="k-inv"></b><span id="k-pnl">–</span></div></div>
+    <div class="kpi"><div class="kpi-l">Allzeithoch<small id="k-ath-date"></small></div><div class="kpi-r"><b id="k-ath"></b><span id="k-ath-sub"></span></div></div>
+    <div class="kpi"><div class="kpi-l" id="k-kurs-sub">Live-Kurs</div><div class="kpi-r"><b id="k-kurs"></b></div></div>
+    <div class="kpi"><div class="kpi-l">&Oslash; Kaufkurs</div><div class="kpi-r"><b id="k-eca"></b></div></div>
   </div>
 
-  <div class="card chart-card" id="card-preis">
-    <div class="chart-title">Bitcoin-Kurs</div>
-    <div class="range-seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs">
-      <button type="button" data-range="1w">1W</button>
-      <button type="button" data-range="1m">1M</button>
-      <button type="button" data-range="6m">6M</button>
-      <button type="button" data-range="1y">1J</button>
-      <button type="button" data-range="max" class="sel">Max</button>
-    </div>
-    <div class="scrub-line" id="scrub-preis"></div>
-    <div class="chart-wrap"><canvas id="chartPreis"></canvas><div class="chart-pop" id="pop-preis" role="status" aria-live="off"></div></div>
+  <div class="charts">
+    <section class="chart card">
+      <h2>Wertentwicklung</h2>
+      <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
+      <div class="scrub" id="scrub-wert"></div>
+      <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
+      <div class="legend"><span><i style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
+    </section>
+    <section class="chart card">
+      <h2>Bitcoin-Kurs</h2>
+      <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
+      <div class="scrub" id="scrub-preis"></div>
+      <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
+      <div class="legend"><span><i style="background:var(--label)"></i>Kauf</span><span><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
+    </section>
+    <section class="chart card">
+      <h2>Stack</h2>
+      <div class="seg" data-chart="sats" role="group" aria-label="Zeitraum Stack"></div>
+      <div class="scrub" id="scrub-sats"></div>
+      <div class="chart-wrap"><canvas id="chartSats" role="img"></canvas></div>
+    </section>
   </div>
 
-  <div class="card chart-card">
-    <div class="chart-title">Sats-Bestand</div>
-    <div class="range-seg" data-chart="sats" role="group" aria-label="Zeitraum Sats-Bestand">
-      <button type="button" data-range="1w">1W</button>
-      <button type="button" data-range="1m">1M</button>
-      <button type="button" data-range="6m">6M</button>
-      <button type="button" data-range="1y">1J</button>
-      <button type="button" data-range="max" class="sel">Max</button>
-    </div>
-    <div class="scrub-line" id="scrub-sats"></div>
-    <div class="chart-wrap"><canvas id="chartSats"></canvas></div>
-  </div>
-
-  <details>
-    <summary><span>Alle Bewegungen (<span id="tx-count"></span>)</span></summary>
+  <details class="card">
+    <summary><span>Alle Bewegungen<span id="tx-count"></span></span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
     <table>
       <thead><tr><th>Datum</th><th>Typ</th><th>Sats</th><th>Euro</th></tr></thead>
       <tbody id="tx-body"></tbody>
@@ -673,92 +318,87 @@
     <button type="button" id="import-btn">Daten importieren</button>
     <input type="file" id="import-input" accept=".json,.csv,text/csv,application/json" hidden>
   </footer>
-</div>
+</main>
 
-<button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 
-<!-- ── Formular: Bewegung erfassen/bearbeiten ──────────────────────── -->
+<!-- ── Sheet: Bewegung erfassen/bearbeiten ── -->
 <div class="overlay" id="form-overlay"></div>
-<div class="sheet" id="form-sheet" role="dialog" aria-label="Bewegung erfassen">
-  <h2><span id="form-title">Neue Bewegung</span><button type="button" data-close="form" aria-label="Schließen">&times;</button></h2>
-  <div class="seg" id="typ-seg">
-    <button type="button" data-typ="kauf" class="sel">Kauf</button>
+<div class="sheet" id="form-sheet" role="dialog" aria-modal="true" aria-labelledby="form-title">
+  <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
+    <button type="button" class="tb" data-close="form" aria-label="Abbrechen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2 id="form-title">Neue Bewegung</h2>
+  </div></div>
+  <div class="seg" id="typ-seg" role="group" aria-label="Typ">
+    <button type="button" data-typ="kauf">Kauf</button>
     <button type="button" data-typ="verkauf">Verkauf</button>
     <button type="button" data-typ="transfer">Transfer</button>
     <button type="button" data-typ="gebuehr">Geb&uuml;hr</button>
     <button type="button" data-typ="geschenk">Geschenk</button>
   </div>
-  <div class="seg" id="dir-seg" style="display:none">
-    <button type="button" data-dir="in" class="sel">Eingang (+)</button>
+  <div class="seg" id="dir-seg" role="group" aria-label="Richtung" style="--n:2" hidden>
+    <button type="button" data-dir="in">Eingang (+)</button>
     <button type="button" data-dir="out">Ausgang (&minus;)</button>
   </div>
-  <div class="f-row">
-    <div class="f-field"><label for="f-person">Person</label><select id="f-person"></select></div>
-    <div class="f-field"><label for="f-date">Datum</label><input type="date" id="f-date"></div>
+  <div class="group">
+    <div class="row"><label for="f-person">Person</label><select id="f-person"></select></div>
+    <div class="row"><label for="f-date">Datum</label><input type="date" id="f-date"></div>
+    <div class="row"><label for="f-eur" id="f-eur-label">Euro</label><input type="text" id="f-eur" inputmode="decimal" placeholder="z. B. 100"></div>
+    <div class="row"><label for="f-sats">Sats</label><input type="text" id="f-sats" inputmode="numeric" placeholder="leer = aus Kurs"></div>
+    <div class="row"><label for="f-who">Wer</label><input type="text" id="f-who" maxlength="3" placeholder="K&uuml;rzel, optional"></div>
+    <div class="row"><label for="f-label">Notiz</label><input type="text" id="f-label" placeholder="optional"></div>
   </div>
-  <div class="f-row">
-    <div class="f-field"><label for="f-eur" id="f-eur-label">Euro</label><input type="text" id="f-eur" inputmode="decimal" placeholder="z. B. 100"></div>
-    <div class="f-field"><label for="f-sats">Sats</label><input type="text" id="f-sats" inputmode="numeric" placeholder="leer = aus Kurs"></div>
-  </div>
-  <div class="f-hint" id="f-hint">Sats leer lassen &rarr; werden aus dem Tageskurs berechnet.</div>
-  <div class="f-row" id="f-row2">
-    <div class="f-field"><label for="f-who">Wer (K&uuml;rzel, optional)</label><input type="text" id="f-who" maxlength="3" placeholder="z. B. Y"></div>
-    <div class="f-field"><label for="f-label">Notiz (optional)</label><input type="text" id="f-label" placeholder="z. B. Consolidation"></div>
-  </div>
+  <p class="note" id="f-hint"></p>
   <button type="button" class="btn" id="f-save">Speichern</button>
-  <button type="button" class="btn danger" id="f-delete" style="display:none">Bewegung l&ouml;schen</button>
   <div class="f-msg" id="f-msg"></div>
+  <div class="group" id="f-delete-group" hidden><button type="button" class="row danger" id="f-delete">Bewegung l&ouml;schen</button></div>
 </div>
 
-<!-- ── Einstellungen: Sync, Sicherung ──────────────────────────────── -->
+<!-- ── Sheet: Einstellungen (Sync, Sicherung) ── -->
 <div class="overlay" id="set-overlay"></div>
-<div class="sheet" id="set-sheet" role="dialog" aria-label="Einstellungen">
-  <h2><span>Einstellungen</span><button type="button" data-close="set" aria-label="Schließen">&times;</button></h2>
-  <button type="button" class="btn" id="s-paste">Code aus Zwischenablage einf&uuml;gen</button>
-  <div class="f-hint" style="margin:6px 0 12px">Den Code erzeugst du am anderen Ger&auml;t mit &bdquo;Einrichtungs-Code kopieren&ldquo;. Verbindet dieses Ger&auml;t ohne Tippen.</div>
-  <hr class="divider">
-  <div class="f-field" style="margin-bottom:10px"><label for="s-token">GitHub-Token</label>
-    <div class="with-eye"><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Anzeigen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-  <div class="f-field" style="margin-bottom:10px"><label for="s-gist">Gist-ID (leer = neu anlegen)</label><input type="text" id="s-gist" name="cfg-b" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="wird automatisch gef&uuml;llt"></div>
-  <div class="f-field" style="margin-bottom:4px"><label for="s-pass">Verschl&uuml;sselungs-Passwort</label>
-    <div class="with-eye"><input type="text" class="masked" id="s-pass" name="cfg-c" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="auf allen Ger&auml;ten gleich"><button type="button" class="eye" data-eye="s-pass" aria-label="Anzeigen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-  <div class="f-hint">Alles bleibt nur auf diesem Ger&auml;t gespeichert. Das Passwort verschl&uuml;sselt deine Daten, bevor sie zu GitHub gehen.</div>
+<div class="sheet" id="set-sheet" role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
+    <button type="button" class="tb" data-close="set" aria-label="Schließen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2 id="set-title">Einstellungen</h2>
+  </div></div>
+  <div class="group"><button type="button" class="row" id="s-paste">Einrichtungs-Code aus Zwischenablage einf&uuml;gen</button></div>
+  <p class="note">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &ndash; verbindet ohne Tippen.</p>
+  <div class="group">
+    <div class="row"><label for="s-token">GitHub-Token</label><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Token anzeigen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+    <div class="row"><label for="s-gist">Gist-ID</label><input type="text" id="s-gist" name="cfg-b" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="leer = neu anlegen"></div>
+    <div class="row"><label for="s-pass">Passwort</label><input type="text" class="masked" id="s-pass" name="cfg-c" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="auf allen Ger&auml;ten gleich"><button type="button" class="eye" data-eye="s-pass" aria-label="Passwort anzeigen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+  </div>
+  <p class="note">Alles bleibt nur auf diesem Ger&auml;t gespeichert. Das Passwort verschl&uuml;sselt deine Daten, bevor sie zu GitHub gehen.</p>
   <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
   <div class="f-msg" id="s-msg"></div>
-  <hr class="divider">
-  <button type="button" class="btn ghost" id="s-copycode">Einrichtungs-Code kopieren</button>
-  <div class="f-hint" style="margin:6px 0 12px">F&uuml;r ein zweites Ger&auml;t &mdash; dort unter &bdquo;Code aus Zwischenablage einf&uuml;gen&ldquo;.</div>
-  <button type="button" class="btn ghost" id="s-sync-now">Jetzt synchronisieren</button>
-  <button type="button" class="btn ghost" id="s-backup">Backup herunterladen</button>
-  <div class="f-hint" style="margin:6px 0 12px">Die Datei ist unverschl&uuml;sselt. Leg sie an einen Ort, dem du vertraust.</div>
-  <button type="button" class="btn danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button>
+  <div class="group">
+    <button type="button" class="row" id="s-copycode">Einrichtungs-Code kopieren (f&uuml;r 2. Ger&auml;t)</button>
+    <button type="button" class="row" id="s-sync-now">Jetzt synchronisieren</button>
+    <button type="button" class="row" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
+  </div>
+  <div class="group"><button type="button" class="row danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button></div>
 </div>
 
-<div id="toast" role="status"></div>
+<div id="toast" class="glass" role="status"></div>
 
 <script>
 "use strict";
 /* ═══════════ Helfer ═══════════ */
 const $ = id => document.getElementById(id);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const DAY = 864e5;
-const fmtEur = (v, d = 2) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d }) + " €";
+const num = (v, d = 2) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const sign = v => (v >= 0 ? "+" : "");
+const fmtEur = v => num(v) + " €";
+const fmtPct = v => sign(v) + num(v) + " %";
 const fmtInt = v => Math.round(v).toLocaleString("de-DE");
-/* Kompakte Y-Achsen-Beschriftung: 70.000 → „70k", auf ganze Tausender gerundet, keine Nachkommastellen (Punkt 11) */
-const fmtAxisK = v => {
-  if (!isFinite(v)) return "";
-  return Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k";
-};
-/* Sats-Achse: ab 100 Mio. Sats in ₿ statt in Millionen Sats („1₿" statt „100M").
-   Einheit immer direkt an der Zahl — kein Leerzeichen. */
-const fmtAxisSats = v => {
-  if (!isFinite(v)) return "";
-  if (Math.abs(v) >= 1e8) return (v / 1e8).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + "₿";
-  if (Math.abs(v) >= 1e6) return (v / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + "M";
-  return fmtInt(v);
-};
+/* Kompakte Y-Achse: 70.000 → „70k" */
+const fmtAxisK = v => (!isFinite(v) ? "" : Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k");
 const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
+const dayTs = d => new Date(d + "T00:00:00Z").getTime();
+const today = () => new Date().toISOString().slice(0, 10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 function toast(msg) {
@@ -768,6 +408,7 @@ function toast(msg) {
   clearTimeout(t.__tm);
   t.__tm = setTimeout(() => t.classList.remove("show"), 2600);
 }
+const setMsg = (id, t, cls) => { $(id).textContent = t; $(id).className = "f-msg " + (cls || ""); };
 /* Zahl mit deutschem Format einlesen ("1.234,56" oder "1234.56") */
 function parseNum(s) {
   s = String(s || "").trim().replace(/\s|€/g, "");
@@ -776,6 +417,12 @@ function parseNum(s) {
   else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   else s = s.replace(",", ".");
   return parseFloat(s);
+}
+/* Segmented Control: Auswahl setzen (Schieber wandert per CSS-Variable --i) */
+function segPick(seg, btn) {
+  const bs = $$("button", seg);
+  bs.forEach(b => { b.classList.toggle("sel", b === btn); b.setAttribute("aria-pressed", b === btn); });
+  seg.style.setProperty("--i", bs.indexOf(btn));
 }
 
 /* ═══════════ Datenspeicher (Bewegungen) ═══════════
@@ -792,12 +439,10 @@ const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "H
 const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
 
 let STORE = { schema: 3, updatedAt: 0, movements: [] };
-(function loadStore() {
-  try {
-    const o = JSON.parse(localStorage.getItem(LS_STORE));
-    if (o && Array.isArray(o.movements)) STORE = o;
-  } catch (e) {}
-})();
+try {
+  const o = JSON.parse(localStorage.getItem(LS_STORE));
+  if (o && Array.isArray(o.movements)) STORE = o;
+} catch (e) {}
 function saveStore() {
   STORE.updatedAt = Date.now();
   try { localStorage.setItem(LS_STORE, JSON.stringify(STORE)); } catch (e) {}
@@ -817,7 +462,7 @@ function upsertMov(m) {
 }
 function deleteMov(id) {
   const m = STORE.movements.find(x => x.id === id);
-  if (m) { m.del = Date.now(); m.mod = Date.now(); saveStore(); markDirty(); }
+  if (m) { m.del = m.mod = Date.now(); saveStore(); markDirty(); }
 }
 /* Alt-Datensatz (Zeile aus CSV/Migration) → Bewegung mit stabiler ID */
 function rowToMov(person, r, idx) {
@@ -840,9 +485,8 @@ function importTables(tables) {
   if (n) { saveStore(); markDirty(); }
   return n;
 }
-/* Numbers-CSV parsen (unverändert aus der Vorgängerversion) */
+/* Numbers-CSV parsen */
 function parseCsvAll(text) {
-  const lines = text.split(/\r?\n/);
   const headerName = l => {
     const s = l.trim();
     if (!s || s.includes(";") || /^\d{2}\/\d{2}\/\d{2}/.test(s)) return null;
@@ -851,7 +495,7 @@ function parseCsvAll(text) {
   };
   const sections = {};
   let current = null;
-  for (const line of lines) {
+  for (const line of text.split(/\r?\n/)) {
     const h = headerName(line);
     if (h) { current = h; sections[current] = []; continue; }
     if (current) sections[current].push(line);
@@ -877,13 +521,10 @@ function parseCsvAll(text) {
     }
     return rows;
   };
-  const names = Object.keys(sections);
   const tables = {};
-  if (names.length) {
-    for (const n of names) {
-      const rows = parseRows(sections[n]);
-      if (rows.length) tables[n] = rows;
-    }
+  for (const n of Object.keys(sections)) {
+    const rows = parseRows(sections[n]);
+    if (rows.length) tables[n] = rows;
   }
   if (!Object.keys(tables).length) throw new Error("Keine Einträge in der Datei gefunden.");
   return tables;
@@ -912,6 +553,7 @@ async function decryptJson(text, pass) {
   const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.data));
   return JSON.parse(new TextDecoder().decode(plain));
 }
+const storePayload = pass => encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, pass);
 
 /* ═══════════ Gist-Sync ═══════════ */
 const GIST_FILE = "bitcoin-dashboard.json.enc";
@@ -925,10 +567,6 @@ function setSyncCfg(cfg) {
 function syncStatus(state, text) {
   $("sync-dot").className = "dot" + (state ? " " + state : "");
   $("sync-text").textContent = text;
-  /* Der Punkt allein traegt die Bedeutung nur ueber Farbe — auf Touch gibt es kein
-     Hover fuer den title. Deshalb wandert der Klartext zusaetzlich ins aria-label. */
-  $("sync-chip").setAttribute("aria-label", "Sync: " + text);
-  $("sync-chip").title = "Sync: " + text + " – tippen für Details";
 }
 async function ghApi(path, opts = {}) {
   const cfg = syncCfg();
@@ -976,9 +614,8 @@ async function gistPull(cfg) {
   catch (e) { throw new Error("Entschlüsselung fehlgeschlagen – Passwort auf allen Geräten gleich?"); }
 }
 async function gistPush(cfg) {
-  const payload = await encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, cfg.pass);
   await ghApi("/gists/" + cfg.gistId, { method: "PATCH",
-    body: JSON.stringify({ files: { [GIST_FILE]: { content: payload } } }) });
+    body: JSON.stringify({ files: { [GIST_FILE]: { content: await storePayload(cfg.pass) } } }) });
 }
 async function doSync(interactive) {
   const cfg = syncCfg();
@@ -997,7 +634,7 @@ async function doSync(interactive) {
       /* nur hochladen, wenn wir etwas haben, das drüben fehlt */
       const localNewer = STORE.movements.length !== remote.movements.length ||
         JSON.stringify(STORE.movements) !== JSON.stringify(mergeMovs(remote.movements, remote.movements));
-      if (dirty || localNewer) { await gistPush(cfg); }
+      if (dirty || localNewer) await gistPush(cfg);
     } else {
       await gistPush(cfg);
     }
@@ -1019,7 +656,7 @@ function downloadBackup() {
     schema: 3, movements: liveMovs() }, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "bitcoin-dashboard-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.download = "bitcoin-dashboard-backup-" + today() + ".json";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   try { localStorage.setItem(LS_BACKUP, String(Date.now())); } catch (e) {}
@@ -1093,332 +730,186 @@ async function fetchSpot() {
   if (!isFinite(p) || !(p > 0)) throw new Error("kein Kurs");
   return p;
 }
-</script>
-<script>
-"use strict";
+
 /* ═══════════ Zustand der Ansicht ═══════════ */
 let person = null;
-let ALL = [];            // Zeilen {date, sats, eur, label, who, typ, id} der gewählten Person
+let ALL = [];            // Bewegungen der gewählten Person, nach Datum sortiert
 let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
-/* Zeitraum pro Chart (ersetzt den früheren Zoom) */
 const RANGES = { wert: "max", preis: "max", sats: "max" };
 const RANGE_DAYS = { "1w": 7, "1m": 30, "6m": 183, "1y": 365 };
+const RANGE_NAME = { "1w": "7 Tage", "1m": "30 Tage", "6m": "6 Monate", "1y": "1 Jahr", max: "Gesamt" };
 function rebuildAll() {
   ALL = liveMovs().filter(m => m.person === person)
-    .slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 function cumAt(ts) {
   let sats = 0, eur = 0;
-  for (const b of ALL) {
-    if (new Date(b.date + "T00:00:00Z").getTime() <= ts) { sats += b.sats; eur += b.eur; }
-  }
+  for (const b of ALL) if (dayTs(b.date) <= ts) { sats += b.sats; eur += b.eur; }
   return { sats, eur };
 }
+/* Neuen Live-Kurs übernehmen (Start, 5-s-Ticker, Rückkehr in die App) */
+function setLive(p) {
+  const m = lastMarket, last = m.candles[m.candles.length - 1];
+  m.live = p; m.fetchedAt = Date.now(); m.liveOk = true;
+  if (last && Date.now() - last.t < 2 * DAY) last.close = p;
+  renderKpis(m);
+}
 
-/* Sanft zählende Zahlen (Hero & BTC-Kurs) */
+/* Sanft zählende Zahlen (Portfoliowert, G/V, Kurs) */
 function countTo(el, to, fmt) {
   const from = el.__num != null ? el.__num : to;
   el.__num = to;
   if (!isFinite(from) || from === to) { el.textContent = fmt(to); return; }
-  const t0 = performance.now(), dur = 600;
+  const t0 = performance.now();
   cancelAnimationFrame(el.__raf);
   (function step(t) {
-    const k = Math.min(1, (t - t0) / dur);
-    const e = 1 - Math.pow(1 - k, 3);
-    el.textContent = fmt(from + (to - from) * e);
+    const k = Math.min(1, (t - t0) / 600);
+    el.textContent = fmt(from + (to - from) * (1 - Math.pow(1 - k, 3)));
     if (k < 1) el.__raf = requestAnimationFrame(step);
   })(t0);
 }
 
-/* ═══════════ KPIs (ohne Chart-Neuaufbau aktualisierbar) ═══════════ */
-function renderKpis(market) {
-  const { live, fetchedAt, liveOk, candles } = market;
+/* ═══════════ Kennzahlen (ohne Chart-Neuaufbau aktualisierbar) ═══════════ */
+function renderKpis({ live, fetchedAt, liveOk, candles }) {
   const totSats = ALL.reduce((s, b) => s + b.sats, 0);
   const totEur = ALL.reduce((s, b) => s + b.eur, 0);
-  const btc = totSats / 1e8;
-  const wert = btc * live;
-  const pnl = wert - totEur;
-  const hasInvest = totEur > 0;
+  const btc = totSats / 1e8, wert = btc * live, pnl = wert - totEur, hasInvest = totEur > 0;
+  const pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct"), cls = pnl >= 0 ? "pos" : "neg";
 
-  countTo($("k-wert"), wert, v => fmtEur(v));
-  /* BTC-Bestand im Header: Satoshis ÷ 1e8 → BTC mit 8 Nachkommastellen (z. B. ₿ 0,59341919) */
-  $("k-btc-head").textContent = btc.toLocaleString("de-DE", { minimumFractionDigits: 8, maximumFractionDigits: 8 });
-  /* v11: Wholecoiner-Fortschrittsbalken entfernt (inkl. „x % von 1 ₿"-Zeile). */
-
-  const chip = $("k-pnl-chip"), pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct");
+  countTo($("k-wert"), wert, fmtEur);
+  $("k-btc-head").textContent = num(btc, 8);
   if (hasInvest) {
-    const pct = (wert / totEur - 1) * 100;
-    countTo(pnlEl, pnl, v => (v >= 0 ? "+" : "") + fmtEur(v));
-    chip.className = "chip " + (pnl >= 0 ? "pos" : "neg");
-    pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
-    pctEl.className = "hero-pct " + (pnl >= 0 ? "pos" : "neg");
+    countTo(pnlEl, pnl, v => sign(v) + fmtEur(v));
+    pnlEl.className = cls;
+    pctEl.textContent = fmtPct((wert / totEur - 1) * 100);
+    pctEl.className = "hero-pct " + cls;
   } else {
-    pnlEl.textContent = "–"; pnlEl.__num = null;
-    chip.className = "chip";
-    pctEl.textContent = ""; pctEl.className = "hero-pct";
+    pnlEl.textContent = "–"; pnlEl.__num = null; pnlEl.className = "";
+    pctEl.textContent = "";
   }
   $("k-inv").textContent = fmtEur(totEur);
   $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc) : "–";
-  countTo($("k-kurs"), live, v => fmtEur(v));
+  countTo($("k-kurs"), live, fmtEur);
   $("k-kurs-sub").textContent = liveOk ? "Live-Kurs" : "Kurs (Cache)";
 
-  /* ATH-Kachel: persoenliches Portfoliowert-ATH ueber die gesamte Historie */
+  /* Persönliches Allzeithoch des Portfoliowerts über die gesamte Historie */
   let ath = 0, athTs = 0;
   if (ALL.length && candles.length) {
-    const first = new Date(ALL[0].date + "T00:00:00Z").getTime();
+    const first = dayTs(ALL[0].date);
     let ai = 0, s = 0;
     for (const c of candles) {
       if (c.t < first) continue;
-      while (ai < ALL.length && new Date(ALL[ai].date + "T00:00:00Z").getTime() <= c.t) { s += ALL[ai].sats; ai++; }
+      while (ai < ALL.length && dayTs(ALL[ai].date) <= c.t) s += ALL[ai++].sats;
       const w = s / 1e8 * c.close;
       if (w > ath) { ath = w; athTs = c.t; }
     }
     if (wert > ath) { ath = wert; athTs = fetchedAt; }
   }
-  if (ath > 0) {
-    const dist = (wert / ath - 1) * 100;
-    $("k-ath").textContent = fmtEur(ath);
-    $("k-ath-date").textContent = fmtDate(athTs);
-    $("k-ath-sub").innerHTML =
-      '<span class="' + (dist >= -0.05 ? "pos" : "neg") + '">' +
-      (dist >= 0 ? "+" : "") + dist.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %</span>";
-  } else {
-    $("k-ath").textContent = "–";
-    $("k-ath-date").textContent = "";
-    $("k-ath-sub").textContent = "";
-  }
+  const dist = ath > 0 ? (wert / ath - 1) * 100 : 0;
+  $("k-ath").textContent = ath > 0 ? fmtEur(ath) : "–";
+  $("k-ath-date").textContent = ath > 0 ? fmtDate(athTs) : "";
+  $("k-ath-sub").textContent = ath > 0 ? fmtPct(dist) : "";
+  $("k-ath-sub").className = dist >= -0.05 ? "pos" : "neg";
   $("stand").textContent = liveOk
     ? new Date(fetchedAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })
     : "Kurs vom " + fmtDate(candles[candles.length - 1].t) + " (offline)";
 }
 
-/* ═══════════ TR-Scrubbing: Snap-Marker, Puls, Vor/Nach-Färbung ═══════════ */
-const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
-/* Gesten-Feintuning: ruhiger Scrub + saubere Trennung von vertikalem Scrollen */
-const SCRUB_HOLD_MS = 180;   /* Punkt 9: so lange halten, bis Scrub startet */
-const SCRUB_MOVE_TOL = 6;    /* Punkt 7: Mindest-Fingerweg (px) bis der Punkt wechselt */
-const SCRUB_SCROLL_TOL = 10; /* vertikale Toleranz vor Aktivierung → als Scroll werten (Punkt 8) */
-const SCRUB_ACTIVATE_DX = 14;/* klar horizontale Geste aktiviert sofort */
-/* Einrast-Radius auf Kaufpunkte (px). Zum Nachjustieren: nur diese Zahl aendern.
-   Halbiert gegenueber v7 (war 22) — das Snapping reagiert dadurch deutlich weniger sensibel. */
-const SCRUB_SNAP_PX = 11;
-/* v11: Die feste Chart-2-Schrittweite (PRICE_AXIS_STEP, 20.000 €) ist entfallen —
-   beide €-Achsen (Chart 1 + 2) skalieren jetzt dynamisch eng an der Wertspanne. */
-/* Gemeinsame Puls-Phase (0…1…0 in 1,6 s). Bewusst NICHT an den Scrub-Zustand gekoppelt:
-   frueher lief der Puls nur, solange etwas anderes das Canvas neu zeichnete — das war
-   auf iOS zufaellig der Fall, auf Android/Web nicht. Jetzt treibt attachPulse() das Neuzeichnen. */
-const pulseK = () => REDUCED_MOTION ? 1
-  : 0.5 - 0.5 * Math.cos((performance.now() % 1600) / 1600 * 2 * Math.PI);
-const fmtPct = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
-/* v11: %-Endlabel am Kurvenende — 1 Dezimale, konsistent zur Hero-Anzeige */
-const fmtPct1 = v => (v >= 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %";
-/* Liegt ein Liniensegment zeitlich hinter dem aktiven Marker? */
+/* ═══════════ Diagramme: Auswahl per Scrubbing ═══════════ */
+/* Gesten-Feintuning: ruhiger Scrub + saubere Trennung vom vertikalen Scrollen */
+const SCRUB_HOLD_MS = 180;    /* so lange halten, bis der Scrub startet */
+const SCRUB_MOVE_TOL = 6;     /* Mindest-Fingerweg (px), bis der Punkt wechselt */
+const SCRUB_SCROLL_TOL = 10;  /* vertikale Toleranz vor Aktivierung → als Scrollen werten */
+const SCRUB_ACTIVATE_DX = 14; /* klar horizontale Geste aktiviert sofort */
+const SCRUB_SNAP_PX = 22;     /* Einrast-Radius auf Kaufpunkte */
+/* Liegt ein Liniensegment zeitlich hinter dem aktiven Punkt? */
 const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
-function scrubHtml(date, value, delta, neg, extra) {
-  return '<span class="scrub-date">' + date + '</span>' +
-    '<span class="scrub-value">' + value + '</span>' +
-    (delta ? '<span class="scrub-delta ' + (neg ? "neg" : "pos") + '">' + delta + '</span>' : '') +
-    (extra ? '<span class="scrub-extra">' + extra + '</span>' : '');
+/* Kopfzeile über dem Diagramm: Wert · Veränderung · Beschriftung */
+const scrubHtml = (value, delta, neg, cap, cls) =>
+  '<b class="scrub-value ' + (cls || "") + '">' + value + "</b>" +
+  (delta ? '<span class="scrub-delta ' + (neg ? "neg" : "pos") + '">' + delta + "</span>" : "") +
+  '<span class="scrub-cap">' + cap + "</span>";
+/* Gepunktete Hilfslinie auf Höhe y (Startwert bzw. 1 BTC), optional mit Beschriftung */
+function dottedLine(chart, value, text) {
+  const s = chart.$scrub;
+  if (!s || value == null || !isFinite(value)) return;
+  const y = chart.scales.y.getPixelForValue(value);
+  const { left, right, top, bottom } = chart.chartArea;
+  if (y < top + 2 || y > bottom - 2) return;
+  const c = chart.ctx;
+  c.save();
+  c.strokeStyle = s.C.gray; c.globalAlpha = .7; c.lineWidth = 2; c.lineCap = "round"; c.setLineDash([.1, 6]);
+  c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+  if (text) {
+    c.globalAlpha = 1; c.fillStyle = s.C.label2; c.textBaseline = "bottom";
+    c.font = "11px " + (Chart.defaults.font.family || "sans-serif");
+    c.fillText(text, left + 4, y - 4);
+  }
+  c.restore();
 }
-/* Marker am aktiven Punkt: pulsiert kompakt ↔ expandiert mit Halo (Endlosschleife) */
+const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => dottedLine(ch, ch.$scrub && ch.$scrub.cfg.base) };
+const wholecoinerPlugin = { id: "wholecoiner", afterDatasetsDraw: ch => dottedLine(ch, 1e8, "1 BTC") };
+/* Aktiver Punkt: senkrechte Linie + Marker mit Ring in Kartenfarbe */
 const scrubPlugin = {
-  id: "trScrub",
+  id: "scrub",
   afterDatasetsDraw(chart) {
     const s = chart.$scrub;
     if (!s || s.i < 0) return;
     const el = chart.getDatasetMeta(0).data[s.i];
     if (!el) return;
-    const k = pulseK();
-    const c = chart.ctx, color = s.cfg.colorAt(s.i);
+    const c = chart.ctx, { top, bottom } = chart.chartArea;
     c.save();
-    c.fillStyle = color;
-    c.globalAlpha = 0.18 * k;                       /* Halo-Ring */
-    c.beginPath(); c.arc(el.x, el.y, 3.5 + 3.5 * k, 0, 2 * Math.PI); c.fill();
-    c.globalAlpha = 1;                              /* Kern */
-    c.beginPath(); c.arc(el.x, el.y, 4 + 1.5 * k, 0, 2 * Math.PI); c.fill();
+    c.strokeStyle = s.C.gray; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(el.x, top); c.lineTo(el.x, bottom); c.stroke();
+    c.fillStyle = s.cfg.colorAt(s.i); c.strokeStyle = s.C.card; c.lineWidth = 2.5;
+    c.beginPath(); c.arc(el.x, el.y, 6, 0, 2 * Math.PI); c.fill(); c.stroke();
     c.restore();
   }
 };
-/* Käufe (Punkt 4): keine Dauer-Punkte mehr — der Kaufpunkt wird nur hervorgehoben,
-   wenn der Scrub-Indikator darauf einrastet. Details laufen in der Scrub-Zeile oben.
-   Zeichnet on-canvas, verschiebt also weder Legende noch Layout. */
-const buyMarkerPlugin = {
-  id: "buyMarker",
-  afterDatasetsDraw(chart) {
-    const s = chart.$scrub, b = chart.$buys;
-    if (!s || s.i < 0 || !b || !b.info[s.i]) return;
-    const el = chart.getDatasetMeta(0).data[s.i];
-    if (!el) return;
-    const c = chart.ctx, r = Math.max(5, (b.radius[s.i] || 0) + 1.5);
-    c.save();
-    c.fillStyle = b.color; c.strokeStyle = b.border; c.lineWidth = 2;
-    c.beginPath(); c.arc(el.x, el.y, r, 0, 2 * Math.PI); c.fill(); c.stroke();
-    c.restore();
-  }
-};
-/* Referenzlinien liegen haeufig exakt auf der Achsen-Ober-/Untergrenze (y === top).
-   Frueher hat die Sichtbarkeitspruefung „y < top + 2" genau diese Faelle verworfen —
-   deshalb war die 1₿-Linie unsichtbar, obwohl 100M auf der Achse stand.
-   refLineY() prueft grosszuegig und rueckt die Linie minimal in die Chartflaeche. */
-function refLineY(chart, value) {
-  if (value == null || !isFinite(value)) return null;
-  const { top, bottom } = chart.chartArea;
-  const y = chart.scales.y.getPixelForValue(value);
-  if (!isFinite(y) || y < top - 1 || y > bottom + 1) return null;
-  return Math.min(bottom - 2, Math.max(top + 2, y));
-}
-/* Gepunktete Referenzlinie auf Höhe des ersten Werts im gewählten Zeitraum */
-const baselinePlugin = {
-  id: "startLine",
-  beforeDatasetsDraw(chart) {
-    const s = chart.$scrub;
-    if (!s) return;
-    const y = refLineY(chart, s.cfg.baseValue);
-    if (y == null) return;
-    const { left, right } = chart.chartArea;
-    const c = chart.ctx;
-    c.save();
-    c.strokeStyle = s.cfg.baseColor;
-    /* Punkt 6: praesentere Punkte — dicker/groesser (an TR-Screenshots orientiert) */
-    c.lineWidth = 3; c.lineCap = "round"; c.setLineDash([0.1, 8]);
-    c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
-    c.restore();
-  }
-};
-/* ═══════════ Endpunkt-Beschriftung statt Legendenzeile ═══════════
-   Jede Kurve traegt ihren Namen dort, wo sie endet — wie eine handschriftliche
-   Notiz am Kurvenende. Ersetzt die frueheren Legenden ueber Chart 1 und 2:
-   dieselbe Information, aber am Ort des Objekts statt in einer eigenen Zeile,
-   und ohne die farbigen Swatch-Quadrate.
-   chart.$endLabels = [{ ds: <Dataset-Index>, text, color }] */
-const endLabelPlugin = {
-  id: "endLabels",
-  afterDatasetsDraw(chart) {
-    const defs = chart.$endLabels;
-    if (!defs || !defs.length || !chart.chartArea) return;
-    const c = chart.ctx, { top, bottom, right } = chart.chartArea;
-    c.save();
-    c.font = "600 11px " + (Chart.defaults.font.family || "Inter, sans-serif");
-    c.textAlign = "right";
-    c.textBaseline = "middle";
-    const used = [];
-    for (const d of defs) {
-      const meta = chart.getDatasetMeta(d.ds);
-      if (!meta || !meta.data || !meta.data.length) continue;
-      /* letzten Punkt mit gueltigem Wert suchen (Ø-Kaufkurs beginnt erst spaeter) */
-      let el = null;
-      for (let i = meta.data.length - 1; i >= 0; i--) {
-        const p = meta.data[i];
-        if (p && isFinite(p.y) && chart.data.datasets[d.ds].data[i] != null) { el = p; break; }
-      }
-      if (!el) continue;
-      /* Label ueber den Endpunkt setzen; kollidiert es mit einem bereits
-         gesetzten Label, weicht es nach unten aus. */
-      let y = el.y - 10;
-      if (y < top + 7) y = el.y + 12;
-      while (used.some(u => Math.abs(u - y) < 13)) y += 13;
-      y = Math.min(bottom - 7, Math.max(top + 7, y));
-      used.push(y);
-      c.fillStyle = d.color;
-      c.fillText(d.text, right - 4, y);
-    }
-    c.restore();
-  }
-};
-/* Treibt die Puls-Animation plattformunabhaengig: ohne diesen Loop zeichnet Chart.js
-   nur bei Interaktion neu — der Puls lief dann je nach Engine gar nicht.
-   Gedrosselt auf ~30 fps und pausiert, sobald der Chart nicht sichtbar oder das Tab
-   im Hintergrund ist (Akku). Der Scrub-Loop hat Vorrang, damit nicht doppelt gezeichnet wird. */
-function attachPulse(chart) {
-  chart.canvas.__pulseAC?.abort();
-  if (REDUCED_MOTION) return;
-  const ac = chart.canvas.__pulseAC = new AbortController();
-  let raf = 0, visible = true, last = 0;
-  const io = "IntersectionObserver" in window
-    ? new IntersectionObserver(es => { visible = es[0].isIntersecting; }, { threshold: 0 })
-    : null;
-  if (io) io.observe(chart.canvas);
-  const loop = t => {
-    if (ac.signal.aborted) return;
-    raf = requestAnimationFrame(loop);
-    if (!visible || document.hidden) return;
-    if (chart.$scrub && chart.$scrub.raf) return;   /* Scrub zeichnet bereits jeden Frame */
-    if (t - last < 33) return;
-    last = t;
-    if (chart.ctx) chart.draw();
-  };
-  ac.signal.addEventListener("abort", () => { cancelAnimationFrame(raf); if (io) io.disconnect(); });
-  raf = requestAnimationFrame(loop);
-}
-/* Scrub-Verhalten an einen Chart binden: Maus-Hover (Desktop) bzw. Touch-Drag (Mobile),
-   X-Position snappt auf den nächstgelegenen Datenpunkt; Loslassen → Grundzustand */
-function attachScrub(chart, s, cfg) {
-  s.cfg = cfg;
-  s.t0 = 0; s.raf = 0;
+/* Scrub an einen Chart binden: Maus-Hover (Desktop) bzw. Halten + Ziehen (Touch);
+   die X-Position rastet auf den nächsten Datenpunkt ein, Loslassen → Grundzustand */
+function attachScrub(chart, s, cfg, C) {
+  s.cfg = cfg; s.C = C;
   chart.$scrub = s;
-  const line = $(cfg.lineId);
-  const show = raw => {
-    /* onShow bekommt den ROHEN Index (-1 = kein Scrub aktiv) — Popups duerfen
-       im Grundzustand nicht stehen bleiben, auch wenn die Scrub-Zeile es tut */
-    if (cfg.onShow) cfg.onShow(raw);
-    if (!line) return;
-    let i = raw;
-    if (i < 0) {
-      /* hideIdle: Zeile nur waehrend des Scrubbens zeigen (redundant zum Header) */
-      if (cfg.hideIdle) { line.innerHTML = ""; if (cfg.onIdle) cfg.onIdle(); return; }
-      i = cfg.n - 1; /* Grundzustand: letzter Punkt des Zeitraums */
-    }
-    line.innerHTML = cfg.n ? cfg.html(i) : "";
-  };
+  const line = $(cfg.line), canvas = chart.canvas;
+  const show = i => { line.innerHTML = !cfg.n ? "" : i < 0 ? cfg.idle() : cfg.html(i); };
   show(-1);
-  const loop = () => {
-    s.raf = 0;
-    if (s.i < 0 || !chart.ctx) return;
-    chart.draw();
-    s.raf = requestAnimationFrame(loop);
-  };
+  canvas.setAttribute("aria-label", cfg.name + ": " + line.textContent);
   const setIdx = i => {
     if (i === s.i) return;
     s.i = i;
     show(i);
-    chart.update("none"); /* Segmentfarben vor/nach Marker neu auswerten */
-    if (i >= 0 && !REDUCED_MOTION && !s.raf) { s.t0 = performance.now(); loop(); }
+    chart.update("none"); /* Segmentfarben vor/nach dem Marker neu auswerten */
   };
   const idxAt = e => {
     if (!cfg.n || !chart.chartArea) return -1;
-    const r = chart.canvas.getBoundingClientRect();
-    const x = e.clientX - r.left;
+    const x = e.clientX - canvas.getBoundingClientRect().left;
     const { left, right } = chart.chartArea;
     if (x < left - 16 || x > right + 16) return -1;
     const cx = Math.min(right, Math.max(left, x));
     let idx = Math.max(0, Math.min(cfg.n - 1, Math.round(chart.scales.x.getValueForPixel(cx))));
-    /* Punkt 5: auf den naechstgelegenen Kaufpunkt einrasten, wenn nah genug */
-    if (cfg.snap && cfg.snap.length) {
-      let best = -1, bestD = SCRUB_SNAP_PX;
-      for (const si of cfg.snap) {
-        const d = Math.abs(chart.scales.x.getPixelForValue(si) - cx);
-        if (d <= bestD) { bestD = d; best = si; }
-      }
-      if (best >= 0) idx = best;
+    /* auf den nächstgelegenen Kaufpunkt einrasten, wenn nah genug */
+    let bestD = SCRUB_SNAP_PX;
+    for (const si of cfg.snap || []) {
+      const d = Math.abs(chart.scales.x.getPixelForValue(si) - cx);
+      if (d <= bestD) { bestD = d; idx = si; }
     }
     return idx;
   };
-  chart.canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
-  const ac = chart.canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
-  const canvas = chart.canvas;
+  canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
+  const ac = canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
 
-  /* Desktop: Maus-Hover scrubbt direkt (kein Scroll-Konflikt) */
+  /* Desktop: Maus-Hover scrubbt direkt */
   canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") setIdx(idxAt(e)); }, o);
   canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setIdx(-1); }, o);
 
-  /* Touch: Scrub erst nach kurzem Halten (Punkt 9). Ein vertikaler Swipe scrollt die Seite
-     normal weiter (Punkt 8); erst bei Aktivierung wird das Scrollen unterbunden. Kleine
-     Fingerbewegungen wechseln den Punkt nicht sofort (ruhiger, Punkt 7). */
+  /* Touch: Scrub erst nach kurzem Halten oder klar horizontaler Bewegung;
+     ein vertikaler Wisch scrollt die Seite normal weiter */
   let holdTimer = 0, active = false, startX = 0, startY = 0, lastX = 0, pid = -1;
-  const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; } };
+  const clearHold = () => { clearTimeout(holdTimer); holdTimer = 0; };
   const activate = () => {
     active = true;
-    canvas.style.touchAction = "none";               /* Seite waehrend Scrub nicht scrollen */
+    canvas.style.touchAction = "none";
     try { canvas.setPointerCapture(pid); } catch (_) {}
     lastX = startX;
     setIdx(idxAt({ clientX: startX }));
@@ -1432,519 +923,198 @@ function attachScrub(chart, s, cfg) {
   };
   canvas.addEventListener("pointerdown", e => {
     if (e.pointerType === "mouse") return;
-    pid = e.pointerId; startX = e.clientX; startY = e.clientY; lastX = e.clientX; active = false;
+    pid = e.pointerId; startX = lastX = e.clientX; startY = e.clientY; active = false;
     clearHold();
     holdTimer = setTimeout(() => { holdTimer = 0; activate(); }, SCRUB_HOLD_MS);
   }, o);
   canvas.addEventListener("pointermove", e => {
     if (e.pointerType === "mouse") return;
     if (!active) {
-      if (!holdTimer) return;                          /* schon verworfen/aktiv */
-      const dx = e.clientX - startX, dy = e.clientY - startY;
-      /* klar vertikale Bewegung vor dem Halten → Nutzer scrollt: Scrub verwerfen */
-      if (Math.abs(dy) > SCRUB_SCROLL_TOL && Math.abs(dy) > Math.abs(dx)) { clearHold(); pid = -1; return; }
-      /* klar horizontale Bewegung → sofort scrubben, ohne aufs Halten zu warten */
-      if (Math.abs(dx) > SCRUB_ACTIVATE_DX && Math.abs(dx) >= Math.abs(dy)) { clearHold(); activate(); setIdx(idxAt(e)); }
+      if (!holdTimer) return;
+      const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+      if (dy > SCRUB_SCROLL_TOL && dy > dx) { clearHold(); pid = -1; }                     /* Nutzer scrollt */
+      else if (dx > SCRUB_ACTIVATE_DX && dx >= dy) { clearHold(); activate(); setIdx(idxAt(e)); }
       return;
     }
-    if (Math.abs(e.clientX - lastX) < SCRUB_MOVE_TOL) return;  /* Punkt 7: Zittern ignorieren */
+    if (Math.abs(e.clientX - lastX) < SCRUB_MOVE_TOL) return;  /* Zittern ignorieren */
     lastX = e.clientX;
     setIdx(idxAt(e));
   }, o);
-  /* Waehrend aktivem Scrub das native Scrollen sicher unterbinden */
   canvas.addEventListener("touchmove", e => { if (active) e.preventDefault(); }, { passive: false, signal: ac.signal });
   canvas.addEventListener("pointerup", stopTouch, o);
   canvas.addEventListener("pointercancel", stopTouch, o);
-  /* Erst jetzt existiert chart.$scrub — neu zeichnen, damit die gepunktete
-     Startwert-Linie sofort sichtbar ist (vorher erst nach dem ersten Tap) */
-  chart.draw();
+  chart.draw(); /* chart.$scrub existiert erst jetzt → Hilfslinien sofort zeichnen */
 }
 
-/* ═══════════ Charts (Wertentwicklung, Kurs, Sats) ═══════════ */
-/* Chart 1: Fläche zwischen Portfoliowert und Investiert ein-/ausblendbar */
-let showArea = true;
-function renderCharts(market) {
-  const { candles, live } = market;
-  const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const C = {
-    grid: cssv("--ch-grid"), tick: cssv("--ch-tick"),
-    tipBg: cssv("--tip-bg"), tipBorder: cssv("--tip-border"),
-    tipTitle: cssv("--tip-title"), tipBody: cssv("--tip-body"),
-    athLine: cssv("--ath-line"), athText: cssv("--ath-text"),
-    main: cssv("--line-main"), loss: cssv("--line-loss"),
-    wert: cssv("--line-wert"), wertLoss: cssv("--line-wert-loss"),
-    invest: cssv("--line-invest"), investLoss: cssv("--line-invest-loss"),
-    fillPos: cssv("--fill-pos"), fillNeg: cssv("--fill-neg"),
-    price: cssv("--line-price"), avg: cssv("--avg-line"),
-    buy: cssv("--buy-dot"), dotBorder: cssv("--dot-border"),
-    after: cssv("--ch-after"), fillAfter: cssv("--fill-after"), base: cssv("--base-line"),
-    btc: cssv("--btc"), sats: cssv("--line-sats"), endLabel: cssv("--ch-endlabel"),
-    posText: cssv("--positive-text"), negText: cssv("--negative-text"),
-    /* Trendfarben aus EINER Quelle — garantiert identische Werte in Chart 1 und Chart 2 */
-    trendUp: cssv("--trend-up"), trendDown: cssv("--trend-down"),
-    trendUpSoft: cssv("--trend-up-soft"), trendDownSoft: cssv("--trend-down-soft")
-  };
-  Chart.defaults.font.family = cssv("--font-family");
+/* ═══════════ Diagramme (Wertentwicklung, Kurs, Stack) ═══════════ */
+function renderCharts({ candles }) {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim();
+  const C = { pos: v("--pos"), neg: v("--neg"), btc: v("--btc"), gray: v("--ch-gray"), label: v("--label"), label2: v("--label2"),
+    sep: v("--sep"), card: v("--card"), after: v("--ch-after"), fillAfter: v("--ch-fill-after") };
+  Chart.defaults.font.family = v("--font");
 
-  const mapPt = c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close, wert: sats / 1e8 * c.close }; };
-  const firstTs = ALL.length ? new Date(ALL[0].date + "T00:00:00Z").getTime() : Date.UTC(2023, 5, 6);
-  /* iOS-Speicher schonen: Punkte ausdünnen, Kauf-Tage und letzter Punkt bleiben immer erhalten.
-     Auf schmalen Screens aggressiver ausduennen, damit dichte „Max"-Kurven clean statt gestaucht wirken (Punkt 13) */
-  const IS_NARROW = (window.innerWidth || 800) <= 700;
-  const MAXPTS = IS_NARROW ? 340 : 700;
-  const buyTs = new Set(ALL.filter(b => b.eur > 0 && b.sats > 0)
-    .map(b => new Date(b.date + "T00:00:00Z").getTime()));
+  const mapPt = c => { const p = cumAt(c.t); p.t = c.t; p.close = c.close; p.wert = p.sats / 1e8 * c.close; return p; };
+  const firstTs = ALL.length ? dayTs(ALL[0].date) : Date.UTC(2023, 5, 6);
+  /* Punkte ausdünnen (auf schmalen Screens stärker); Kauf-Tage und letzter Punkt bleiben erhalten */
+  const narrow = innerWidth <= 700, MAXPTS = narrow ? 340 : 700;
+  const buyTs = new Set(ALL.filter(b => b.eur > 0 && b.sats > 0).map(b => dayTs(b.date)));
   const thin = arr => {
     if (arr.length <= MAXPTS) return arr;
     const stride = Math.ceil(arr.length / MAXPTS);
     return arr.filter((c, i) => i % stride === 0 || i === arr.length - 1 || buyTs.has(c.t));
   };
-  /* Zeitraum-Filter pro Chart: 1W/1M/6M/1J/Max */
+  /* Zeitraum-Filter pro Chart */
   const lastTs = candles.length ? candles[candles.length - 1].t : Date.now();
-  const cutFor = key => RANGE_DAYS[RANGES[key]] ? lastTs - RANGE_DAYS[RANGES[key]] * DAY : 0;
   const inRange = (key, minTs) => {
-    const cut = Math.max(minTs || 0, cutFor(key));
+    const days = RANGE_DAYS[RANGES[key]];
+    const cut = Math.max(minTs || 0, days ? lastTs - days * DAY : 0);
     const arr = candles.filter(c => c.t >= cut);
     return arr.length >= 2 ? arr : candles.slice(-2);
   };
-  const ptsW = thin(inRange("wert", firstTs)).map(mapPt);
-  const labelsW = ptsW.map(p => p.t);
-  /* Sats-Chart beginnt einen Tag vor dem ersten Kauf bei 0 Sats */
-  const ptsS = thin(inRange("sats", firstTs - DAY)).map(mapPt);
-  const labelsS = ptsS.map(p => p.t);
-  /* X-Achse: Label-Anzahl richtet sich nach der Chartbreite — kein Overlap */
+  /* X-Achse: Anzahl der Labels richtet sich nach der Chartbreite */
   const tickCb = labels => {
     const span = labels.length ? labels[labels.length - 1] - labels[0] : 0;
     const fmt = span <= 200 * DAY
       ? ts => new Date(ts).toLocaleDateString("de-DE", { day: "numeric", month: "short" })
       : fmtMonth;
-    return function (v, i) {
+    return function (val, i) {
       const w = (this.chart && this.chart.width) || 360;
-      const slots = Math.max(3, Math.min(6, Math.floor(w / 96)));
-      const every = Math.ceil(labels.length / slots);
+      const every = Math.ceil(labels.length / Math.max(3, Math.min(6, Math.floor(w / 96))));
       return i % every === 0 ? fmt(labels[i]) : "";
     };
   };
-  /* Y-Achse: feste Schritte (10.000 € / 10 Mio Sats), auf Vielfache gerundet;
-     bei kurzen Zeiträumen automatisch feinere „schöne" Schritte (1/2/5 × 10^n) — bewusst
-     ohne 2,5er-Schritt, damit die kompakten „k"-Labels ganze Tausender bleiben (Punkt 11) */
-  const axisBounds = (vals, prefStep, forceStep) => {
+  /* Y-Achse: feste Schritte (10.000 € / 10 Mio. Sats); bei kurzen Zeiträumen feinere 1/2/5-Schritte */
+  const axisBounds = (vals, prefStep) => {
     let lo = Infinity, hi = -Infinity;
-    for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+    for (const x of vals) { if (x == null || !isFinite(x)) continue; if (x < lo) lo = x; if (x > hi) hi = x; }
     if (!isFinite(lo)) { lo = 0; hi = 1; }
     if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
     let step = prefStep;
     const ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
-    /* forceStep: Schrittweite ist gesetzt und wird nicht automatisch verfeinert */
-    if (!forceStep && (ticks(step) < 2 || ticks(step) > 7)) {
-      const raw = (hi - lo) / 4;
-      const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    if (ticks(step) < 2 || ticks(step) > 7) {
+      const mag = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4)));
       step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
     }
     return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
   };
-  /* v11: enge, dynamische €-Skala fuer Chart 1 + 2 — die Schrittweite folgt der
-     tatsaechlichen Wertspanne der Periode (1/2/5 × 10^n, ganzzahlig, Ziel 3–6 Ticks),
-     statt einer festen, zu breiten Skala (frueher z. B. 40k/50k/60k bei 49k–51k). */
-  const tightBounds = vals => {
-    let lo = Infinity, hi = -Infinity;
-    for (const v of vals) { if (v == null || !isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
-    if (!isFinite(lo)) { lo = 0; hi = 1; }
-    if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
-    const raw = (hi - lo) / 4;
-    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-    let step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 6) || 10 * mag;
-    step = Math.max(1, Math.round(step));            /* nur ganze Zahlen auf der Achse */
-    return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
+  /* Verlauf unter der Linie: Linienfarbe, nach unten auslaufend */
+  const grad = col => c => {
+    const a = c.chart.chartArea;
+    if (!a) return "transparent";
+    const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+    g.addColorStop(0, col + "40"); g.addColorStop(1, col + "00");
+    return g;
   };
-  /* v11: €-Achsenlabel — „k"-Kurzform nur, wenn die Schrittweite ganze Tausender
-     ergibt (sonst volle ganze Zahl, z. B. „49.500" statt gerundet „50k") */
-  const fmtAxisTight = b => v => (b.step >= 1000 && b.step % 1000 === 0) ? fmtAxisK(v) : fmtInt(v);
-  /* v11: linke %-Skala (nur 1W/1M/6M/1J) — reine Umbeschriftung der €-Skala relativ
-     zum Periodenstart. Schritte: Vielfache von 5 (Werte enden auf 0/5); bei kleinen
-     Spannen unter ~10 Prozentpunkten feinere ganze Schritte (1 %/2 %). */
-  const pctScaleOpts = (base, b) => {
-    if (!(base > 0)) return null;
-    const lo = (b.min / base - 1) * 100, hi = (b.max / base - 1) * 100;
-    const span = hi - lo;
-    const step = span >= 10
-      ? ([5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2500, 5000].find(s => span / s <= 6) || 10000)
-      : (span >= 4 ? 2 : 1);
-    const tv = [];
-    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) tv.push(Math.round(v));
-    return {
-      type: "linear", position: "left", min: lo, max: hi,
-      border: { display: false }, grid: { display: false },
-      afterBuildTicks: ax => { ax.ticks = tv.map(v => ({ value: v })); },
-      ticks: { color: C.tick, font: { size: 11 }, callback: v => v + " %" }
-    };
-  };
-  const common = {
-    responsive: true, maintainAspectRatio: false, animation: false,
-    devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
-    events: [], /* Hover/Tooltip aus — Interaktion läuft über das Scrubbing */
-    /* bei voller Breite (iOS) die Achsenlabels leicht vom Bildschirmrand einruecken */
-    layout: { padding: { right: IS_NARROW ? 4 : 0, left: 2 } },
-    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-    elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
-    scales: {
-      x: { grid: { display: false }, ticks: { callback: tickCb(labelsW), maxRotation: 0, color: C.tick, font: { size: 11 }, autoSkip: false } },
-      y: { position: "right", border: { display: false }, grid: { display: false }, ticks: { color: C.tick, font: { size: 11 } } }
-    }
-  };
-
-  /* Laufende Animations-Loops vor dem Zerstoeren stoppen — sonst zeichnet ein
-     rAF-Tick auf einem bereits zerstoerten Chart weiter */
-  ["chartWert", "chartSats", "chartPreis"].forEach(id => {
-    const el = $(id);
-    if (el) el.__pulseAC?.abort();
+  /* Linie; hinter dem Scrub-Marker blassen Kurve und Fläche aus */
+  const line = (data, colAt, sc, extra) => ({ data, borderColor: colAt(data.length - 1), borderWidth: 2, pointRadius: 0, pointHitRadius: 6,
+    segment: { borderColor: c => (scrubAfter(sc, c) ? C.after : colAt(c.p1DataIndex)),
+               backgroundColor: c => (scrubAfter(sc, c) ? C.fillAfter : undefined) }, ...extra });
+  const tick = { color: C.label2, font: { size: 11 } };
+  const make = (id, pts, y, yFmt, datasets, plugins) => {
     Chart.getChart(id)?.destroy();
-  });
-
-  /* v11: enge, dynamische €-Skala statt fester 10k-Schritte */
-  const bW = tightBounds(ptsW.map(p => p.wert).concat(ptsW.map(p => p.eur)));
-  const scW = { i: -1 };
-  const isMaxW = RANGES.wert === "max";
-  /* Flaeche existiert nur in der Max-Ansicht. Der Schalter bleibt trotzdem stehen und
-     wird nur deaktiviert — ein Bedienelement, das je nach Zeitraum verschwindet,
-     laesst die ganze Leiste springen. */
-  const areaBtn = $("toggle-area");
-  areaBtn.disabled = !isMaxW;
-  areaBtn.setAttribute("aria-pressed", (showArea && isMaxW) ? "true" : "false");
-  areaBtn.title = isMaxW ? "" : "Fläche gibt es nur im Zeitraum „Max“";
-  const areaOn = showArea && isMaxW;
-  /* v11: Segment-Faerbung in 1W/1M/6M/1J — punktweise gegen den Periodenstart
-     (die gepunktete Referenzlinie): oberhalb gruen, unterhalb rot. Dieselbe
-     punktweise Logik wie in „Max", dort bleibt die Referenz die Investiert-Kurve. */
-  const trendModeW = !isMaxW && ptsW.length > 1;
-  const baseW = ptsW.length ? ptsW[0].wert : NaN;
-  const colW = i => trendModeW
-    ? (ptsW[i].wert < baseW ? C.trendDown : C.trendUp)
-    : (ptsW[i].wert < ptsW[i].eur ? C.wertLoss : C.wert);
-  /* Investiert-Kurve: nur in „Max" farbig; sonst im Grauton der Chart-2-Kurve
-     (--avg-line, die Oe-Kaufkurs-Linie) */
-  const colInvW = i => trendModeW
-    ? C.avg
-    : (ptsW[i].wert < ptsW[i].eur ? C.investLoss : C.invest);
-  /* v11: %-Anzeige — 1W–1J relativ zum Periodenstart (linke %-Achse + Endlabel);
-     „Max": nur Endlabel mit der Gesamtrendite vs. Investiert (wie im Hero),
-     eine lineare %-Achse gibt es dort bewusst nicht (Investiert waechst ueber die Zeit). */
-  const lastW = ptsW[ptsW.length - 1];
-  const pctEndW = isMaxW
-    ? (lastW && lastW.eur > 0 ? (lastW.wert / lastW.eur - 1) * 100 : null)
-    : (lastW && baseW > 0 ? (lastW.wert / baseW - 1) * 100 : null);
-  const pctAxisW = trendModeW ? pctScaleOpts(baseW, bW) : null;
-  /* Punkt 13: auf schmalen Screens im „Max"-Zeitraum duennere/staerker geglaettete Kurve,
-     damit sie bei hoher Datendichte nicht gestaucht/zu dick wirkt */
-  const denseW = IS_NARROW && RANGES.wert === "max";
-  const chW = new Chart($("chartWert"), {
-    type: "line",
-    plugins: [baselinePlugin, endLabelPlugin, scrubPlugin],
-    data: { labels: labelsW, datasets: [
-      /* Portfoliowert nominal auf der €-Skala rechts (die %-Hilfsskala ist entfallen) */
-      { label: "Portfoliowert", data: ptsW.map(p => p.wert),
-        borderColor: C.wert,
-        /* Fade nach dem Scrub-Marker: Kurve UND Fuellflaeche zwischen den Kurven.
-           backgroundColor nur setzen, wenn die Flaeche aktiv ist — sonst bliebe beim
-           Scrubben eine Rest-Flaeche stehen, obwohl der Toggle aus ist. */
-        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colW(c.p1DataIndex)),
-                   backgroundColor: c => ((areaOn && scrubAfter(scW, c)) ? C.fillAfter : undefined) },
-        /* Toggle „aus" oder Nicht-Max-Zeitraum: fill:false — Chart.js zeichnet die
-           Flaeche dann gar nicht erst, es bleibt keine Restdeckkraft uebrig. */
-        fill: areaOn ? { target: 1, above: C.fillPos, below: C.fillNeg } : false,
-        borderWidth: denseW ? 1.6 : 2.21, pointRadius: 0, pointHitRadius: 6, tension: denseW ? 0.35 : 0.2 },
-      { label: "Investiert", data: ptsW.map(p => p.eur), borderColor: C.invest,
-        /* Punkt 3: gleicher Ausblend-Effekt nach dem Scrub-Marker wie bei der Portfoliowert-Kurve */
-        segment: { borderColor: c => (scrubAfter(scW, c) ? C.after : colInvW(c.p1DataIndex)) },
-        borderWidth: 1, pointRadius: 0, pointHitRadius: 6, stepped: true, fill: false }
-    ]},
-    options: { ...common,
-      scales: { ...common.scales,
-        /* v11: rechts die enge €-Skala; links (nur 1W–1J) die %-Skala */
-        y: { ...common.scales.y, min: bW.min, max: bW.max,
-          ticks: { ...common.scales.y.ticks, stepSize: bW.step,
-          callback: fmtAxisTight(bW) } },
-        ...(pctAxisW ? { pct: pctAxisW } : {}) } }
-  });
-  /* v11: keine Kurvennamen mehr im Chart — am Kurvenende steht nur noch die
-     prozentuale Veraenderung (farbig, 1 Dezimale) */
-  chW.$endLabels = pctEndW != null
-    ? [{ ds: 0, text: fmtPct1(pctEndW), color: pctEndW < 0 ? C.negText : C.posText }]
-    : [];
-  attachScrub(chW, scW, {
-    lineId: "scrub-wert", n: ptsW.length, colorAt: colW,
-    /* v11: gepunktete Periodenstart-Linie nur in 1W–1J; in „Max" entfaellt sie */
-    baseValue: (!isMaxW && ptsW.length) ? ptsW[0].wert : null, baseColor: C.base,
-    /* Zeile ist redundant zum Header → nur waehrend des Scrubbens sichtbar */
-    hideIdle: true,
-    html: i => {
-      const p = ptsW[i];
-      const pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
-      /* Der investierte Betrag stand frueher in der Legende — seit die Legende weg ist,
-         laeuft er hier mit (und steht dauerhaft in der KPI-Kachel „Investiert"). */
-      return scrubHtml(fmtDate(p.t), fmtEur(p.wert),
-        pct != null ? fmtPct(pct) : "", pct != null && pct < 0,
-        "investiert " + fmtEur(p.eur, 0));
-    }
-  });
-
-  /* Wholecoiner-Ziel: dezente Markierung bei 1₿ (100 Mio. Sats).
-     Bugfix: liegt die Marke exakt auf der Achsen-Obergrenze (y === chartArea.top, der
-     Normalfall sobald die Achse bis 100M reicht), wurde sie zuvor als „ausserhalb"
-     verworfen. refLineY() rueckt sie stattdessen 2px in die Flaeche; das Label rutscht
-     unter die Linie, wenn oben kein Platz ist. */
-  const wholecoinerPlugin = {
-    id: "wholecoiner",
-    afterDatasetsDraw(chart) {
-      const y = refLineY(chart, 1e8);
-      if (y == null) return;
-      const { left, right, top } = chart.chartArea;
-      const c = chart.ctx;
-      c.save();
-      c.strokeStyle = C.athLine;
-      /* Punkt 6: gleiche praesentere Punkte wie die Startwert-Linie */
-      c.lineCap = "round"; c.setLineDash([0.1, 8]);
-      c.lineWidth = 3;
-      c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
-      c.setLineDash([]); c.lineCap = "butt";
-      c.font = "10px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      c.fillStyle = C.athText;
-      const below = y - 4 < top + 11;
-      c.textBaseline = below ? "top" : "bottom";
-      /* v11: Label „Wholecoiner" statt des doppelten „1₿" (rechts steht 1₿ ohnehin auf der Achse) */
-      c.fillText("Wholecoiner", left + 6, below ? y + 5 : y - 4);
-      c.restore();
-    }
+    const labels = pts.map(p => p.t);
+    return new Chart($(id), { type: "line", plugins, data: { labels, datasets }, options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      devicePixelRatio: Math.min(2, devicePixelRatio || 1),
+      events: [], /* Interaktion läuft über das Scrubbing */
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { ...tick, callback: tickCb(labels), maxRotation: 0, autoSkip: false } },
+        y: { position: "right", min: y.min, max: y.max, border: { display: false, dash: [2, 4] }, grid: { color: C.sep, drawTicks: false },
+          ticks: { ...tick, padding: 8, stepSize: y.step, callback: yFmt } }
+      } } });
   };
-  const bS = axisBounds(ptsS.map(p => p.sats), 1e7);
-  const scS = { i: -1 };
-  /* v11: Sats-Bestand wieder vollstaendig in Original-BTC-Orange (--line-sats → --btc). */
-  const chS = new Chart($("chartSats"), {
-    type: "line",
-    plugins: [baselinePlugin, wholecoinerPlugin, scrubPlugin],
-    data: { labels: labelsS, datasets: [
-      { label: "Sats", data: ptsS.map(p => p.sats), borderColor: C.sats,
-        segment: { borderColor: c => (scrubAfter(scS, c) ? C.after : C.sats) },
-        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, stepped: true }
-    ]},
-    options: { ...common,
-      scales: { ...common.scales,
-        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsS) } },
-        y: { ...common.scales.y, min: bS.min, max: bS.max, ticks: { ...common.scales.y.ticks, stepSize: bS.step,
-        callback: fmtAxisSats } } } }
-  });
-  attachScrub(chS, scS, {
-    lineId: "scrub-sats", n: ptsS.length, colorAt: () => C.sats,
-    baseValue: ptsS.length ? ptsS[0].sats : null, baseColor: C.base,
-    html: i => {
-      const p = ptsS[i];
-      return scrubHtml(fmtDate(p.t), fmtInt(p.sats) + " Sats", "", false, "");
-    }
-  });
+  const span = pts => [pts[0], pts[pts.length - 1]];
 
-  const ptsK = thin(inRange("preis", 0)).map(c => { const { sats, eur } = cumAt(c.t); return { t: c.t, sats, eur, close: c.close }; });
-  const labelsK = ptsK.map(p => p.t);
+  /* ── Wertentwicklung: Portfoliowert gegen Investiert ── */
+  const ptsW = thin(inRange("wert", firstTs)).map(mapPt), scW = { i: -1 };
+  const colW = i => (ptsW[i] && ptsW[i].wert < ptsW[i].eur ? C.neg : C.pos);
+  const dense = narrow && RANGES.wert === "max"; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
+  attachScrub(make("chartWert", ptsW, axisBounds(ptsW.flatMap(p => [p.wert, p.eur]), 10000), fmtAxisK, [
+    line(ptsW.map(p => p.wert), colW, scW, { label: "Portfoliowert", fill: { target: 1, above: C.pos + "26", below: C.neg + "26" },
+      borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 }),
+    line(ptsW.map(p => p.eur), () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })
+  ], [baselinePlugin, scrubPlugin]), scW, {
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colW, base: ptsW[0].wert,
+    idle: () => {
+      const [a, b] = span(ptsW), g = b.wert - a.wert - (b.eur - a.eur); /* Wertänderung abzüglich Einzahlungen */
+      $("legend-inv").textContent = fmtEur(b.eur);
+      return scrubHtml(sign(g) + fmtEur(g), "", 0, (g < 0 ? "Verlust · " : "Gewinn · ") + RANGE_NAME[RANGES.wert], g < 0 ? "neg" : "pos");
+    },
+    html: i => {
+      const p = ptsW[i], pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
+      $("legend-inv").textContent = fmtEur(p.eur);
+      return scrubHtml(fmtEur(p.wert), pct != null ? fmtPct(pct) : "", pct < 0, fmtDate(p.t));
+    }
+  }, C);
+
+  /* ── Stack: Sats-Bestand, beginnt einen Tag vor dem ersten Kauf bei 0 ── */
+  const ptsS = thin(inRange("sats", firstTs - DAY)).map(mapPt), scS = { i: -1 };
+  attachScrub(make("chartSats", ptsS, axisBounds(ptsS.map(p => p.sats), 1e7),
+    x => (x / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M", [
+    line(ptsS.map(p => p.sats), () => C.btc, scS, { label: "Sats", stepped: true, fill: "start", backgroundColor: grad(C.btc) })
+  ], [baselinePlugin, wholecoinerPlugin, scrubPlugin]), scS, {
+    line: "scrub-sats", name: "Stack", n: ptsS.length, colorAt: () => C.btc, base: ptsS[0].sats,
+    idle: () => {
+      const [a, b] = span(ptsS), d = b.sats - a.sats;
+      return scrubHtml(sign(d) + fmtInt(d) + " Sats", "", 0, "Zuwachs · " + RANGE_NAME[RANGES.sats]);
+    },
+    html: i => scrubHtml(fmtInt(ptsS[i].sats) + " Sats", "", 0, fmtDate(ptsS[i].t))
+  }, C);
+
+  /* ── Bitcoin-Kurs: Linie in Trendfarbe des Zeitraums, Käufe als Punkte, Ø Kaufkurs gestrichelt ── */
+  const ptsK = thin(inRange("preis", 0)).map(mapPt), scK = { i: -1 };
   const byDay = new Map();
   for (const b of ALL) {
     if (!(b.eur > 0 && b.sats > 0)) continue;
-    const t = new Date(b.date + "T00:00:00Z").getTime();
-    const cur = byDay.get(t) || { sats: 0, eur: 0 };
+    const t = dayTs(b.date), cur = byDay.get(t) || { sats: 0, eur: 0 };
     cur.sats += b.sats; cur.eur += b.eur;
     byDay.set(t, cur);
   }
-  const dots = ptsK.map(() => null);
-  const dotInfo = ptsK.map(() => null);
-  const dotR = ptsK.map(() => 0);
-  const vMax = Math.max(1, ...[...byDay.values()].map(v => v.eur));
-  for (const [t, v] of byDay) {
-    if (!ptsK.length || t < ptsK[0].t - DAY) continue; /* Käufe vor dem gewählten Zeitraum nicht anzeigen */
+  const dots = ptsK.map(() => null), dotInfo = ptsK.map(() => null), dotR = ptsK.map(() => 0);
+  const vMax = Math.max(1, ...[...byDay.values()].map(x => x.eur));
+  for (const [t, x] of byDay) {
+    if (t < ptsK[0].t - DAY) continue; /* Käufe vor dem gewählten Zeitraum nicht anzeigen */
     let i = ptsK.findIndex(p => p.t >= t);
     if (i < 0) i = ptsK.length - 1;
     dots[i] = ptsK[i].close;
-    dotInfo[i] = v;
-    dotR[i] = 1.4 + 3.15 * Math.sqrt(v.eur / vMax); /* 30 % kleiner als zuvor */
+    dotInfo[i] = x;
+    dotR[i] = 2.2 + 3.3 * Math.sqrt(x.eur / vMax); /* Größe nach Kaufsumme */
   }
   const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
-
-  /* Kauf-Indizes für Snap (Punkt 5) und Highlight-Marker (Punkt 4) */
-  const buyIdx = [];
-  dotInfo.forEach((v, i) => { if (v) buyIdx.push(i); });
-
-  /* v11: Segment-Faerbung wie Chart 1 — punktweise gegen den Periodenstart
-     (gepunktete Linie): oberhalb gruen, unterhalb rot. Identische Farbwerte
-     (--trend-up/--trend-down). „Max" bleibt neutral (--line-price). */
-  const trendModeK = RANGES.preis !== "max" && ptsK.length > 1;
-  const isMaxK = RANGES.preis === "max";
-  const baseK = ptsK.length ? ptsK[0].close : NaN;
-  const colK = i => trendModeK
-    ? ((i != null && ptsK[i] && ptsK[i].close < baseK) ? C.trendDown : C.trendUp)
-    : C.price;
-  /* v11: enge, dynamische €-Skala statt fester 20.000-€-Schritte */
-  const bP = tightBounds(ptsK.map(p => p.close).concat(avgLine.filter(v => v != null)));
-  /* v11: %-Anzeige — 1W–1J relativ zum Periodenstart-Kurs (linke %-Achse + Endlabel);
-     „Max": nur Endlabel mit der Gesamtveraenderung seit dem ersten Kurs der Historie. */
-  const lastK = ptsK[ptsK.length - 1];
-  const pctEndK = (lastK && baseK > 0) ? (lastK.close / baseK - 1) * 100 : null;
-  const pctAxisK = trendModeK ? pctScaleOpts(baseK, bP) : null;
-  const scK = { i: -1 };
-  /* Kaufpunkt-Halos: derselbe Puls wie am Scrub-Punkt, nochmals halbiert,
-     in Farbe und Groesse an den jeweiligen Kaufpunkt gekoppelt.
-     Bugfix: der Puls haengt nicht mehr am Scrub-Zustand — attachPulse() sorgt dafuer,
-     dass er auf jeder Plattform durchgaengig laeuft. */
-  const buyHaloPlugin = {
-    id: "buyHalo",
-    afterDatasetsDraw(chart) {
-      const meta = chart.getDatasetMeta(2);
-      if (!meta || !meta.data.length) return;
-      const k = pulseK();
-      const c = chart.ctx;
-      c.save();
-      c.fillStyle = C.buy;
-      for (let j = 0; j < dotR.length; j++) {
-        if (!dotR[j]) continue;
-        const el = meta.data[j];
-        if (!el) continue;
-        c.globalAlpha = 0.18 * k;
-        c.beginPath(); c.arc(el.x, el.y, dotR[j] + 1.75 + 1.75 * k, 0, 2 * Math.PI); c.fill();
-      }
-      c.restore();
-    }
-  };
-  const chK = new Chart($("chartPreis"), {
-    type: "line",
-    plugins: [baselinePlugin, buyHaloPlugin, endLabelPlugin, scrubPlugin],
-    data: { labels: labelsK, datasets: [
-      { label: "BTC-Kurs", data: ptsK.map(p => p.close), borderColor: colK(ptsK.length - 1),
-        segment: { borderColor: c => (scrubAfter(scK, c) ? C.after : colK(c.p1DataIndex)) },
-        borderWidth: 2.21, pointRadius: 0, pointHitRadius: 6, tension: 0.2, order: 3 },
-      { label: "Ø Kaufkurs", data: avgLine, borderColor: C.avg,
-        borderWidth: 1.4, pointRadius: 0, pointHitRadius: 6, spanGaps: true, order: 2 },
-      /* Käufe: permanent sichtbare Punkte (Groesse nach Kaufsumme), wie urspruenglich */
-      { label: "Einzelner Kauf", data: dots, backgroundColor: C.buy,
-        showLine: false, pointBorderColor: C.dotBorder, pointBorderWidth: 0.75,
-        pointRadius: c => dotR[c.dataIndex] || 0,
-        pointHoverRadius: c => (dotR[c.dataIndex] || 0) + 1.5,
-        pointHitRadius: 4, order: 1 }
-    ]},
-    options: { ...common,
-      scales: { ...common.scales,
-        x: { ...common.scales.x, ticks: { ...common.scales.x.ticks, callback: tickCb(labelsK) } },
-        /* v11: rechts die enge €-Skala; links (nur 1W–1J) die %-Skala */
-        y: { ...common.scales.y, min: bP.min, max: bP.max, ticks: { ...common.scales.y.ticks, stepSize: bP.step, callback: fmtAxisTight(bP) } },
-        ...(pctAxisK ? { pct: pctAxisK } : {}) } }
-  });
-  chK.$buys = { info: dotInfo, radius: dotR, color: C.buy, border: C.dotBorder };
-  /* v11: keine Kurvennamen mehr im Chart — nur die prozentuale Veraenderung
-     am Ende der Kurs-Kurve (farbig, 1 Dezimale) */
-  chK.$endLabels = pctEndK != null
-    ? [{ ds: 0, text: fmtPct1(pctEndK), color: pctEndK < 0 ? C.negText : C.posText }]
-    : [];
-
-  /* Kauf-Popup: erscheint, sobald der Scrub-Indikator auf einem Kaufpunkt einrastet.
-     Zeile 1: „500 € @ 62.345 €", Zeile 2: „1.234.567 Sats". */
-  const popK = $("pop-preis");
-  popK.classList.remove("show");
-  const showBuyPop = i => {
-    const v = i >= 0 ? dotInfo[i] : null;
-    if (!v) { popK.classList.remove("show"); return; }
-    const el = chK.getDatasetMeta(0).data[i];
-    if (!el) { popK.classList.remove("show"); return; }
-    popK.innerHTML = esc(fmtEur(v.eur, 0)) + " @ " + esc(fmtEur(ptsK[i].close, 0)) +
-      '<span class="pop-sub">' + esc(fmtInt(v.sats)) + " Sats</span>";
-    popK.classList.add("show");
-    /* horizontal im Chart halten, damit das Popup an den Raendern nicht abgeschnitten wird */
-    const wrapW = popK.parentElement.clientWidth, half = popK.offsetWidth / 2;
-    popK.style.left = Math.round(Math.min(wrapW - half - 4, Math.max(half + 4, el.x))) + "px";
-    popK.style.top = Math.round(Math.max(popK.offsetHeight + 4, el.y - 12)) + "px";
-  };
-
-  attachScrub(chK, scK, {
-    lineId: "scrub-preis", n: ptsK.length,
-    /* Auf einem Kaufpunkt uebernimmt der Marker dessen Farbe; sonst die Kurvenfarbe */
-    colorAt: i => (dotInfo[i] ? C.buy : colK(i)),
-    /* v11: gepunktete Periodenstart-Linie nur in 1W–1J; in „Max" entfaellt sie */
-    baseValue: (!isMaxK && ptsK.length) ? ptsK[0].close : null, baseColor: C.base, snap: buyIdx,
-    onShow: showBuyPop,
+  const [k0, k1] = span(ptsK), kPct = (k1.close / k0.close - 1) * 100, colK = kPct < 0 ? C.neg : C.pos;
+  attachScrub(make("chartPreis", ptsK, axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000), fmtAxisK, [
+    line(ptsK.map(p => p.close), () => colK, scK, { label: "BTC-Kurs", tension: .2, order: 3, fill: "start", backgroundColor: grad(colK) }),
+    { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, borderDash: [4, 4], pointRadius: 0, spanGaps: true, order: 2 },
+    { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
+      pointRadius: c => dotR[c.dataIndex] || 0, order: 1 }
+  ], [baselinePlugin, scrubPlugin]), scK, {
+    line: "scrub-preis", name: "Bitcoin-Kurs", n: ptsK.length, base: k0.close,
+    colorAt: i => (dotInfo[i] ? C.label : colK),
+    snap: dotInfo.flatMap((x, i) => (x ? [i] : [])),
+    idle: () => scrubHtml(fmtPct(kPct), "", 0, "Kursänderung · " + RANGE_NAME[RANGES.preis], kPct < 0 ? "neg" : "pos"),
     html: i => {
-      const p = ptsK[i];
-      /* Kaufdetails stehen im Popup — hier nur Datum, Kurs und der bis dahin
-         kumuliert investierte Betrag (stand frueher in der Legende). */
-      return scrubHtml(fmtDate(p.t), fmtEur(p.close), "", false,
-        p.eur > 0 ? "investiert " + fmtEur(p.eur, 0) : "");
+      const p = ptsK[i], x = dotInfo[i];
+      return scrubHtml(fmtEur(p.close), "", 0, fmtDate(p.t) + (x ? " · Kauf " + fmtEur(x.eur) + " · " + fmtInt(x.sats) + " Sats" : ""));
     }
+  }, C);
+}
+
+/* ═══════════ Zeitraum-Auswahl pro Diagramm ═══════════ */
+$$(".seg[data-chart]").forEach(seg => {
+  seg.innerHTML = Object.keys(RANGE_NAME).map(r => '<button type="button" data-range="' + r + '" aria-label="' + RANGE_NAME[r] + '">' +
+    (r === "max" ? "Max" : r.toUpperCase().replace("Y", "J")) + "</button>").join("");
+  segPick(seg, seg.lastChild);
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b || b.classList.contains("sel")) return;
+    RANGES[seg.dataset.chart] = b.dataset.range;
+    segPick(seg, b);
+    if (lastMarket) renderCharts(lastMarket);
   });
-  attachPulse(chK);
-}
-
-/* ═══════════ Zeitraum-Buttons (pro Chart, ersetzen den Zoom) ═══════════ */
-document.querySelectorAll(".range-seg").forEach(seg => seg.addEventListener("click", e => {
-  const b = e.target.closest("button[data-range]");
-  if (!b || b.classList.contains("sel")) return;
-  RANGES[seg.dataset.chart] = b.dataset.range;
-  seg.querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b));
-  if (lastMarket) renderCharts(lastMarket);
-}));
-
-/* ═══════════ Flächen-Schalter (Chart 1) ═══════════
-   Beim Umschalten zeichnen die Kurven kurz weich (≈140ms rein, 140ms raus) — sie
-   bleiben dabei durchgehend sichtbar, es ist nur ein Uebergang, kein Ausblenden. */
-function blurSwap(canvas, apply) {
-  if (REDUCED_MOTION || !canvas) { apply(); return; }
-  canvas.classList.add("fx-blur");
-  const ms = parseFloat(getComputedStyle(document.documentElement)
-    .getPropertyValue("--duration-blur")) || 140;
-  setTimeout(() => {
-    apply();
-    /* Canvas wird beim Neuaufbau wiederverwendet — Klasse liegt noch am selben Element */
-    requestAnimationFrame(() => $("chartWert").classList.remove("fx-blur"));
-  }, ms);
-}
-$("toggle-area").addEventListener("click", () => {
-  const btn = $("toggle-area");
-  showArea = !showArea;
-  btn.setAttribute("aria-pressed", showArea ? "true" : "false");
-  if (!lastMarket) return;
-  blurSwap($("chartWert"), () => renderCharts(lastMarket));
 });
-
-/* ═══════════ Hero kollabiert beim Scrollen ═══════════
-   Kopfzeile und Portfoliowert bleiben sticky, aber der Hero schrumpft nach den ersten
-   Pixeln auf eine Zeile: Bestand, Zeitstempel und Fortschrittsleiste treten zurueck,
-   der Wert bleibt. Zwei Sticky-Ebenen in voller Hoehe kosten sonst dauerhaft
-   ueber ein Sechstel des iPhone-Viewports. Hysterese (24/8 px) verhindert Flackern. */
-(function heroCondense() {
-  const root = document.documentElement;
-  let ticking = false, on = false;
-  const apply = () => {
-    ticking = false;
-    const y = window.scrollY || window.pageYOffset || 0;
-    const next = on ? y > 8 : y > 24;
-    if (next === on) return;
-    on = next;
-    root.classList.toggle("condensed", on);
-  };
-  addEventListener("scroll", () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(apply);
-  }, { passive: true });
-  apply();
-})();
-
-/* ═══════════ KPI-Leiste umhaengen: Desktop in der Kopfzeile, iOS als Block darunter ═══
-   Ein einziger DOM-Knoten (#kpi-strip, eindeutige IDs bleiben erhalten) — er wandert
-   je nach Breite in die Kopfzeile (Flex-Leiste) oder direkt unter sie (2x2-Grid). */
-const kpiMQ = matchMedia("(max-width: 700px)");
-function placeKpiStrip() {
-  const strip = $("kpi-strip"), hero = document.querySelector(".hero");
-  if (!strip || !hero) return;
-  if (kpiMQ.matches) {
-    if (strip.parentElement === hero) hero.insertAdjacentElement("afterend", strip);
-  } else if (strip.parentElement !== hero) hero.appendChild(strip);
-}
-if (kpiMQ.addEventListener) kpiMQ.addEventListener("change", placeKpiStrip);
-else if (kpiMQ.addListener) kpiMQ.addListener(placeKpiStrip);
-placeKpiStrip();
 
 /* ═══════════ Bewegungs-Tabelle ═══════════ */
 function renderTable() {
@@ -1973,21 +1143,19 @@ function refreshAfterDataChange() {
   if (lastMarket) render(lastMarket);
 }
 
-/* ═══════════ Personen-Auswahl (Avatar mit Initialen, TR-Stil) ═══════════ */
+/* ═══════════ Personen-Auswahl (Avatar mit Initialen) ═══════════ */
 function initials(p) {
-  const s = String(p || "").trim();
-  if (!s) return "–";
-  const parts = s.split(/[^0-9A-Za-zÄÖÜäöüß]+/).filter(Boolean);
-  const ini = parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
-  return ini.toUpperCase();
+  const parts = String(p || "").split(/[^0-9A-Za-zÄÖÜäöüß]+/).filter(Boolean);
+  if (!parts.length) return "–";
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)).toUpperCase();
 }
+const personOptions = (list, sel) => list.map(p =>
+  '<option value="' + esc(p) + '"' + (p === sel ? " selected" : "") + ">" + esc(p) + "</option>").join("");
 function renderPersonSelect() {
   const list = personList();
-  if (!list.length) { $("person-select").innerHTML = "<option>–</option>"; $("person-avatar").textContent = "–"; return; }
-  if (!person || !list.includes(person)) person = list[0];
-  $("person-select").innerHTML = list.map(p =>
-    '<option value="' + esc(p) + '"' + (p === person ? " selected" : "") + ">" + esc(p) + "</option>").join("");
-  $("person-avatar").textContent = initials(person);
+  if (list.length && !list.includes(person)) person = list[0];
+  $("person-select").innerHTML = list.length ? personOptions(list, person) : "<option>–</option>";
+  $("person-avatar").textContent = list.length ? initials(person) : "–";
 }
 $("person-select").addEventListener("change", e => {
   person = e.target.value;
@@ -1996,52 +1164,67 @@ $("person-select").addEventListener("change", e => {
   if (lastMarket) render(lastMarket);
 });
 
-/* ═══════════ Sheets (Formular / Einstellungen) ═══════════ */
-function openSheet(name) { $(name + "-overlay").classList.add("open"); $(name + "-sheet").classList.add("open"); }
-function closeSheet(name) { $(name + "-overlay").classList.remove("open"); $(name + "-sheet").classList.remove("open"); }
-document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeSheet(b.dataset.close)));
-$("form-overlay").addEventListener("click", () => closeSheet("form"));
-$("set-overlay").addEventListener("click", () => closeSheet("set"));
+/* ═══════════ Sheets: öffnen, schließen, zum Schließen nach unten ziehen ═══════════ */
+const SHEETS = ["form", "set"];
+const toggleSheet = (name, open) => ["overlay", "sheet"].forEach(k => $(name + "-" + k).classList.toggle("open", open));
+const openSheet = name => toggleSheet(name, true);
+const closeSheet = name => toggleSheet(name, false);
+SHEETS.forEach(name => {
+  const sh = $(name + "-sheet"), top = sh.querySelector(".sheet-top");
+  let y0 = null;
+  $(name + "-overlay").addEventListener("click", () => closeSheet(name));
+  sh.querySelector("[data-close]").addEventListener("click", () => closeSheet(name));
+  top.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return;
+    y0 = e.clientY;
+    try { top.setPointerCapture(e.pointerId); } catch (_) {}
+    sh.style.transition = "none";
+  });
+  top.addEventListener("pointermove", e => { if (y0 != null) sh.style.translate = "0 " + Math.max(0, e.clientY - y0) + "px"; });
+  const end = e => {
+    if (y0 == null) return;
+    const d = e.clientY - y0;
+    y0 = null;
+    sh.style.transition = sh.style.translate = "";
+    if (d > 80) closeSheet(name);
+  };
+  top.addEventListener("pointerup", end);
+  top.addEventListener("pointercancel", end);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") SHEETS.forEach(closeSheet); });
 
 /* ═══════════ Formular: Bewegung erfassen / bearbeiten ═══════════ */
 let fTyp = "kauf", fDir = "in", fEditId = null;
 const NEEDS_EUR = { kauf: "Euro", verkauf: "Erlös (€)" };
+const TYP_HINT = {
+  kauf: "Sats leer lassen → werden aus dem Tageskurs berechnet.",
+  verkauf: "Sats = verkaufte Menge. Der Erlös mindert „Investiert“.",
+  transfer: "Eingang erhöht den Bestand, Ausgang verringert ihn.",
+  gebuehr: "Sats werden vom Bestand abgezogen.",
+  geschenk: "Erhaltene Sats ohne Euro-Einsatz (z. B. geschenkt)."
+};
 function setTyp(t) {
   fTyp = t;
-  document.querySelectorAll("#typ-seg button").forEach(b => b.classList.toggle("sel", b.dataset.typ === t));
-  $("dir-seg").style.display = t === "transfer" ? "flex" : "none";
-  const needsEur = !!NEEDS_EUR[t];
-  $("f-eur").parentElement.style.display = needsEur ? "block" : "none";
+  segPick($("typ-seg"), $("typ-seg").querySelector('[data-typ="' + t + '"]'));
+  $("dir-seg").hidden = t !== "transfer";
+  $("f-eur").parentElement.hidden = !NEEDS_EUR[t];
   $("f-eur-label").textContent = NEEDS_EUR[t] || "Euro";
-  $("f-hint").textContent = t === "kauf"
-    ? "Sats leer lassen → werden aus dem Tageskurs berechnet."
-    : t === "verkauf" ? "Sats = verkaufte Menge. Erlös mindert „Investiert“."
-    : t === "transfer" ? "Eingang erhöht den Bestand, Ausgang verringert ihn."
-    : t === "gebuehr" ? "Sats werden vom Bestand abgezogen."
-    : "Erhaltene Sats ohne Euro-Einsatz (z. B. geschenkt).";
+  $("f-hint").textContent = TYP_HINT[t];
 }
-document.querySelectorAll("#typ-seg button").forEach(b => b.addEventListener("click", () => setTyp(b.dataset.typ)));
-document.querySelectorAll("#dir-seg button").forEach(b => b.addEventListener("click", () => {
-  fDir = b.dataset.dir;
-  document.querySelectorAll("#dir-seg button").forEach(x => x.classList.toggle("sel", x === b));
-}));
-function typFromMov(m) {
-  if (m.typ) return m.typ;
-  return m.eur > 0 ? "kauf" : m.sats < 0 ? "transfer" : "geschenk";
+function setDir(d) {
+  fDir = d;
+  segPick($("dir-seg"), $("dir-seg").querySelector('[data-dir="' + d + '"]'));
 }
-function fillPersonOptions(sel) {
-  const list = personList();
-  $("f-person").innerHTML = list.map(p =>
-    '<option value="' + esc(p) + '"' + (p === sel ? " selected" : "") + ">" + esc(p) + "</option>").join("") +
-    '<option value="__neu__">+ Neue Person …</option>';
-}
+$("typ-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTyp(b.dataset.typ); });
+$("dir-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setDir(b.dataset.dir); });
+const typFromMov = m => m.typ || (m.eur > 0 ? "kauf" : m.sats < 0 ? "transfer" : "geschenk");
 $("f-person").addEventListener("change", e => {
   if (e.target.value !== "__neu__") return;
   const name = (prompt("Name der neuen Person (Kürzel wie in Numbers):") || "").trim();
   if (name) {
     const opt = document.createElement("option");
     opt.value = opt.textContent = name;
-    e.target.insertBefore(opt, e.target.querySelector('[value="__neu__"]'));
+    e.target.insertBefore(opt, e.target.lastChild);
     e.target.value = name;
   } else e.target.value = person || personList()[0] || "";
 });
@@ -2049,13 +1232,12 @@ function openForm(editId) {
   fEditId = editId || null;
   const m = editId ? STORE.movements.find(x => x.id === editId) : null;
   $("form-title").textContent = m ? "Bewegung bearbeiten" : "Neue Bewegung";
-  $("f-delete").style.display = m ? "block" : "none";
-  $("f-msg").textContent = ""; $("f-msg").className = "f-msg";
-  fillPersonOptions(m ? m.person : person);
+  $("f-delete-group").hidden = !m;
+  setMsg("f-msg", "");
+  $("f-person").innerHTML = personOptions(personList(), m ? m.person : person) + '<option value="__neu__">+ Neue Person …</option>';
   setTyp(m ? typFromMov(m) : "kauf");
-  fDir = m && m.sats < 0 ? "out" : "in";
-  document.querySelectorAll("#dir-seg button").forEach(x => x.classList.toggle("sel", x.dataset.dir === fDir));
-  $("f-date").value = m ? m.date : new Date().toISOString().slice(0, 10);
+  setDir(m && m.sats < 0 ? "out" : "in");
+  $("f-date").value = m ? m.date : today();
   $("f-eur").value = m && m.eur ? String(Math.abs(m.eur)).replace(".", ",") : "";
   $("f-sats").value = m ? String(Math.abs(m.sats)) : "";
   $("f-who").value = m ? (m.who || "") : "";
@@ -2064,8 +1246,7 @@ function openForm(editId) {
 }
 $("fab").addEventListener("click", () => openForm(null));
 $("f-delete").addEventListener("click", () => {
-  if (!fEditId) return;
-  if (!confirm("Diese Bewegung wirklich löschen?")) return;
+  if (!fEditId || !confirm("Diese Bewegung wirklich löschen?")) return;
   deleteMov(fEditId);
   closeSheet("form");
   refreshAfterDataChange();
@@ -2073,18 +1254,17 @@ $("f-delete").addEventListener("click", () => {
 });
 function closeAtDate(dateStr) {
   if (!lastMarket) return null;
-  const ts = new Date(dateStr + "T00:00:00Z").getTime();
+  const ts = dayTs(dateStr);
   let best = null;
   for (const c of lastMarket.candles) { if (c.t <= ts + DAY) best = c.close; else break; }
   return best || lastMarket.live;
 }
 $("f-save").addEventListener("click", () => {
-  const msg = (t, cls) => { $("f-msg").textContent = t; $("f-msg").className = "f-msg " + (cls || ""); };
-  const p = $("f-person").value;
-  const date = $("f-date").value;
+  const msg = (t, cls) => setMsg("f-msg", t, cls), save = $("f-save");
+  const p = $("f-person").value, date = $("f-date").value;
   if (!p || p === "__neu__") return msg("Bitte Person wählen.", "err");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return msg("Bitte Datum angeben.", "err");
-  if (date > new Date().toISOString().slice(0, 10)) return msg("Datum liegt in der Zukunft.", "err");
+  if (date > today()) return msg("Datum liegt in der Zukunft.", "err");
   const needsEur = !!NEEDS_EUR[fTyp];
   let eur = 0;
   if (needsEur) {
@@ -2093,29 +1273,24 @@ $("f-save").addEventListener("click", () => {
   }
   let sats = parseNum($("f-sats").value);
   if (!isFinite(sats) || sats <= 0) {
-    if (fTyp === "kauf") {
-      const close = closeAtDate(date);
-      if (!close) return msg("Kein Kurs verfügbar – bitte Sats angeben.", "err");
-      sats = Math.round(eur / close * 1e8);
-      $("f-sats").value = String(sats);
-      msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – Speichern erneut tippen zum Bestätigen.", "ok");
-      $("f-save").dataset.confirm = "1";
-      if ($("f-save").dataset.confirmed !== String(sats)) { $("f-save").dataset.confirmed = String(sats); return; }
-    } else return msg("Bitte Sats angeben.", "err");
+    if (fTyp !== "kauf") return msg("Bitte Sats angeben.", "err");
+    const close = closeAtDate(date);
+    if (!close) return msg("Kein Kurs verfügbar – bitte Sats angeben.", "err");
+    sats = Math.round(eur / close * 1e8);
+    $("f-sats").value = String(sats);
+    msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – Speichern erneut tippen zum Bestätigen.", "ok");
+    if (save.dataset.confirmed !== String(sats)) { save.dataset.confirmed = String(sats); return; }
   }
-  delete $("f-save").dataset.confirmed;
+  delete save.dataset.confirmed;
   sats = Math.abs(Math.round(sats));
   const sSign = fTyp === "verkauf" || fTyp === "gebuehr" || (fTyp === "transfer" && fDir === "out") ? -1 : 1;
-  const eSign = fTyp === "verkauf" ? -1 : 1;
-  const mov = {
-    id: fEditId || uid(),
-    person: p, date, typ: fTyp,
+  upsertMov({
+    id: fEditId || uid(), person: p, date, typ: fTyp,
     sats: sSign * sats,
-    eur: needsEur ? eSign * Math.round(eur * 100) / 100 : 0,
+    eur: needsEur ? (fTyp === "verkauf" ? -1 : 1) * Math.round(eur * 100) / 100 : 0,
     who: $("f-who").value.trim(), label: $("f-label").value.trim(),
     mod: Date.now(), del: 0
-  };
-  upsertMov(mov);
+  });
   closeSheet("form");
   person = p;
   refreshAfterDataChange();
@@ -2123,25 +1298,22 @@ $("f-save").addEventListener("click", () => {
   fEditId = null;
 });
 
-/* ═══════════ Einstellungen / Sync-UI ═══════════ */
+/* ═══════════ Einstellungen / Sync ═══════════ */
+const sMsg = (t, cls) => setMsg("s-msg", t, cls);
 $("settings-btn").addEventListener("click", () => {
   const cfg = syncCfg();
   $("s-token").value = cfg ? cfg.token : "";
   $("s-gist").value = cfg ? cfg.gistId : "";
   $("s-pass").value = cfg ? cfg.pass : "";
-  $("s-msg").textContent = cfg && cfg.lastSync
-    ? "Zuletzt synchronisiert: " + new Date(cfg.lastSync).toLocaleString("de-DE") : "";
-  $("s-msg").className = "f-msg";
+  sMsg(cfg && cfg.lastSync ? "Zuletzt synchronisiert: " + new Date(cfg.lastSync).toLocaleString("de-DE") : "");
   openSheet("set");
 });
 $("sync-chip").addEventListener("click", () => $("settings-btn").click());
-document.querySelectorAll(".eye").forEach(b => b.addEventListener("click", () =>
-  $(b.dataset.eye).classList.toggle("show")));
+$$(".eye").forEach(b => b.addEventListener("click", () => $(b.dataset.eye).classList.toggle("show")));
 /* iOS-Autofill fernhalten: Felder sind readonly, bis sie wirklich fokussiert werden */
 ["s-token", "s-gist", "s-pass"].forEach(id => {
-  const el = $(id);
+  const el = $(id), unlock = () => el.removeAttribute("readonly");
   el.setAttribute("readonly", "");
-  const unlock = () => el.removeAttribute("readonly");
   el.addEventListener("touchstart", unlock, { passive: true });
   el.addEventListener("focus", unlock);
 });
@@ -2156,53 +1328,48 @@ $("s-copycode").addEventListener("click", async () => {
   catch (e) { prompt("Kopieren nicht möglich – Code manuell markieren:", code); }
 });
 $("s-paste").addEventListener("click", async () => {
-  const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
   let text = "";
   try { text = (await navigator.clipboard.readText() || "").trim(); }
   catch (e) { text = (prompt("Einrichtungs-Code hier einfügen:") || "").trim(); }
-  if (!text.startsWith(CODE_PREFIX)) return msg("Kein Einrichtungs-Code in der Zwischenablage gefunden.", "err");
+  if (!text.startsWith(CODE_PREFIX)) return sMsg("Kein Einrichtungs-Code in der Zwischenablage gefunden.", "err");
   try {
     const o = JSON.parse(new TextDecoder().decode(unb64(text.slice(CODE_PREFIX.length))));
     if (!o.t || !o.g || !o.p) throw new Error("unvollständig");
     setSyncCfg({ token: o.t, gistId: o.g, pass: o.p });
     $("s-token").value = o.t; $("s-gist").value = o.g; $("s-pass").value = o.p;
-    msg("Code übernommen – verbinde …");
+    sMsg("Code übernommen – verbinde …");
     await doSync(false);
     dirty = false;
-    msg("Verbunden und synchronisiert.", "ok");
+    sMsg("Verbunden und synchronisiert.", "ok");
     toast("Gerät eingerichtet");
     refreshAfterDataChange();
   } catch (e) {
-    msg("Code ungültig oder Verbindung fehlgeschlagen: " + (e.message || e), "err");
+    sMsg("Code ungültig oder Verbindung fehlgeschlagen: " + (e.message || e), "err");
   }
 });
 $("s-connect").addEventListener("click", async () => {
-  const msg = (t, cls) => { $("s-msg").textContent = t; $("s-msg").className = "f-msg " + (cls || ""); };
-  const token = $("s-token").value.trim();
-  const gistId = $("s-gist").value.trim();
-  const pass = $("s-pass").value;
-  if (!token) return msg("Bitte GitHub-Token eintragen.", "err");
-  if (!pass || pass.length < 6) return msg("Bitte Passwort mit mindestens 6 Zeichen wählen.", "err");
+  const token = $("s-token").value.trim(), gistId = $("s-gist").value.trim(), pass = $("s-pass").value;
+  if (!token) return sMsg("Bitte GitHub-Token eintragen.", "err");
+  if (!pass || pass.length < 6) return sMsg("Bitte Passwort mit mindestens 6 Zeichen wählen.", "err");
   setSyncCfg({ token, gistId, pass });
   try {
-    msg("Prüfe Verbindung …");
+    sMsg("Prüfe Verbindung …");
     if (!gistId) {
-      const payload = await encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, pass);
       const g = await ghApi("/gists", { method: "POST", body: JSON.stringify({
         description: "Bitcoin Dashboard – verschlüsselte Daten", public: false,
-        files: { [GIST_FILE]: { content: payload } } }) });
+        files: { [GIST_FILE]: { content: await storePayload(pass) } } }) });
       setSyncCfg({ token, gistId: g.id, pass });
       $("s-gist").value = g.id;
-      msg("Privates Gist angelegt und erster Stand hochgeladen. Diese Gist-ID am anderen Gerät eintragen.", "ok");
+      sMsg("Privates Gist angelegt und erster Stand hochgeladen. Diese Gist-ID am anderen Gerät eintragen.", "ok");
     } else {
       await doSync(false);
-      msg("Verbunden und synchronisiert.", "ok");
+      sMsg("Verbunden und synchronisiert.", "ok");
     }
     dirty = false;
     syncStatus("ok", "Synchron");
     toast("Sync eingerichtet");
   } catch (e) {
-    msg("Fehler: " + (e.message || e), "err");
+    sMsg("Fehler: " + (e.message || e), "err");
     syncStatus("err", "Sync-Fehler");
   }
 });
@@ -2216,7 +1383,7 @@ $("s-disconnect").addEventListener("click", () => {
   toast("Sync getrennt");
 });
 
-/* ═══════════ Import (Backup-JSON, Migrations-JSON, Numbers-CSV) ═══ */
+/* ═══════════ Import (Backup-JSON, Migrations-JSON, Numbers-CSV) ═══════════ */
 $("import-btn").addEventListener("click", () => $("import-input").click());
 $("import-input").addEventListener("change", async () => {
   const f = $("import-input").files[0];
@@ -2244,81 +1411,55 @@ $("import-input").addEventListener("change", async () => {
   }
 });
 
-/* ═══════════ Theme ═══════════ */
-const themeBtn = $("theme-toggle");
+/* ═══════════ Erscheinungsbild: folgt dem System, bis man es selbst umstellt ═══════════ */
+const sysDark = matchMedia("(prefers-color-scheme: dark)");
+const sysTheme = () => (sysDark.matches ? "dark" : "light");
+const storedTheme = () => { try { return localStorage.getItem(LS_THEME); } catch (e) { return null; } };
 function applyTheme(t) {
-  const dark = t === "dark";
   document.documentElement.dataset.theme = t;
-  /* Icon zeigt das Ziel-Design: Mond im Light-Mode, Sonne im Dark-Mode */
-  $("theme-icon-moon").style.display = dark ? "none" : "block";
-  $("theme-icon-sun").style.display = dark ? "block" : "none";
-  themeBtn.setAttribute("aria-label", dark ? "Helles Design aktivieren" : "Dunkles Design aktivieren");
-  try { localStorage.setItem(LS_THEME, t); } catch (e) {}
+  $("theme-color").content = t === "dark" ? "#000000" : "#F2F2F7";
+  $("theme-toggle").setAttribute("aria-label", t === "dark" ? "Helles Design aktivieren" : "Dunkles Design aktivieren");
   if (lastMarket) renderCharts(lastMarket);
 }
-themeBtn.addEventListener("click", () =>
-  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
-applyTheme((() => {
-  try {
-    return localStorage.getItem(LS_THEME) ||
-      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  } catch (e) { return "light"; }
-})());
-
-/* ═══════════ Live-Ticker (~5 Sekunden) ═══════════ */
-let tickTimer = null;
-function startTicker() {
-  clearInterval(tickTimer);
-  tickTimer = setInterval(async () => {
-    if (document.hidden || !lastMarket) return;
-    try {
-      const p = await fetchSpot();
-      lastMarket.live = p;
-      lastMarket.fetchedAt = Date.now();
-      lastMarket.liveOk = true;
-      const last = lastMarket.candles[lastMarket.candles.length - 1];
-      if (last && Date.now() - last.t < 2 * DAY) last.close = p;
-      renderKpis(lastMarket);
-    } catch (e) {}
-  }, 5000);
-}
+$("theme-toggle").addEventListener("click", () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  /* Entspricht die Wahl wieder dem System, wird ihm künftig automatisch gefolgt */
+  try { t === sysTheme() ? localStorage.removeItem(LS_THEME) : localStorage.setItem(LS_THEME, t); } catch (e) {}
+  applyTheme(t);
+});
+sysDark.addEventListener("change", () => { if (!storedTheme()) applyTheme(sysTheme()); });
+applyTheme(storedTheme() || sysTheme());
 
 /* ═══════════ Start ═══════════ */
+const refreshSpot = () => fetchSpot().then(setLive).catch(() => {});
 (async () => {
   renderPersonSelect();
   rebuildAll();
   try {
     const { hist, fresh } = await loadHistory(t => { $("sk-note").textContent = t; });
     const candles = hist.map(h => ({ t: h[0] * 1000, close: h[1] }));
-    let live = candles[candles.length - 1].close, liveOk = fresh;
-    try { live = await fetchSpot(); liveOk = true; } catch (e) {}
-    lastMarket = { candles, live, fetchedAt: Date.now(), liveOk };
-    $("skeleton").style.display = "none";
-    $("content").style.display = "block";
-    document.body.classList.add("reveal");
-    /* Einblend-Animationen nach dem Auftritt entfernen – weniger Compositing-Ebenen */
-    setTimeout(() => document.body.classList.remove("reveal"), 1000);
+    lastMarket = { candles, live: candles[candles.length - 1].close, fetchedAt: Date.now(), liveOk: fresh };
+    await refreshSpot();
+    $("skeleton").hidden = true;
+    $("content").hidden = false;
     render(lastMarket);
-    startTicker();
+    /* Live-Ticker (~5 Sekunden) */
+    setInterval(() => { if (!document.hidden) refreshSpot(); }, 5000);
     if (!liveMovs().length) {
       setTimeout(() => toast(syncCfg()
         ? "Noch keine Daten – Sync läuft oder „+“ für die erste Bewegung"
-        : "Willkommen! ⚙ öffnen, um den Sync zu verbinden – oder unten „Daten importieren“"), 800);
+        : "Willkommen! Einstellungen öffnen, um den Sync zu verbinden – oder unten „Daten importieren“"), 800);
     }
     maybeBackupReminder();
   } catch (e) {
-    $("sk-note").innerHTML = "Dashboard konnte nicht geladen werden.<br><small>" +
-      esc(String(e && e.message || e)) + "</small>";
+    $("sk-note").innerHTML = "Dashboard konnte nicht geladen werden.<br><small>" + esc(String(e && e.message || e)) + "</small>";
   }
   if (syncCfg()) doSync().catch(() => {});
   else syncStatus("", "Lokal");
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     if (syncCfg()) doSync().catch(() => {});
-    if (lastMarket) fetchSpot().then(p => {
-      lastMarket.live = p; lastMarket.fetchedAt = Date.now(); lastMarket.liveOk = true;
-      renderKpis(lastMarket);
-    }).catch(() => {});
+    if (lastMarket) refreshSpot();
   });
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
