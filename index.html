@@ -131,7 +131,7 @@
 
   /* ── Abschnitte: Titel über der Gruppe ── */
   .blocks { display: grid; gap: 28px 16px; }
-  .block { min-width: 0; }
+  .block { min-width: 0; display: flex; flex-direction: column; }
   .sec { font-size: var(--title3); font-weight: 700; padding: 0 16px; margin-bottom: 10px; }
   .sec span { font-weight: 400; color: var(--label2); margin-left: 4px; }
   @media (min-width: 900px) { .blocks { grid-template-columns: 1fr 1fr; } .block.wide { grid-column: 1 / -1; } }
@@ -148,17 +148,19 @@
     .kpi:nth-child(odd) { margin-right: 8px; }
   }
 
-  /* ── Diagramm-Karten ── */
-  .chart { padding: 16px; }
+  /* ── Diagramm-Karten: Karten einer Reihe gleich hoch, Legende sitzt unten ── */
+  .chart { padding: 16px; flex: 1; display: flex; flex-direction: column; }
   .scrub { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-height: 1.9rem; margin-bottom: 10px; }
   .scrub-value { font-size: var(--title2); font-weight: 700; }
   .scrub-delta { font-size: var(--sub); font-weight: 600; }
   .scrub-cap { font-size: var(--foot); color: var(--label2); }
   .chart-wrap { position: relative; height: 260px; margin-top: 10px; }
   .chart-wrap canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--foot); color: var(--label2); margin-top: 12px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--foot); color: var(--label2); margin-top: auto; padding-top: 12px; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .legend i.dash { width: 12px; height: 2px; border-radius: 1px; vertical-align: middle; }
+  .legend i.dots { width: 12px; height: 2px; border-radius: 0; vertical-align: middle;
+    background: repeating-linear-gradient(90deg, var(--ch-gray) 0 2px, transparent 2px 5px); }
   @media (min-width: 700px) { .chart-wrap { height: 300px; } }
 
   /* ── Segmented Control (Typ, Richtung) ── */
@@ -303,7 +305,7 @@
         <div class="scrub" id="scrub-wert"></div>
         <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
         <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
-        <div class="legend"><span><i style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
+        <div class="legend"><span><i id="legend-wert-dot" style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
       </div>
     </section>
 
@@ -333,6 +335,7 @@
         <div class="scrub" id="scrub-sats"></div>
         <div class="seg" data-chart="sats" role="group" aria-label="Zeitraum Stack"></div>
         <div class="chart-wrap"><canvas id="chartSats" role="img"></canvas></div>
+        <div class="legend"><span><i style="background:var(--btc)"></i>Bestand</span><span id="legend-1btc"><i class="dots"></i>1 BTC</span></div>
       </div>
     </section>
 
@@ -1098,20 +1101,27 @@ function renderCharts({ candles }) {
   };
   const span = pts => [pts[0], pts[pts.length - 1]];
 
-  /* ── Wertentwicklung: Portfoliowert gegen Investiert ── */
+  /* ── Wertentwicklung: Farbe folgt dem Ergebnis des Zeitraums (wie Kopfzeile und Kurs-Chart) ── */
   const ptsW = thin(inRange("wert", firstTs)).map(mapPt), scW = { i: -1 };
-  const colW = i => (ptsW[i] && ptsW[i].wert < ptsW[i].eur ? C.neg : C.pos);
+  const [w0, w1] = span(ptsW), depW = w1.eur - w0.eur;
+  const gW = w1.wert - w0.wert - depW;                 /* Wertänderung abzüglich Einzahlungen */
+  const baseW = w0.wert + Math.max(0, depW), pctW = baseW > 0 ? gW / baseW * 100 : null;
+  const negW = gW < 0, colW = negW ? C.neg : C.pos;
+  $("legend-wert-dot").style.background = negW ? "var(--neg)" : "var(--pos)";
+  /* Achse folgt dem Portfoliowert; nur bei Max zählt „Investiert" mit. Was außerhalb liegt, wird nicht gezeichnet */
+  const yW = axisBounds(ptsW.flatMap(p => (RANGES.wert === "max" ? [p.wert, p.eur] : [p.wert])), 10000);
+  const invW = ptsW.map(p => (p.eur >= yW.min && p.eur <= yW.max ? p.eur : null));
   const dense = narrow && RANGES.wert === "max"; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
-  attachScrub(make("chartWert", ptsW, axisBounds(ptsW.flatMap(p => [p.wert, p.eur]), 10000), fmtAxisK, [
-    line(ptsW.map(p => p.wert), colW, scW, { label: "Portfoliowert", fill: { target: 1, above: C.pos + "26", below: C.neg + "26" },
+  attachScrub(make("chartWert", ptsW, yW, fmtAxisK, [
+    line(ptsW.map(p => p.wert), () => colW, scW, { label: "Portfoliowert", fill: "start", backgroundColor: grad(colW),
       borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 }),
-    line(ptsW.map(p => p.eur), () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })
+    line(invW, () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })
   ], [baselinePlugin, scrubPlugin]), scW, {
-    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colW, base: ptsW[0].wert,
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: () => colW, base: w0.wert,
     idle: () => {
-      const [a, b] = span(ptsW), g = b.wert - a.wert - (b.eur - a.eur); /* Wertänderung abzüglich Einzahlungen */
-      $("legend-inv").textContent = fmtEur(b.eur);
-      return scrubHtml(sign(g) + fmtEur(g), "", 0, (g < 0 ? "Verlust · " : "Gewinn · ") + RANGE_NAME[RANGES.wert], g < 0 ? "neg" : "pos");
+      $("legend-inv").textContent = fmtEur(w1.eur);
+      return scrubHtml(sign(gW) + fmtEur(gW), pctW != null ? fmtPct(pctW) : "", negW,
+        (negW ? "Verlust · " : "Gewinn · ") + RANGE_NAME[RANGES.wert], negW ? "neg" : "pos");
     },
     html: i => {
       const p = ptsW[i], pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
@@ -1122,7 +1132,9 @@ function renderCharts({ candles }) {
 
   /* ── Stack: Sats-Bestand, beginnt einen Tag vor dem ersten Kauf bei 0 ── */
   const ptsS = thin(inRange("sats", firstTs - DAY)).map(mapPt), scS = { i: -1 };
-  attachScrub(make("chartSats", ptsS, axisBounds(ptsS.map(p => p.sats), 1e7),
+  const yS = axisBounds(ptsS.map(p => p.sats), 1e7);
+  $("legend-1btc").hidden = !(yS.min <= 1e8 && 1e8 <= yS.max); /* Legende nennt die 1-BTC-Linie nur, wenn sie sichtbar ist */
+  attachScrub(make("chartSats", ptsS, yS,
     x => (x / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M", [
     line(ptsS.map(p => p.sats), () => C.btc, scS, { label: "Sats", stepped: true, fill: "start", backgroundColor: grad(C.btc) })
   ], [baselinePlugin, wholecoinerPlugin, scrubPlugin]), scS, {
