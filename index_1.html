@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bitcoin">
+<meta name="theme-color" id="theme-color" content="#F2F2F7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Bitcoin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
+<style>
+  /* ══ Design-Tokens nach Apples Human Interface Guidelines ══
+     Aufbau nach dem Vorbild der Aktien-App: großer Titel, Wert, Diagramm mit Zeitraum-Zeile,
+     Kennzahlen und Bewegungen als gruppierte Listen. Glas nur für die Bedienelemente der Leiste. */
+  :root {
+    color-scheme: light;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+    /* Textstile (iOS „Large": 1rem = 17pt) */
+    --large: 2rem; --title2: 1.294rem; --title3: 1.176rem; --sub: .882rem; --foot: .765rem; --cap: max(11px, .706rem);
+    /* Hintergründe: gruppiert */
+    --bg: #F2F2F7; --card: #FFFFFF; --elev: #F2F2F7; --elev-card: #FFFFFF;
+    --fill: rgba(120,120,128,.12); --fill-strong: rgba(120,120,128,.2);
+    /* Labels & Trennlinien */
+    --label: #000000; --label2: rgba(60,60,67,.76); --label3: rgba(60,60,67,.3); --sep: rgba(60,60,67,.2);
+    /* Akzent: Text-Variante (≥ 4,5:1) und Füllfarbe für Flächen mit weißer Schrift */
+    --accent: #0066CC; --accent-fill: #0071E3;
+    /* Systemfarben für Grafik … */
+    --pos: #34C759; --neg: #FF383C; --btc: #F7931A; --warn: #FFCC00; --ch-gray: #8E8E93;
+    /* … und kontraststärkere Varianten für Text (≥ 4,5:1) */
+    --pos-text: #00802E; --neg-text: #D70F28; --btc-text: #B84D00;
+    --ch-after: #C7C7CC; --ch-fill-after: rgba(142,142,147,.1);
+    --seg-thumb: #FFFFFF;
+    /* Materialien */
+    --glass: rgba(255,255,255,.66); --glass-edge: rgba(255,255,255,.75);
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.09);
+    --blur: blur(24px) saturate(180%);
+    --r: 24px; --pad: 16px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #000000; --card: #1C1C1E; --elev: #1C1C1E; --elev-card: #2C2C2E;
+    --fill: rgba(120,120,128,.24); --fill-strong: rgba(120,120,128,.36);
+    --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --sep: rgba(84,84,88,.65);
+    --accent: #2997FF; --accent-fill: #0071E3;
+    --pos: #30D158; --neg: #FF4245; --btc: #FF9230; --warn: #FFD600;
+    --pos-text: #30D158; --neg-text: #FF4245; --btc-text: #FF9230;
+    --ch-after: #48484A; --ch-fill-after: rgba(142,142,147,.12);
+    --seg-thumb: #636366;
+    --glass: rgba(58,58,60,.62); --glass-edge: rgba(255,255,255,.14);
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.45);
+  }
+  @media (prefers-contrast: more) {
+    :root { --pos: #008932; --neg: #E9152D; --label2: rgba(60,60,67,.9); --sep: rgba(60,60,67,.5); }
+    html[data-theme="dark"] { --pos: #4AD968; --neg: #FF6165; --label2: rgba(235,235,245,.8); --sep: rgba(120,120,128,.9); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root, html[data-theme="dark"] { --glass: var(--card); --blur: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (min-width: 700px) { :root { --pad: 24px; } }
+  /* iOS: Dynamic Type – Schriftgröße folgt der Systemeinstellung */
+  @supports (font: -apple-system-body) and (-webkit-touch-callout: none) { html { font: -apple-system-body; } }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); overflow-x: clip; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg); color: var(--label); font-family: var(--font); font-size: 1rem; line-height: 1.3;
+    font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    max-width: 1040px; margin: 0 auto; padding: 0 var(--pad) calc(40px + env(safe-area-inset-bottom));
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible { outline: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .icon { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon .solid { fill: currentColor; stroke: none; }
+  .pos { color: var(--pos-text); }
+  .neg { color: var(--neg-text); }
+  .card { background: var(--card); border-radius: var(--r); overflow: hidden; }
+  .glass { background: var(--glass); border: .5px solid var(--glass-edge); box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+
+  /* ── Navigationsleiste: nur die Bedienelemente sind Glas; der Inhalt läuft weich darunter aus ── */
+  header { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 10px;
+    margin: 0 calc(-1 * var(--pad)); padding: calc(8px + env(safe-area-inset-top)) var(--pad) 8px; }
+  header::before { content: ""; position: absolute; inset: 0 0 -18px; z-index: -1; pointer-events: none;
+    background: linear-gradient(var(--bg) 35%, transparent);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+  #nav-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2;
+    opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s var(--ease); }
+  header.scrolled #nav-title { opacity: 1; transform: none; }
+  #nav-title b { font-size: var(--sub); font-weight: 600; }
+  #nav-title span { font-size: var(--foot); color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toolbar { display: flex; border-radius: 99px; }
+  .tb { position: relative; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--label);
+    display: grid; place-items: center; transition: background-color .15s; }
+  @media (hover: hover) { .tb:hover { background: var(--fill); } #fab:hover { filter: brightness(1.1); } }
+  .tb:active { background: var(--fill-strong); }
+  .dot { position: absolute; top: 9px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
+  .dot.ok { background: var(--pos); }
+  .dot.pend { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+  .dot.err { background: var(--neg); }
+  @keyframes pulse { 50% { opacity: .4; } }
+  .avatar { position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    font-size: var(--sub); font-weight: 600; }
+  .avatar select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .avatar:has(select:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+  /* Primäraktion: einzige farbige Fläche der Leiste */
+  #fab { flex: none; width: 44px; height: 44px; border-radius: 50%; border: .5px solid rgba(255,255,255,.25); background: var(--accent-fill);
+    color: #FFFFFF; box-shadow: var(--glass-shadow); display: grid; place-items: center; transition: transform .15s var(--ease), filter .15s; }
+  #fab .icon { stroke-width: 2.4; }
+  #fab:active { transform: scale(.94); }
+
+  /* ── Kopf: großer Titel, Portfoliowert, Veränderung ── */
+  .hero { padding: 4px 4px 0; margin-bottom: 20px; }
+  .hero h1 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: var(--large); font-weight: 700; letter-spacing: -.01em; }
+  .hero h1 span { font-size: var(--sub); font-weight: 500; letter-spacing: 0; color: var(--label2); }
+  .hero-value { font-family: ui-rounded, var(--font); font-size: clamp(2.35rem, 11vw, 3.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; margin-top: 10px; }
+  .hero-sub { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .hero-pct { font-size: var(--title3); font-weight: 600; white-space: nowrap; }
+  #stand { font-size: var(--foot); color: var(--label2); }
+
+  /* ── Abschnitte: Titel über der Gruppe ── */
+  .blocks { display: grid; gap: 28px 16px; }
+  .block { min-width: 0; }
+  .sec { font-size: var(--title3); font-weight: 700; padding: 0 16px; margin-bottom: 10px; }
+  .sec span { font-weight: 400; color: var(--label2); margin-left: 4px; }
+  @media (min-width: 900px) { .blocks { grid-template-columns: 1fr 1fr; } .block.wide { grid-column: 1 / -1; } }
+
+  /* ── Kennzahlen: Zeilen mit Wert rechts; ab 700 px zweispaltig ── */
+  .kpi { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; margin-left: 16px; padding: 8px 16px 8px 0; }
+  .kpi + .kpi { border-top: .5px solid var(--sep); }
+  .kpi-l small { font-size: var(--foot); color: var(--label2); margin-left: 4px; }
+  .kpi-r { display: flex; flex-direction: column; align-items: flex-end; font-size: var(--foot); font-weight: 500; color: var(--label2); }
+  .kpi-r b { font-size: 1rem; font-weight: 600; color: var(--label); }
+  @media (min-width: 700px) {
+    .kpis { display: grid; grid-template-columns: 1fr 1fr; }
+    .kpi:nth-child(2) { border-top: 0; }
+    .kpi:nth-child(odd) { margin-right: 8px; }
+  }
+
+  /* ── Diagramm-Karten ── */
+  .chart { padding: 16px; }
+  .scrub { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-height: 1.9rem; margin-bottom: 10px; }
+  .scrub-value { font-size: var(--title2); font-weight: 700; }
+  .scrub-delta { font-size: var(--sub); font-weight: 600; }
+  .scrub-cap { font-size: var(--foot); color: var(--label2); }
+  .chart-wrap { position: relative; height: 260px; margin-top: 10px; }
+  .chart-wrap canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--foot); color: var(--label2); margin-top: 12px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .legend i.dash { width: 12px; height: 2px; border-radius: 1px; vertical-align: middle; }
+  @media (min-width: 700px) { .chart-wrap { height: 300px; } }
+
+  /* ── Segmented Control (Typ, Richtung) ── */
+  .seg { position: relative; isolation: isolate; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    padding: 2px; border-radius: 99px; background: var(--fill); }
+  .seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px;
+    width: calc((100% - 4px) / var(--n, 5)); border-radius: 99px; background: var(--seg-thumb);
+    box-shadow: 0 1px 4px rgba(0,0,0,.14); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .3s var(--ease); }
+  .seg button { min-height: 36px; padding: 0 2px; border: 0; border-radius: 99px; background: none; font-size: var(--foot); font-weight: 500; }
+  .seg button.sel { font-weight: 600; }
+  /* Zeitraum-Zeile wie in der Aktien-App: ohne Schiene, Auswahl als ruhige Pille */
+  .seg[data-chart] { background: none; padding: 0; margin: 0 -4px; }
+  .seg[data-chart]::before { top: 4px; bottom: 4px; left: 0; width: calc(100% / var(--n, 5)); background: var(--fill); box-shadow: none; }
+  .seg[data-chart] button { min-height: 44px; font-size: var(--sub); color: var(--label2); }
+  .seg[data-chart] button.sel { color: var(--label); }
+
+  /* ── Bewegungen: Listenzeilen, Betrag rechts ── */
+  table, tbody { display: block; width: 100%; }
+  tr { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px; margin-left: 16px; padding: 9px 16px 9px 0; cursor: pointer; }
+  tr + tr { border-top: .5px solid var(--sep); }
+  tr:active { opacity: .55; }
+  td { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  td:last-child { align-items: flex-end; text-align: right; white-space: nowrap; }
+  td b { font-weight: 600; }
+  td span { font-size: var(--sub); color: var(--label2); overflow: hidden; text-overflow: ellipsis; }
+  td:first-child span { white-space: nowrap; }
+  #tx-body:not(.all) tr:nth-child(n+6) { display: none; }
+  tr.empty { cursor: default; color: var(--label2); }
+
+  /* ── Ladezustand: Aktivitätsanzeige ── */
+  #skeleton { display: grid; justify-items: center; gap: 12px; padding: 30vh 0; color: var(--label2); }
+  .spin { width: 28px; height: 28px; animation: spin .8s steps(8) infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #sk-note { text-align: center; font-size: var(--foot); }
+  #content { animation: fade .3s; }
+  @keyframes fade { from { opacity: 0; } }
+
+  /* ── Sheets ── */
+  .overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; z-index: 31; left: 50%; bottom: 0; width: min(540px, 100%); max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--elev); border-radius: 34px 34px 0 0; padding: 6px 16px calc(20px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 105%); transition: transform .45s var(--ease); box-shadow: var(--glass-shadow); }
+  .sheet.open { transform: translate(-50%, 0); }
+  .sheet-top { touch-action: none; }
+  .grab { display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 0 auto; }
+  .sheet-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 60px; margin-bottom: 8px; }
+  .sheet-head h2 { grid-column: 2; font-size: 1rem; font-weight: 600; text-align: center; }
+  .sheet-head .tb { background: var(--fill); }
+  .sheet-head .tb.go { background: var(--accent-fill); color: #FFFFFF; }
+  .sheet-head .tb.go .icon { stroke-width: 2.4; }
+  @media (min-width: 700px) {
+    .sheet { bottom: auto; top: 50%; border-radius: 28px; padding-top: 10px; opacity: 0; pointer-events: none;
+      transform: translate(-50%, -48%) scale(.97); transition: transform .3s var(--ease), opacity .3s; }
+    .sheet.open { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
+    .grab { display: none; }
+  }
+  .group { background: var(--elev-card); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; width: calc(100% - 16px); min-height: 52px; margin-left: 16px; padding-right: 16px;
+    border: 0; background: none; text-align: left; }
+  .row + .row { border-top: .5px solid var(--sep); }
+  button.row { color: var(--accent); }
+  button.row:active { opacity: .55; }
+  button.row.danger { color: var(--neg-text); }
+  .row input, .row select { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; text-align: right; -webkit-appearance: none; appearance: none; }
+  .row select { flex: 0 1 auto; margin-left: auto; color: var(--accent); cursor: pointer; }
+  .row input::placeholder { color: var(--label3); }
+  .row input::-webkit-date-and-time-value { text-align: right; }
+  .masked { -webkit-text-security: disc; }
+  .masked.show { -webkit-text-security: none; }
+  .eye { width: 44px; height: 44px; margin-right: -12px; border: 0; background: none; color: var(--label2); display: grid; place-items: center; }
+  .seg + .seg, .seg + .group { margin-top: 10px; }
+  .note { font-size: var(--foot); color: var(--label2); padding: 0 16px; margin: -2px 0 16px; }
+  .btn { width: 100%; min-height: 50px; border: 0; border-radius: 99px; background: var(--accent-fill); color: #FFFFFF; font-weight: 600;
+    transition: opacity .15s; }
+  .btn:active { opacity: .75; }
+  .f-msg { font-size: var(--foot); text-align: center; color: var(--label2); min-height: 1.2rem; margin: 10px 0; }
+  .f-msg.err { color: var(--neg-text); }
+  .f-msg.ok { color: var(--pos-text); }
+
+  /* ── Hinweis-Dialog (ersetzt die Browser-Dialoge) ── */
+  #alert-overlay { z-index: 50; }
+  #alert { position: fixed; z-index: 51; left: 50%; top: 50%; width: min(320px, calc(100vw - 48px)); padding: 22px 16px 16px;
+    background: var(--elev-card); border-radius: 30px; box-shadow: var(--glass-shadow);
+    opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(1.06); transition: opacity .2s, transform .25s var(--ease); }
+  #alert.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%); }
+  #alert h2 { font-size: 1rem; font-weight: 600; padding: 0 6px; }
+  #alert p { font-size: var(--sub); color: var(--label2); padding: 0 6px; margin-top: 4px; overflow-wrap: anywhere; }
+  #alert input { width: 100%; min-height: 44px; margin-top: 14px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--fill); }
+  .alert-btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 18px; }
+  .alert-btns button { min-height: 48px; border: 0; border-radius: 99px; background: var(--fill); font-weight: 500; }
+  .alert-btns button:active { opacity: .7; }
+  #alert-ok { background: var(--accent-fill); color: #FFFFFF; font-weight: 600; }
+  #alert-ok.danger { background: var(--neg-text); }
+  html[data-theme="dark"] #alert-ok.danger { background: #D70F28; }
+
+  #toast { position: fixed; z-index: 40; left: 50%; top: calc(64px + env(safe-area-inset-top)); width: max-content; max-width: calc(100vw - 32px);
+    border-radius: 99px; padding: 12px 20px; font-size: var(--sub); font-weight: 500; text-align: center;
+    opacity: 0; pointer-events: none; transform: translate(-50%, -20px); transition: opacity .3s, transform .3s var(--ease); }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div class="avatar glass">
+    <span id="person-avatar" aria-hidden="true">&ndash;</span>
+    <select id="person-select" aria-label="Person wählen"></select>
+  </div>
+  <div id="nav-title" aria-hidden="true"><b>Bitcoin</b><span id="nav-value"></span></div>
+  <div class="toolbar glass">
+    <button type="button" class="tb" id="theme-toggle" aria-label="Design wechseln">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path class="solid" d="M12 3.5a8.5 8.5 0 0 0 0 17z"/></svg>
+    </button>
+    <button type="button" class="tb" id="settings-btn" aria-label="Einstellungen und Sync">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle class="solid" cx="5" cy="12" r="1.9"/><circle class="solid" cx="12" cy="12" r="1.9"/><circle class="solid" cx="19" cy="12" r="1.9"/></svg>
+      <i class="dot" id="sync-dot"></i>
+    </button>
+  </div>
+  <button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <span id="sync-text" class="sr-only" role="status">Lokal</span>
+</header>
+
+<div id="skeleton">
+  <svg class="spin" viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 3v4" opacity=".125"/><path d="M12 3v4" opacity=".25" transform="rotate(45 12 12)"/><path d="M12 3v4" opacity=".375" transform="rotate(90 12 12)"/>
+    <path d="M12 3v4" opacity=".5" transform="rotate(135 12 12)"/><path d="M12 3v4" opacity=".625" transform="rotate(180 12 12)"/><path d="M12 3v4" opacity=".75" transform="rotate(225 12 12)"/>
+    <path d="M12 3v4" opacity=".875" transform="rotate(270 12 12)"/><path d="M12 3v4" transform="rotate(315 12 12)"/></g></svg>
+  <div id="sk-note">Lade Kursdaten &hellip;</div>
+</div>
+
+<main id="content" hidden>
+  <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
+    <h1>Bitcoin <span>&#8383; <span id="k-btc-head">–</span></span></h1>
+    <div class="hero-value"><span id="k-wert">–</span></div>
+    <div class="hero-sub"><span class="hero-pct" id="k-pnl-pct"></span><span id="stand"></span></div>
+  </section>
+
+  <div class="blocks">
+    <section class="block wide">
+      <h2 class="sec">Wertentwicklung</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-wert"></div>
+        <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
+        <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
+        <div class="legend"><span><i style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Kennzahlen</h2>
+      <div class="kpis card">
+        <div class="kpi"><div class="kpi-l">Investiert</div><div class="kpi-r"><b id="k-inv"></b><span id="k-pnl">–</span></div></div>
+        <div class="kpi"><div class="kpi-l">Allzeithoch<small id="k-ath-date"></small></div><div class="kpi-r"><b id="k-ath"></b><span id="k-ath-sub"></span></div></div>
+        <div class="kpi"><div class="kpi-l" id="k-kurs-sub">Live-Kurs</div><div class="kpi-r"><b id="k-kurs"></b></div></div>
+        <div class="kpi"><div class="kpi-l">&Oslash; Kaufkurs</div><div class="kpi-r"><b id="k-eca"></b></div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="sec">Bitcoin-Kurs</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-preis"></div>
+        <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
+        <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
+        <div class="legend"><span><i style="background:var(--label)"></i>Kauf</span><span><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="sec">Stack</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-sats"></div>
+        <div class="seg" data-chart="sats" role="group" aria-label="Zeitraum Stack"></div>
+        <div class="chart-wrap"><canvas id="chartSats" role="img"></canvas></div>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Bewegungen<span id="tx-count"></span></h2>
+      <div class="card">
+        <table><tbody id="tx-body"></tbody></table>
+        <button type="button" class="row" id="tx-more" hidden>Alle anzeigen</button>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Daten</h2>
+      <div class="group" style="background:var(--card)">
+        <button type="button" class="row" id="backup-btn">Backup herunterladen</button>
+        <button type="button" class="row" id="import-btn">Daten importieren</button>
+      </div>
+      <p class="note" style="margin-top:8px">Kursdaten: Coinbase (BTC/EUR). Daten werden verschl&uuml;sselt synchronisiert.</p>
+      <input type="file" id="import-input" accept=".json,.csv,text/csv,application/json" hidden>
+    </section>
+  </div>
+</main>
+
+<!-- ── Sheet: Bewegung erfassen/bearbeiten ── -->
+<div class="overlay" id="form-overlay"></div>
+<div class="sheet" id="form-sheet" role="dialog" aria-modal="true" aria-labelledby="form-title">
+  <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
+    <button type="button" class="tb" data-close="form" aria-label="Abbrechen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+    <h2 id="form-title">Neue Bewegung</h2>
+    <button type="button" class="tb go" id="f-save" aria-label="Speichern"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5l4.5 4.5 8.5-10"/></svg></button>
+  </div></div>
+  <div class="seg" id="typ-seg" role="group" aria-label="Typ">
+    <button type="button" data-typ="kauf">Kauf</button>
+    <button type="button" data-typ="verkauf">Verkauf</button>
+    <button type="button" data-typ="transfer">Transfer</button>
+    <button type="button" data-typ="gebuehr">Geb&uuml;hr</button>
+    <button type="button" data-typ="geschenk">Geschenk</button>
+  </div>
+  <div class="seg" id="dir-seg" role="group" aria-label="Richtung" style="--n:2" hidden>
+    <button type="button" data-dir="in">Eingang (+)</button>
+    <button type="button" data-dir="out">Ausgang (&minus;)</button>
+  </div>
+  <div class="group">
+    <div class="row"><label for="f-person">Person</label><select id="f-person"></select></div>
+    <div class="row"><label for="f-date">Datum</label><input type="date" id="f-date"></div>
+    <div class="row"><label for="f-eur" id="f-eur-label">Euro</label><input type="text" id="f-eur" inputmode="decimal" placeholder="z. B. 100"></div>
+    <div class="row"><label for="f-sats">Sats</label><input type="text" id="f-sats" inputmode="numeric" placeholder="leer = aus Kurs"></div>
+    <div class="row"><label for="f-who">Wer</label><input type="text" id="f-who" maxlength="3" placeholder="K&uuml;rzel, optional"></div>
+    <div class="row"><label for="f-label">Notiz</label><input type="text" id="f-label" placeholder="optional"></div>
+  </div>
+  <p class="note" id="f-hint"></p>
+  <div class="f-msg" id="f-msg"></div>
+  <div class="group" id="f-delete-group" hidden><button type="button" class="row danger" id="f-delete">Bewegung l&ouml;schen</button></div>
+</div>
+
+<!-- ── Sheet: Einstellungen (Sync, Sicherung) ── -->
+<div class="overlay" id="set-overlay"></div>
+<div class="sheet" id="set-sheet" role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
+    <button type="button" class="tb" data-close="set" aria-label="Schließen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+    <h2 id="set-title">Einstellungen</h2>
+  </div></div>
+  <div class="group"><button type="button" class="row" id="s-paste">Einrichtungs-Code einf&uuml;gen</button></div>
+  <p class="note">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &ndash; verbindet ohne Tippen.</p>
+  <div class="group">
+    <div class="row"><label for="s-token">GitHub-Token</label><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Token anzeigen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+    <div class="row"><label for="s-gist">Gist-ID</label><input type="text" id="s-gist" name="cfg-b" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="leer = neu anlegen"></div>
+    <div class="row"><label for="s-pass">Passwort</label><input type="text" class="masked" id="s-pass" name="cfg-c" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="auf allen Ger&auml;ten gleich"><button type="button" class="eye" data-eye="s-pass" aria-label="Passwort anzeigen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+  </div>
+  <p class="note">Alles bleibt nur auf diesem Ger&auml;t gespeichert. Das Passwort verschl&uuml;sselt deine Daten, bevor sie zu GitHub gehen.</p>
+  <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
+  <div class="f-msg" id="s-msg"></div>
+  <div class="group">
+    <button type="button" class="row" id="s-copycode">Einrichtungs-Code kopieren</button>
+    <button type="button" class="row" id="s-sync-now">Jetzt synchronisieren</button>
+    <button type="button" class="row" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
+  </div>
+  <div class="group"><button type="button" class="row danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button></div>
+</div>
+
+<!-- ── Hinweis-Dialog ── -->
+<div class="overlay" id="alert-overlay"></div>
+<div id="alert" role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+  <h2 id="alert-title"></h2>
+  <p id="alert-text"></p>
+  <input type="text" id="alert-input" autocomplete="off" autocapitalize="none" spellcheck="false" hidden>
+  <div class="alert-btns"><button type="button" id="alert-cancel">Abbrechen</button><button type="button" id="alert-ok">OK</button></div>
+</div>
+
+<div id="toast" class="glass" role="status"></div>
+
+<script>
+"use strict";
+/* ═══════════ Helfer ═══════════ */
+const $ = id => document.getElementById(id);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const DAY = 864e5;
+const num = (v, d = 2) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const sign = v => (v >= 0 ? "+" : "");
+const fmtEur = v => num(v) + " €";
+const fmtPct = v => sign(v) + num(v) + " %";
+const fmtInt = v => Math.round(v).toLocaleString("de-DE");
+/* Kompakte Y-Achse: 70.000 → „70k" */
+const fmtAxisK = v => (!isFinite(v) ? "" : Math.abs(v) < 1000 ? fmtInt(v) : fmtInt(v / 1000) + "k");
+const fmtDate = ts => new Date(ts).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+const fmtMonth = ts => new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
+const dayTs = d => new Date(d + "T00:00:00Z").getTime();
+const today = () => new Date().toISOString().slice(0, 10);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t.__tm);
+  t.__tm = setTimeout(() => t.classList.remove("show"), 2600);
+}
+const setMsg = (id, t, cls) => { $(id).textContent = t; $(id).className = "f-msg " + (cls || ""); };
+/* Zahl mit deutschem Format einlesen ("1.234,56" oder "1234.56") */
+function parseNum(s) {
+  s = String(s || "").trim().replace(/\s|€/g, "");
+  if (!s) return NaN;
+  if (/,\d*$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  else s = s.replace(",", ".");
+  return parseFloat(s);
+}
+/* Segmented Control: Auswahl setzen (Schieber wandert per CSS-Variable --i) */
+function segPick(seg, btn) {
+  const bs = $$("button", seg);
+  bs.forEach(b => { b.classList.toggle("sel", b === btn); b.setAttribute("aria-pressed", b === btn); });
+  seg.style.setProperty("--i", bs.indexOf(btn));
+}
+/* Hinweis-Dialog statt confirm()/prompt(): liefert true/false bzw. mit input den Text oder null */
+let alertDone = null;
+function ask({ title, text = "", ok = "OK", danger = false, input = false, value = "" }) {
+  return new Promise(resolve => {
+    const inp = $("alert-input");
+    $("alert-title").textContent = title;
+    $("alert-text").textContent = text;
+    $("alert-text").hidden = !text;
+    $("alert-ok").textContent = ok;
+    $("alert-ok").classList.toggle("danger", danger);
+    inp.hidden = !input;
+    inp.value = value;
+    ["alert", "alert-overlay"].forEach(id => $(id).classList.add("open"));
+    alertDone = yes => {
+      alertDone = null;
+      ["alert", "alert-overlay"].forEach(id => $(id).classList.remove("open"));
+      resolve(input ? (yes ? inp.value.trim() : null) : yes);
+    };
+    (input ? inp : $("alert-ok")).focus();
+    if (input && value) inp.select();
+  });
+}
+$("alert-ok").addEventListener("click", () => alertDone && alertDone(true));
+$("alert-cancel").addEventListener("click", () => alertDone && alertDone(false));
+$("alert-input").addEventListener("keydown", e => { if (e.key === "Enter" && alertDone) alertDone(true); });
+
+/* ═══════════ Datenspeicher (Bewegungen) ═══════════
+   Bewegung: { id, person, date "YYYY-MM-DD", typ, sats (±Delta),
+               eur (±Delta auf "Investiert"), who, label, mod, del }
+   Vorzeichen sind im Datensatz enthalten – Kauf: sats+ eur+,
+   Verkauf: sats− eur−, Gebühr: sats−, Geschenk: sats+, Transfer: ±. */
+const LS_STORE = "btc-dash-store-v3";
+const LS_SET   = "btc-dash-sync-v1";
+const LS_HIST  = "btc-dash-hist-v1";
+const LS_THEME = "btc-glass-theme";
+const LS_BACKUP = "btc-dash-lastbackup";
+const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
+const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
+const TX_PREVIEW = 5; /* so viele Bewegungen zeigt die Liste, bis „Alle anzeigen" getippt wird */
+
+let STORE = { schema: 3, updatedAt: 0, movements: [] };
+try {
+  const o = JSON.parse(localStorage.getItem(LS_STORE));
+  if (o && Array.isArray(o.movements)) STORE = o;
+} catch (e) {}
+function saveStore() {
+  STORE.updatedAt = Date.now();
+  try { localStorage.setItem(LS_STORE, JSON.stringify(STORE)); } catch (e) {}
+}
+const liveMovs = () => STORE.movements.filter(m => !m.del);
+function personList() {
+  const seen = new Set(liveMovs().map(m => m.person));
+  return PERSON_ORDER.filter(p => seen.has(p))
+    .concat([...seen].filter(p => !PERSON_ORDER.includes(p)).sort());
+}
+function upsertMov(m) {
+  m.mod = Date.now();
+  const i = STORE.movements.findIndex(x => x.id === m.id);
+  if (i >= 0) STORE.movements[i] = m; else STORE.movements.push(m);
+  saveStore();
+  markDirty();
+}
+function deleteMov(id) {
+  const m = STORE.movements.find(x => x.id === id);
+  if (m) { m.del = m.mod = Date.now(); saveStore(); markDirty(); }
+}
+/* Alt-Datensatz (Zeile aus CSV/Migration) → Bewegung mit stabiler ID */
+function rowToMov(person, r, idx) {
+  let typ;
+  if (r.eur > 0 && r.sats > 0) typ = "kauf";
+  else if (r.sats < 0) typ = /consolidation|fee|geb/i.test(r.label || "") ? "gebuehr" : "transfer";
+  else typ = (r.label ? "geschenk" : "kauf");
+  return { id: "mig-" + person.replace(/\W/g, "_") + "-" + idx + "-" + r.date + "-" + r.sats,
+    person, date: r.date, typ, sats: r.sats, eur: r.eur || 0,
+    who: r.who || "", label: r.label || "", mod: 1, del: 0 };
+}
+function importTables(tables) {
+  let n = 0;
+  for (const p of Object.keys(tables)) {
+    (tables[p] || []).forEach((r, i) => {
+      const m = rowToMov(p, r, i);
+      if (!STORE.movements.some(x => x.id === m.id)) { STORE.movements.push(m); n++; }
+    });
+  }
+  if (n) { saveStore(); markDirty(); }
+  return n;
+}
+/* Numbers-CSV parsen */
+function parseCsvAll(text) {
+  const headerName = l => {
+    const s = l.trim();
+    if (!s || s.includes(";") || /^\d{2}\/\d{2}\/\d{2}/.test(s)) return null;
+    const m = s.match(/^(.+?):\s/);
+    return (m ? m[1] : s).trim();
+  };
+  const sections = {};
+  let current = null;
+  for (const line of text.split(/\r?\n/)) {
+    const h = headerName(line);
+    if (h) { current = h; sections[current] = []; continue; }
+    if (current) sections[current].push(line);
+  }
+  const parseRows = scope => {
+    const rows = [];
+    for (const line of scope) {
+      const parts = line.split(";").map(p => p.trim());
+      const di = parts.findIndex(p => /^\d{2}\/\d{2}\/\d{2}$/.test(p));
+      if (di < 0) continue;
+      const rest = parts.slice(di + 1).filter(p => p !== "");
+      if (!rest.length || !/^-?[\d.]+$/.test(rest[0])) continue;
+      const sats = parseInt(rest[0].replace(/\./g, ""), 10);
+      if (!isFinite(sats)) continue;
+      const eurField = rest[1] || "";
+      const m = eurField.match(/^([\d.,]+)\s*€?$/);
+      const eur = m ? parseFloat(m[1].replace(/\./g, "").replace(",", ".")) : 0;
+      const label = m || !eurField ? null : eurField;
+      const [dd, mm, yy] = parts[di].split("/");
+      const row = { date: "20" + yy + "-" + mm + "-" + dd, sats, eur, label };
+      if (di >= 1 && /^[A-ZÄÖÜ]$/.test(parts[0])) row.who = parts[0];
+      rows.push(row);
+    }
+    return rows;
+  };
+  const tables = {};
+  for (const n of Object.keys(sections)) {
+    const rows = parseRows(sections[n]);
+    if (rows.length) tables[n] = rows;
+  }
+  if (!Object.keys(tables).length) throw new Error("Keine Einträge in der Datei gefunden.");
+  return tables;
+}
+
+/* ═══════════ Verschlüsselung (AES-GCM, Schlüssel aus Passwort) ═══════════ */
+const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pass, salt) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 250000, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function encryptJson(obj, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pass, salt);
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv },
+    key, new TextEncoder().encode(JSON.stringify(obj)));
+  return JSON.stringify({ v: 1, alg: "AES-GCM/PBKDF2-250k", salt: b64(salt), iv: b64(iv), data: b64(data) });
+}
+async function decryptJson(text, pass) {
+  const o = JSON.parse(text);
+  if (!o || o.v !== 1) throw new Error("Unbekanntes Datenformat");
+  const key = await deriveKey(pass, unb64(o.salt));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.data));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+const storePayload = pass => encryptJson({ schema: 3, updatedAt: STORE.updatedAt, movements: STORE.movements }, pass);
+
+/* ═══════════ Gist-Sync ═══════════ */
+const GIST_FILE = "bitcoin-dashboard.json.enc";
+function syncCfg() {
+  try { return JSON.parse(localStorage.getItem(LS_SET)) || null; } catch (e) { return null; }
+}
+function setSyncCfg(cfg) {
+  if (cfg) localStorage.setItem(LS_SET, JSON.stringify(cfg));
+  else localStorage.removeItem(LS_SET);
+}
+function syncStatus(state, text) {
+  $("sync-dot").className = "dot" + (state ? " " + state : "");
+  $("sync-text").textContent = text;
+}
+async function ghApi(path, opts = {}) {
+  const cfg = syncCfg();
+  const r = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + cfg.token,
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      ...(opts.headers || {})
+    }
+  });
+  if (r.status === 401) throw new Error("Token ungültig oder abgelaufen");
+  if (r.status === 404) throw new Error("Gist nicht gefunden (ID prüfen / Token-Rechte)");
+  if (!r.ok) throw new Error("GitHub-Fehler " + r.status);
+  return r.json();
+}
+/* Zwei Stände vereinen: pro ID gewinnt die zuletzt geänderte Fassung */
+function mergeMovs(a, b) {
+  const map = new Map();
+  for (const m of a) map.set(m.id, m);
+  for (const m of b) {
+    const x = map.get(m.id);
+    if (!x || (m.mod || 0) > (x.mod || 0)) map.set(m.id, m);
+  }
+  return [...map.values()];
+}
+let dirty = false, pushTimer = null, syncing = false;
+function markDirty() {
+  dirty = true;
+  if (!syncCfg()) { syncStatus("", "Lokal"); return; }
+  syncStatus("pend", "Ausstehend");
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => doSync().catch(() => {}), 1500);
+}
+async function gistPull(cfg) {
+  const g = await ghApi("/gists/" + cfg.gistId);
+  const f = g.files && g.files[GIST_FILE];
+  if (!f) return null;
+  let content = f.content;
+  if (f.truncated) content = await (await fetch(f.raw_url)).text();
+  if (!content) return null;
+  try { return await decryptJson(content, cfg.pass); }
+  catch (e) { throw new Error("Entschlüsselung fehlgeschlagen – Passwort auf allen Geräten gleich?"); }
+}
+async function gistPush(cfg) {
+  await ghApi("/gists/" + cfg.gistId, { method: "PATCH",
+    body: JSON.stringify({ files: { [GIST_FILE]: { content: await storePayload(cfg.pass) } } }) });
+}
+async function doSync(interactive) {
+  const cfg = syncCfg();
+  if (!cfg || syncing) return;
+  syncing = true;
+  syncStatus("pend", "Sync …");
+  try {
+    const remote = await gistPull(cfg);
+    if (remote && Array.isArray(remote.movements)) {
+      const before = JSON.stringify(STORE.movements);
+      STORE.movements = mergeMovs(STORE.movements, remote.movements);
+      if (JSON.stringify(STORE.movements) !== before) {
+        saveStore();
+        refreshAfterDataChange();
+      }
+      /* nur hochladen, wenn wir etwas haben, das drüben fehlt */
+      const localNewer = STORE.movements.length !== remote.movements.length ||
+        JSON.stringify(STORE.movements) !== JSON.stringify(mergeMovs(remote.movements, remote.movements));
+      if (dirty || localNewer) await gistPush(cfg);
+    } else {
+      await gistPush(cfg);
+    }
+    dirty = false;
+    cfg.lastSync = Date.now();
+    setSyncCfg(cfg);
+    syncStatus("ok", "Synchron " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }));
+    if (interactive) toast("Synchronisiert");
+  } catch (e) {
+    syncStatus("err", "Sync-Fehler");
+    if (interactive) toast("Sync fehlgeschlagen: " + (e.message || e));
+    throw e;
+  } finally { syncing = false; }
+}
+
+/* ═══════════ Backup (unverschlüsselte Datei) ═══════════ */
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(),
+    schema: 3, movements: liveMovs() }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bitcoin-dashboard-backup-" + today() + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  try { localStorage.setItem(LS_BACKUP, String(Date.now())); } catch (e) {}
+  toast("Backup gespeichert (Downloads)");
+}
+function maybeBackupReminder() {
+  const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (isStandalone || !liveMovs().length) return;
+  const last = parseInt(localStorage.getItem(LS_BACKUP) || "0", 10);
+  if (Date.now() - last > 30 * DAY) setTimeout(() =>
+    toast("Tipp: Backup ist älter als 30 Tage – unten „Backup herunterladen“"), 4000);
+}
+
+/* ═══════════ Kursdaten (Coinbase, direkt per fetch) ═══════════ */
+const HIST_START = Date.UTC(2015, 3, 23);
+function histCache() {
+  try {
+    const o = JSON.parse(localStorage.getItem(LS_HIST));
+    return o && Array.isArray(o.candles) && o.candles.length ? o : null;
+  } catch (e) { return null; }
+}
+async function fetchJson(url) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await sleep(1000);
+    try {
+      const r = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!r.ok) { lastErr = new Error("HTTP " + r.status); continue; }
+      return await r.json();
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+async function fetchRange(startMs, endMs) {
+  const rows = await fetchJson(
+    "https://api.exchange.coinbase.com/products/BTC-EUR/candles?granularity=86400" +
+    "&start=" + new Date(startMs).toISOString() +
+    "&end=" + new Date(endMs).toISOString());
+  return Array.isArray(rows) ? rows.map(c => [c[0], c[4]]).sort((a, b) => a[0] - b[0]) : [];
+}
+async function loadHistory(onProgress) {
+  const cached = histCache();
+  let hist = cached ? cached.candles.slice(0, Math.max(0, cached.candles.length - 7)) : [];
+  try {
+    const CHUNK = 290 * DAY;
+    let cursor = hist.length ? (hist[hist.length - 1][0] + 86400) * 1000 : HIST_START;
+    const endAll = Date.now() + DAY;
+    while (cursor < endAll) {
+      const end = Math.min(cursor + CHUNK, endAll);
+      if (end - cursor > 30 * DAY && onProgress) onProgress("Lade Kurshistorie … " + new Date(cursor).getFullYear());
+      const rows = await fetchRange(cursor, end);
+      for (const r of rows) if (!hist.length || r[0] > hist[hist.length - 1][0]) hist.push(r);
+      cursor = end;
+    }
+    if (!hist.length) throw new Error("keine Kurse erhalten");
+    try { localStorage.setItem(LS_HIST, JSON.stringify({ updatedAt: Date.now(), candles: hist })); } catch (e) {}
+    return { hist, fresh: true };
+  } catch (e) {
+    if (cached) return { hist: cached.candles, fresh: false };
+    throw new Error("Kurshistorie konnte nicht geladen werden (" + (e && e.message || e) + ")");
+  }
+}
+async function fetchSpot() {
+  try {
+    const t = await fetchJson("https://api.exchange.coinbase.com/products/BTC-EUR/ticker");
+    const p = parseFloat(t && t.price);
+    if (isFinite(p) && p > 0) return p;
+  } catch (e) {}
+  const s = await fetchJson("https://api.coinbase.com/v2/prices/BTC-EUR/spot");
+  const p = parseFloat(s && s.data && s.data.amount);
+  if (!isFinite(p) || !(p > 0)) throw new Error("kein Kurs");
+  return p;
+}
+
+/* ═══════════ Zustand der Ansicht ═══════════ */
+let person = null;
+let ALL = [];            // Bewegungen der gewählten Person, nach Datum sortiert
+let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
+const RANGES = { wert: "max", preis: "max", sats: "max" };
+const RANGE_DAYS = { "1w": 7, "1m": 30, "6m": 183, "1y": 365 };
+const RANGE_NAME = { "1w": "7 Tage", "1m": "30 Tage", "6m": "6 Monate", "1y": "1 Jahr", max: "Gesamt" };
+function rebuildAll() {
+  ALL = liveMovs().filter(m => m.person === person)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+function cumAt(ts) {
+  let sats = 0, eur = 0;
+  for (const b of ALL) if (dayTs(b.date) <= ts) { sats += b.sats; eur += b.eur; }
+  return { sats, eur };
+}
+/* Neuen Live-Kurs übernehmen (Start, 5-s-Ticker, Rückkehr in die App) */
+function setLive(p) {
+  const m = lastMarket, last = m.candles[m.candles.length - 1];
+  m.live = p; m.fetchedAt = Date.now(); m.liveOk = true;
+  if (last && Date.now() - last.t < 2 * DAY) last.close = p;
+  renderKpis(m);
+}
+
+/* Sanft zählende Zahlen (Portfoliowert, G/V, Kurs) */
+function countTo(el, to, fmt) {
+  const from = el.__num != null ? el.__num : to;
+  el.__num = to;
+  if (!isFinite(from) || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  cancelAnimationFrame(el.__raf);
+  (function step(t) {
+    const k = Math.min(1, (t - t0) / 600);
+    el.textContent = fmt(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) el.__raf = requestAnimationFrame(step);
+  })(t0);
+}
+
+/* ═══════════ Kennzahlen (ohne Chart-Neuaufbau aktualisierbar) ═══════════ */
+function renderKpis({ live, fetchedAt, liveOk, candles }) {
+  const totSats = ALL.reduce((s, b) => s + b.sats, 0);
+  const totEur = ALL.reduce((s, b) => s + b.eur, 0);
+  const btc = totSats / 1e8, wert = btc * live, pnl = wert - totEur, hasInvest = totEur > 0;
+  const pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct"), cls = pnl >= 0 ? "pos" : "neg";
+
+  countTo($("k-wert"), wert, fmtEur);
+  $("nav-value").textContent = fmtEur(wert); /* kompakter Titel in der Leiste, sobald der Kopf weggescrollt ist */
+  $("k-btc-head").textContent = num(btc, 8);
+  if (hasInvest) {
+    countTo(pnlEl, pnl, v => sign(v) + fmtEur(v));
+    pnlEl.className = cls;
+    pctEl.textContent = fmtPct((wert / totEur - 1) * 100);
+    pctEl.className = "hero-pct " + cls;
+  } else {
+    pnlEl.textContent = "–"; pnlEl.__num = null; pnlEl.className = "";
+    pctEl.textContent = "";
+  }
+  $("k-inv").textContent = fmtEur(totEur);
+  $("k-eca").textContent = hasInvest && btc > 0 ? fmtEur(totEur / btc) : "–";
+  countTo($("k-kurs"), live, fmtEur);
+  $("k-kurs-sub").textContent = liveOk ? "Live-Kurs" : "Kurs (Cache)";
+
+  /* Persönliches Allzeithoch des Portfoliowerts über die gesamte Historie */
+  let ath = 0, athTs = 0;
+  if (ALL.length && candles.length) {
+    const first = dayTs(ALL[0].date);
+    let ai = 0, s = 0;
+    for (const c of candles) {
+      if (c.t < first) continue;
+      while (ai < ALL.length && dayTs(ALL[ai].date) <= c.t) s += ALL[ai++].sats;
+      const w = s / 1e8 * c.close;
+      if (w > ath) { ath = w; athTs = c.t; }
+    }
+    if (wert > ath) { ath = wert; athTs = fetchedAt; }
+  }
+  const dist = ath > 0 ? (wert / ath - 1) * 100 : 0;
+  $("k-ath").textContent = ath > 0 ? fmtEur(ath) : "–";
+  $("k-ath-date").textContent = ath > 0 ? fmtDate(athTs) : "";
+  $("k-ath-sub").textContent = ath > 0 ? fmtPct(dist) : "";
+  $("k-ath-sub").className = dist >= -0.05 ? "pos" : "neg";
+  $("stand").textContent = liveOk
+    ? new Date(fetchedAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })
+    : "Kurs vom " + fmtDate(candles[candles.length - 1].t) + " (offline)";
+}
+
+/* ═══════════ Diagramme: Auswahl per Scrubbing ═══════════ */
+/* Gesten-Feintuning: ruhiger Scrub + saubere Trennung vom vertikalen Scrollen */
+const SCRUB_HOLD_MS = 180;    /* so lange halten, bis der Scrub startet */
+const SCRUB_MOVE_TOL = 6;     /* Mindest-Fingerweg (px), bis der Punkt wechselt */
+const SCRUB_SCROLL_TOL = 10;  /* vertikale Toleranz vor Aktivierung → als Scrollen werten */
+const SCRUB_ACTIVATE_DX = 14; /* klar horizontale Geste aktiviert sofort */
+const SCRUB_SNAP_PX = 22;     /* Einrast-Radius auf Kaufpunkte */
+/* Liegt ein Liniensegment zeitlich hinter dem aktiven Punkt? */
+const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
+/* Kopfzeile über dem Diagramm: Wert · Veränderung · Beschriftung */
+const scrubHtml = (value, delta, neg, cap, cls) =>
+  '<b class="scrub-value ' + (cls || "") + '">' + value + "</b>" +
+  (delta ? '<span class="scrub-delta ' + (neg ? "neg" : "pos") + '">' + delta + "</span>" : "") +
+  '<span class="scrub-cap">' + cap + "</span>";
+/* Gepunktete Hilfslinie auf Höhe y (Startwert bzw. 1 BTC), optional mit Beschriftung */
+function dottedLine(chart, value, text) {
+  const s = chart.$scrub;
+  if (!s || value == null || !isFinite(value)) return;
+  const y = chart.scales.y.getPixelForValue(value);
+  const { left, right, top, bottom } = chart.chartArea;
+  if (y < top + 2 || y > bottom - 2) return;
+  const c = chart.ctx;
+  c.save();
+  c.strokeStyle = s.C.gray; c.globalAlpha = .7; c.lineWidth = 2; c.lineCap = "round"; c.setLineDash([.1, 6]);
+  c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
+  if (text) {
+    c.globalAlpha = 1; c.fillStyle = s.C.label2; c.textBaseline = "bottom";
+    c.font = "11px " + (Chart.defaults.font.family || "sans-serif");
+    c.fillText(text, left + 4, y - 4);
+  }
+  c.restore();
+}
+const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => dottedLine(ch, ch.$scrub && ch.$scrub.cfg.base) };
+const wholecoinerPlugin = { id: "wholecoiner", afterDatasetsDraw: ch => dottedLine(ch, 1e8, "1 BTC") };
+/* Aktiver Punkt: senkrechte Linie + Marker mit Ring in Kartenfarbe */
+const scrubPlugin = {
+  id: "scrub",
+  afterDatasetsDraw(chart) {
+    const s = chart.$scrub;
+    if (!s || s.i < 0) return;
+    const el = chart.getDatasetMeta(0).data[s.i];
+    if (!el) return;
+    const c = chart.ctx, { top, bottom } = chart.chartArea;
+    c.save();
+    c.strokeStyle = s.C.gray; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(el.x, top); c.lineTo(el.x, bottom); c.stroke();
+    c.fillStyle = s.cfg.colorAt(s.i); c.strokeStyle = s.C.card; c.lineWidth = 2.5;
+    c.beginPath(); c.arc(el.x, el.y, 6, 0, 2 * Math.PI); c.fill(); c.stroke();
+    c.restore();
+  }
+};
+/* Scrub an einen Chart binden: Maus-Hover (Desktop) bzw. Halten + Ziehen (Touch);
+   die X-Position rastet auf den nächsten Datenpunkt ein, Loslassen → Grundzustand */
+function attachScrub(chart, s, cfg, C) {
+  s.cfg = cfg; s.C = C;
+  chart.$scrub = s;
+  const line = $(cfg.line), canvas = chart.canvas;
+  const show = i => { line.innerHTML = !cfg.n ? "" : i < 0 ? cfg.idle() : cfg.html(i); };
+  show(-1);
+  canvas.setAttribute("aria-label", cfg.name + ": " + line.textContent);
+  const setIdx = i => {
+    if (i === s.i) return;
+    s.i = i;
+    show(i);
+    chart.update("none"); /* Segmentfarben vor/nach dem Marker neu auswerten */
+  };
+  const idxAt = e => {
+    if (!cfg.n || !chart.chartArea) return -1;
+    const x = e.clientX - canvas.getBoundingClientRect().left;
+    const { left, right } = chart.chartArea;
+    if (x < left - 16 || x > right + 16) return -1;
+    const cx = Math.min(right, Math.max(left, x));
+    let idx = Math.max(0, Math.min(cfg.n - 1, Math.round(chart.scales.x.getValueForPixel(cx))));
+    /* auf den nächstgelegenen Kaufpunkt einrasten, wenn nah genug */
+    let bestD = SCRUB_SNAP_PX;
+    for (const si of cfg.snap || []) {
+      const d = Math.abs(chart.scales.x.getPixelForValue(si) - cx);
+      if (d <= bestD) { bestD = d; idx = si; }
+    }
+    return idx;
+  };
+  canvas.__scrubAC?.abort(); /* Listener des vorherigen Chart-Aufbaus lösen */
+  const ac = canvas.__scrubAC = new AbortController(), o = { signal: ac.signal };
+
+  /* Desktop: Maus-Hover scrubbt direkt */
+  canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") setIdx(idxAt(e)); }, o);
+  canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setIdx(-1); }, o);
+
+  /* Touch: Scrub erst nach kurzem Halten oder klar horizontaler Bewegung;
+     ein vertikaler Wisch scrollt die Seite normal weiter */
+  let holdTimer = 0, active = false, startX = 0, startY = 0, lastX = 0, pid = -1;
+  const clearHold = () => { clearTimeout(holdTimer); holdTimer = 0; };
+  const activate = () => {
+    active = true;
+    canvas.style.touchAction = "none";
+    try { canvas.setPointerCapture(pid); } catch (_) {}
+    lastX = startX;
+    setIdx(idxAt({ clientX: startX }));
+  };
+  const stopTouch = () => {
+    clearHold();
+    if (active) { active = false; canvas.style.touchAction = ""; }
+    if (pid >= 0) { try { canvas.releasePointerCapture(pid); } catch (_) {} }
+    pid = -1;
+    setIdx(-1);
+  };
+  canvas.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse") return;
+    pid = e.pointerId; startX = lastX = e.clientX; startY = e.clientY; active = false;
+    clearHold();
+    holdTimer = setTimeout(() => { holdTimer = 0; activate(); }, SCRUB_HOLD_MS);
+  }, o);
+  canvas.addEventListener("pointermove", e => {
+    if (e.pointerType === "mouse") return;
+    if (!active) {
+      if (!holdTimer) return;
+      const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+      if (dy > SCRUB_SCROLL_TOL && dy > dx) { clearHold(); pid = -1; }                     /* Nutzer scrollt */
+      else if (dx > SCRUB_ACTIVATE_DX && dx >= dy) { clearHold(); activate(); setIdx(idxAt(e)); }
+      return;
+    }
+    if (Math.abs(e.clientX - lastX) < SCRUB_MOVE_TOL) return;  /* Zittern ignorieren */
+    lastX = e.clientX;
+    setIdx(idxAt(e));
+  }, o);
+  canvas.addEventListener("touchmove", e => { if (active) e.preventDefault(); }, { passive: false, signal: ac.signal });
+  canvas.addEventListener("pointerup", stopTouch, o);
+  canvas.addEventListener("pointercancel", stopTouch, o);
+  chart.draw(); /* chart.$scrub existiert erst jetzt → Hilfslinien sofort zeichnen */
+}
+
+/* ═══════════ Diagramme (Wertentwicklung, Kurs, Stack) ═══════════ */
+function renderCharts({ candles }) {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim();
+  const C = { pos: v("--pos"), neg: v("--neg"), btc: v("--btc"), gray: v("--ch-gray"), label: v("--label"), label2: v("--label2"),
+    sep: v("--sep"), card: v("--card"), after: v("--ch-after"), fillAfter: v("--ch-fill-after") };
+  Chart.defaults.font.family = v("--font");
+
+  const mapPt = c => { const p = cumAt(c.t); p.t = c.t; p.close = c.close; p.wert = p.sats / 1e8 * c.close; return p; };
+  const firstTs = ALL.length ? dayTs(ALL[0].date) : Date.UTC(2023, 5, 6);
+  /* Punkte ausdünnen (auf schmalen Screens stärker); Kauf-Tage und letzter Punkt bleiben erhalten */
+  const narrow = innerWidth <= 700, MAXPTS = narrow ? 340 : 700;
+  const buyTs = new Set(ALL.filter(b => b.eur > 0 && b.sats > 0).map(b => dayTs(b.date)));
+  const thin = arr => {
+    if (arr.length <= MAXPTS) return arr;
+    const stride = Math.ceil(arr.length / MAXPTS);
+    return arr.filter((c, i) => i % stride === 0 || i === arr.length - 1 || buyTs.has(c.t));
+  };
+  /* Zeitraum-Filter pro Chart */
+  const lastTs = candles.length ? candles[candles.length - 1].t : Date.now();
+  const inRange = (key, minTs) => {
+    const days = RANGE_DAYS[RANGES[key]];
+    const cut = Math.max(minTs || 0, days ? lastTs - days * DAY : 0);
+    const arr = candles.filter(c => c.t >= cut);
+    return arr.length >= 2 ? arr : candles.slice(-2);
+  };
+  /* X-Achse: Anzahl der Labels richtet sich nach der Chartbreite */
+  const tickCb = labels => {
+    const span = labels.length ? labels[labels.length - 1] - labels[0] : 0;
+    const fmt = span <= 200 * DAY
+      ? ts => new Date(ts).toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+      : fmtMonth;
+    return function (val, i) {
+      const w = (this.chart && this.chart.width) || 360;
+      const every = Math.ceil(labels.length / Math.max(3, Math.min(6, Math.floor(w / 96))));
+      return i % every === 0 ? fmt(labels[i]) : "";
+    };
+  };
+  /* Y-Achse: feste Schritte (10.000 € / 10 Mio. Sats); bei kurzen Zeiträumen feinere 1/2/5-Schritte */
+  const axisBounds = (vals, prefStep) => {
+    let lo = Infinity, hi = -Infinity;
+    for (const x of vals) { if (x == null || !isFinite(x)) continue; if (x < lo) lo = x; if (x > hi) hi = x; }
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
+    let step = prefStep;
+    const ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
+    if (ticks(step) < 2 || ticks(step) > 7) {
+      const mag = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4)));
+      step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
+    }
+    return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
+  };
+  /* Verlauf unter der Linie: Linienfarbe, nach unten auslaufend */
+  const grad = col => c => {
+    const a = c.chart.chartArea;
+    if (!a) return "transparent";
+    const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+    g.addColorStop(0, col + "40"); g.addColorStop(1, col + "00");
+    return g;
+  };
+  /* Linie; hinter dem Scrub-Marker blassen Kurve und Fläche aus */
+  const line = (data, colAt, sc, extra) => ({ data, borderColor: colAt(data.length - 1), borderWidth: 2, pointRadius: 0, pointHitRadius: 6,
+    segment: { borderColor: c => (scrubAfter(sc, c) ? C.after : colAt(c.p1DataIndex)),
+               backgroundColor: c => (scrubAfter(sc, c) ? C.fillAfter : undefined) }, ...extra });
+  const tick = { color: C.label2, font: { size: 11 } };
+  const make = (id, pts, y, yFmt, datasets, plugins) => {
+    Chart.getChart(id)?.destroy();
+    const labels = pts.map(p => p.t);
+    return new Chart($(id), { type: "line", plugins, data: { labels, datasets }, options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      devicePixelRatio: Math.min(2, devicePixelRatio || 1),
+      events: [], /* Interaktion läuft über das Scrubbing */
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { ...tick, callback: tickCb(labels), maxRotation: 0, autoSkip: false } },
+        y: { position: "right", min: y.min, max: y.max, border: { display: false }, grid: { color: C.sep, lineWidth: .5, drawTicks: false },
+          ticks: { ...tick, padding: 8, stepSize: y.step, callback: yFmt } }
+      } } });
+  };
+  const span = pts => [pts[0], pts[pts.length - 1]];
+
+  /* ── Wertentwicklung: Portfoliowert gegen Investiert ── */
+  const ptsW = thin(inRange("wert", firstTs)).map(mapPt), scW = { i: -1 };
+  const colW = i => (ptsW[i] && ptsW[i].wert < ptsW[i].eur ? C.neg : C.pos);
+  const dense = narrow && RANGES.wert === "max"; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
+  attachScrub(make("chartWert", ptsW, axisBounds(ptsW.flatMap(p => [p.wert, p.eur]), 10000), fmtAxisK, [
+    line(ptsW.map(p => p.wert), colW, scW, { label: "Portfoliowert", fill: { target: 1, above: C.pos + "26", below: C.neg + "26" },
+      borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 }),
+    line(ptsW.map(p => p.eur), () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })
+  ], [baselinePlugin, scrubPlugin]), scW, {
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colW, base: ptsW[0].wert,
+    idle: () => {
+      const [a, b] = span(ptsW), g = b.wert - a.wert - (b.eur - a.eur); /* Wertänderung abzüglich Einzahlungen */
+      $("legend-inv").textContent = fmtEur(b.eur);
+      return scrubHtml(sign(g) + fmtEur(g), "", 0, (g < 0 ? "Verlust · " : "Gewinn · ") + RANGE_NAME[RANGES.wert], g < 0 ? "neg" : "pos");
+    },
+    html: i => {
+      const p = ptsW[i], pct = p.eur > 0 ? (p.wert / p.eur - 1) * 100 : null;
+      $("legend-inv").textContent = fmtEur(p.eur);
+      return scrubHtml(fmtEur(p.wert), pct != null ? fmtPct(pct) : "", pct < 0, fmtDate(p.t));
+    }
+  }, C);
+
+  /* ── Stack: Sats-Bestand, beginnt einen Tag vor dem ersten Kauf bei 0 ── */
+  const ptsS = thin(inRange("sats", firstTs - DAY)).map(mapPt), scS = { i: -1 };
+  attachScrub(make("chartSats", ptsS, axisBounds(ptsS.map(p => p.sats), 1e7),
+    x => (x / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " M", [
+    line(ptsS.map(p => p.sats), () => C.btc, scS, { label: "Sats", stepped: true, fill: "start", backgroundColor: grad(C.btc) })
+  ], [baselinePlugin, wholecoinerPlugin, scrubPlugin]), scS, {
+    line: "scrub-sats", name: "Stack", n: ptsS.length, colorAt: () => C.btc, base: ptsS[0].sats,
+    idle: () => {
+      const [a, b] = span(ptsS), d = b.sats - a.sats;
+      return scrubHtml(sign(d) + fmtInt(d) + " Sats", "", 0, "Zuwachs · " + RANGE_NAME[RANGES.sats]);
+    },
+    html: i => scrubHtml(fmtInt(ptsS[i].sats) + " Sats", "", 0, fmtDate(ptsS[i].t))
+  }, C);
+
+  /* ── Bitcoin-Kurs: Linie in Trendfarbe des Zeitraums, Käufe als Punkte, Ø Kaufkurs gestrichelt ── */
+  const ptsK = thin(inRange("preis", 0)).map(mapPt), scK = { i: -1 };
+  const byDay = new Map();
+  for (const b of ALL) {
+    if (!(b.eur > 0 && b.sats > 0)) continue;
+    const t = dayTs(b.date), cur = byDay.get(t) || { sats: 0, eur: 0 };
+    cur.sats += b.sats; cur.eur += b.eur;
+    byDay.set(t, cur);
+  }
+  const dots = ptsK.map(() => null), dotInfo = ptsK.map(() => null), dotR = ptsK.map(() => 0);
+  const vMax = Math.max(1, ...[...byDay.values()].map(x => x.eur));
+  for (const [t, x] of byDay) {
+    if (t < ptsK[0].t - DAY) continue; /* Käufe vor dem gewählten Zeitraum nicht anzeigen */
+    let i = ptsK.findIndex(p => p.t >= t);
+    if (i < 0) i = ptsK.length - 1;
+    dots[i] = ptsK[i].close;
+    dotInfo[i] = x;
+    dotR[i] = 2.2 + 3.3 * Math.sqrt(x.eur / vMax); /* Größe nach Kaufsumme */
+  }
+  const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
+  const [k0, k1] = span(ptsK), kPct = (k1.close / k0.close - 1) * 100, colK = kPct < 0 ? C.neg : C.pos;
+  attachScrub(make("chartPreis", ptsK, axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000), fmtAxisK, [
+    line(ptsK.map(p => p.close), () => colK, scK, { label: "BTC-Kurs", tension: .2, order: 3, fill: "start", backgroundColor: grad(colK) }),
+    { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, borderDash: [4, 4], pointRadius: 0, spanGaps: true, order: 2 },
+    { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
+      pointRadius: c => dotR[c.dataIndex] || 0, order: 1 }
+  ], [baselinePlugin, scrubPlugin]), scK, {
+    line: "scrub-preis", name: "Bitcoin-Kurs", n: ptsK.length, base: k0.close,
+    colorAt: i => (dotInfo[i] ? C.label : colK),
+    snap: dotInfo.flatMap((x, i) => (x ? [i] : [])),
+    idle: () => scrubHtml(fmtPct(kPct), "", 0, "Kursänderung · " + RANGE_NAME[RANGES.preis], kPct < 0 ? "neg" : "pos"),
+    html: i => {
+      const p = ptsK[i], x = dotInfo[i];
+      return scrubHtml(fmtEur(p.close), "", 0, fmtDate(p.t) + (x ? " · Kauf " + fmtEur(x.eur) + " · " + fmtInt(x.sats) + " Sats" : ""));
+    }
+  }, C);
+}
+
+/* ═══════════ Zeitraum-Auswahl pro Diagramm ═══════════ */
+$$(".seg[data-chart]").forEach(seg => {
+  seg.innerHTML = Object.keys(RANGE_NAME).map(r => '<button type="button" data-range="' + r + '" aria-label="' + RANGE_NAME[r] + '">' +
+    (r === "max" ? "Max" : r.toUpperCase().replace("Y", "J")) + "</button>").join("");
+  segPick(seg, seg.lastChild);
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b || b.classList.contains("sel")) return;
+    RANGES[seg.dataset.chart] = b.dataset.range;
+    segPick(seg, b);
+    if (lastMarket) renderCharts(lastMarket);
+  });
+});
+
+/* ═══════════ Bewegungen (Liste; neueste zuerst) ═══════════ */
+function renderTable() {
+  const body = $("tx-body");
+  $("tx-count").textContent = ALL.length;
+  body.innerHTML = [...ALL].reverse().map(b =>
+    '<tr data-id="' + esc(b.id) + '"><td><b>' + (TYP_NAME[b.typ] || "Kauf") + "</b><span>" +
+    esc([fmtDate(new Date(b.date + "T00:00:00").getTime()), b.who, b.label].filter(Boolean).join(" · ")) + "</span></td>" +
+    "<td><b>" + sign(b.sats) + fmtInt(b.sats) + " Sats</b>" + (b.eur ? "<span>" + fmtEur(b.eur) + "</span>" : "") + "</td></tr>"
+  ).join("") || '<tr class="empty"><td>Noch keine Bewegungen</td></tr>';
+  $("tx-more").hidden = ALL.length <= TX_PREVIEW || body.classList.contains("all");
+}
+$("tx-more").addEventListener("click", () => { $("tx-body").classList.add("all"); $("tx-more").hidden = true; });
+$("tx-body").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (tr) openForm(tr.dataset.id);
+});
+
+function render(market) {
+  renderKpis(market);
+  renderCharts(market);
+  renderTable();
+}
+function refreshAfterDataChange() {
+  renderPersonSelect();
+  rebuildAll();
+  if (lastMarket) render(lastMarket);
+}
+
+/* ═══════════ Personen-Auswahl (Avatar mit Initialen) ═══════════ */
+function initials(p) {
+  const parts = String(p || "").split(/[^0-9A-Za-zÄÖÜäöüß]+/).filter(Boolean);
+  if (!parts.length) return "–";
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)).toUpperCase();
+}
+const personOptions = (list, sel) => list.map(p =>
+  '<option value="' + esc(p) + '"' + (p === sel ? " selected" : "") + ">" + esc(p) + "</option>").join("");
+function renderPersonSelect() {
+  const list = personList();
+  if (list.length && !list.includes(person)) person = list[0];
+  $("person-select").innerHTML = list.length ? personOptions(list, person) : "<option>–</option>";
+  $("person-avatar").textContent = list.length ? initials(person) : "–";
+}
+$("person-select").addEventListener("change", e => {
+  person = e.target.value;
+  $("person-avatar").textContent = initials(person);
+  rebuildAll();
+  if (lastMarket) render(lastMarket);
+});
+
+/* ═══════════ Sheets: öffnen, schließen, zum Schließen nach unten ziehen ═══════════ */
+const SHEETS = ["form", "set"];
+const toggleSheet = (name, open) => ["overlay", "sheet"].forEach(k => $(name + "-" + k).classList.toggle("open", open));
+const openSheet = name => toggleSheet(name, true);
+const closeSheet = name => toggleSheet(name, false);
+SHEETS.forEach(name => {
+  const sh = $(name + "-sheet"), top = sh.querySelector(".sheet-top");
+  let y0 = null;
+  $(name + "-overlay").addEventListener("click", () => closeSheet(name));
+  sh.querySelector("[data-close]").addEventListener("click", () => closeSheet(name));
+  top.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return;
+    y0 = e.clientY;
+    try { top.setPointerCapture(e.pointerId); } catch (_) {}
+    sh.style.transition = "none";
+  });
+  top.addEventListener("pointermove", e => { if (y0 != null) sh.style.translate = "0 " + Math.max(0, e.clientY - y0) + "px"; });
+  const end = e => {
+    if (y0 == null) return;
+    const d = e.clientY - y0;
+    y0 = null;
+    sh.style.transition = sh.style.translate = "";
+    if (d > 80) closeSheet(name);
+  };
+  top.addEventListener("pointerup", end);
+  top.addEventListener("pointercancel", end);
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (alertDone) alertDone(false); else SHEETS.forEach(closeSheet);
+});
+/* Kompakter Titel in der Leiste, sobald der Portfoliowert aus dem Bild gescrollt ist */
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver(([e]) => $("topbar").classList.toggle("scrolled", !e.isIntersecting),
+    { rootMargin: "-64px 0px 0px 0px" }).observe(document.querySelector(".hero-value"));
+}
+
+/* ═══════════ Formular: Bewegung erfassen / bearbeiten ═══════════ */
+let fTyp = "kauf", fDir = "in", fEditId = null;
+const NEEDS_EUR = { kauf: "Euro", verkauf: "Erlös (€)" };
+const TYP_HINT = {
+  kauf: "Sats leer lassen → werden aus dem Tageskurs berechnet.",
+  verkauf: "Sats = verkaufte Menge. Der Erlös mindert „Investiert“.",
+  transfer: "Eingang erhöht den Bestand, Ausgang verringert ihn.",
+  gebuehr: "Sats werden vom Bestand abgezogen.",
+  geschenk: "Erhaltene Sats ohne Euro-Einsatz (z. B. geschenkt)."
+};
+function setTyp(t) {
+  fTyp = t;
+  segPick($("typ-seg"), $("typ-seg").querySelector('[data-typ="' + t + '"]'));
+  $("dir-seg").hidden = t !== "transfer";
+  $("f-eur").parentElement.hidden = !NEEDS_EUR[t];
+  $("f-eur-label").textContent = NEEDS_EUR[t] || "Euro";
+  $("f-hint").textContent = TYP_HINT[t];
+}
+function setDir(d) {
+  fDir = d;
+  segPick($("dir-seg"), $("dir-seg").querySelector('[data-dir="' + d + '"]'));
+}
+$("typ-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTyp(b.dataset.typ); });
+$("dir-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setDir(b.dataset.dir); });
+const typFromMov = m => m.typ || (m.eur > 0 ? "kauf" : m.sats < 0 ? "transfer" : "geschenk");
+$("f-person").addEventListener("change", async e => {
+  const sel = e.target;
+  if (sel.value !== "__neu__") return;
+  const name = await ask({ title: "Neue Person", text: "Kürzel wie in Numbers.", ok: "Hinzufügen", input: true });
+  if (name) {
+    const opt = document.createElement("option");
+    opt.value = opt.textContent = name;
+    sel.insertBefore(opt, sel.lastChild);
+    sel.value = name;
+  } else sel.value = person || personList()[0] || "";
+});
+function openForm(editId) {
+  fEditId = editId || null;
+  const m = editId ? STORE.movements.find(x => x.id === editId) : null;
+  $("form-title").textContent = m ? "Bewegung bearbeiten" : "Neue Bewegung";
+  $("f-delete-group").hidden = !m;
+  setMsg("f-msg", "");
+  $("f-person").innerHTML = personOptions(personList(), m ? m.person : person) + '<option value="__neu__">+ Neue Person …</option>';
+  setTyp(m ? typFromMov(m) : "kauf");
+  setDir(m && m.sats < 0 ? "out" : "in");
+  $("f-date").value = m ? m.date : today();
+  $("f-eur").value = m && m.eur ? String(Math.abs(m.eur)).replace(".", ",") : "";
+  $("f-sats").value = m ? String(Math.abs(m.sats)) : "";
+  $("f-who").value = m ? (m.who || "") : "";
+  $("f-label").value = m ? (m.label || "") : "";
+  openSheet("form");
+}
+$("fab").addEventListener("click", () => openForm(null));
+$("f-delete").addEventListener("click", async () => {
+  if (!fEditId || !await ask({ title: "Bewegung löschen?", text: "Das lässt sich nicht rückgängig machen.", ok: "Löschen", danger: true })) return;
+  deleteMov(fEditId);
+  closeSheet("form");
+  refreshAfterDataChange();
+  toast("Bewegung gelöscht");
+});
+function closeAtDate(dateStr) {
+  if (!lastMarket) return null;
+  const ts = dayTs(dateStr);
+  let best = null;
+  for (const c of lastMarket.candles) { if (c.t <= ts + DAY) best = c.close; else break; }
+  return best || lastMarket.live;
+}
+$("f-save").addEventListener("click", () => {
+  const msg = (t, cls) => setMsg("f-msg", t, cls), save = $("f-save");
+  const p = $("f-person").value, date = $("f-date").value;
+  if (!p || p === "__neu__") return msg("Bitte Person wählen.", "err");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return msg("Bitte Datum angeben.", "err");
+  if (date > today()) return msg("Datum liegt in der Zukunft.", "err");
+  const needsEur = !!NEEDS_EUR[fTyp];
+  let eur = 0;
+  if (needsEur) {
+    eur = parseNum($("f-eur").value);
+    if (!isFinite(eur) || eur <= 0) return msg("Bitte gültigen Euro-Betrag angeben.", "err");
+  }
+  let sats = parseNum($("f-sats").value);
+  if (!isFinite(sats) || sats <= 0) {
+    if (fTyp !== "kauf") return msg("Bitte Sats angeben.", "err");
+    const close = closeAtDate(date);
+    if (!close) return msg("Kein Kurs verfügbar – bitte Sats angeben.", "err");
+    sats = Math.round(eur / close * 1e8);
+    $("f-sats").value = String(sats);
+    msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – zum Bestätigen erneut auf den Haken tippen.", "ok");
+    if (save.dataset.confirmed !== String(sats)) { save.dataset.confirmed = String(sats); return; }
+  }
+  delete save.dataset.confirmed;
+  sats = Math.abs(Math.round(sats));
+  const sSign = fTyp === "verkauf" || fTyp === "gebuehr" || (fTyp === "transfer" && fDir === "out") ? -1 : 1;
+  upsertMov({
+    id: fEditId || uid(), person: p, date, typ: fTyp,
+    sats: sSign * sats,
+    eur: needsEur ? (fTyp === "verkauf" ? -1 : 1) * Math.round(eur * 100) / 100 : 0,
+    who: $("f-who").value.trim(), label: $("f-label").value.trim(),
+    mod: Date.now(), del: 0
+  });
+  closeSheet("form");
+  person = p;
+  refreshAfterDataChange();
+  toast(fEditId ? "Bewegung aktualisiert" : TYP_NAME[fTyp] + " erfasst");
+  fEditId = null;
+});
+
+/* ═══════════ Einstellungen / Sync ═══════════ */
+const sMsg = (t, cls) => setMsg("s-msg", t, cls);
+$("settings-btn").addEventListener("click", () => {
+  const cfg = syncCfg();
+  $("s-token").value = cfg ? cfg.token : "";
+  $("s-gist").value = cfg ? cfg.gistId : "";
+  $("s-pass").value = cfg ? cfg.pass : "";
+  sMsg(cfg && cfg.lastSync ? "Zuletzt synchronisiert: " + new Date(cfg.lastSync).toLocaleString("de-DE") : "");
+  openSheet("set");
+});
+$$(".eye").forEach(b => b.addEventListener("click", () => $(b.dataset.eye).classList.toggle("show")));
+/* iOS-Autofill fernhalten: Felder sind readonly, bis sie wirklich fokussiert werden */
+["s-token", "s-gist", "s-pass"].forEach(id => {
+  const el = $(id), unlock = () => el.removeAttribute("readonly");
+  el.setAttribute("readonly", "");
+  el.addEventListener("touchstart", unlock, { passive: true });
+  el.addEventListener("focus", unlock);
+});
+/* Einrichtungs-Code: Zugang ohne Tippen aufs zweite Gerät bringen */
+const CODE_PREFIX = "BTCDASH1.";
+$("s-copycode").addEventListener("click", async () => {
+  const cfg = syncCfg();
+  if (!cfg || !cfg.token || !cfg.gistId || !cfg.pass) { toast("Erst hier verbinden, dann Code erzeugen"); return; }
+  if (!await ask({ title: "Einrichtungs-Code kopieren?", ok: "Kopieren",
+    text: "Der Code enthält Token, Gist-ID und dein Passwort im Klartext. Nur an dich selbst schicken und die Nachricht danach löschen." })) return;
+  const code = CODE_PREFIX + b64(new TextEncoder().encode(JSON.stringify({ t: cfg.token, g: cfg.gistId, p: cfg.pass })));
+  try { await navigator.clipboard.writeText(code); toast("Einrichtungs-Code kopiert"); }
+  catch (e) { await ask({ title: "Kopieren nicht möglich", text: "Code manuell markieren und kopieren.", input: true, value: code }); }
+});
+$("s-paste").addEventListener("click", async () => {
+  let text = "";
+  try { text = (await navigator.clipboard.readText() || "").trim(); }
+  catch (e) { text = await ask({ title: "Einrichtungs-Code", text: "Code hier einfügen.", ok: "Übernehmen", input: true }) || ""; }
+  if (!text.startsWith(CODE_PREFIX)) return sMsg("Kein Einrichtungs-Code in der Zwischenablage gefunden.", "err");
+  try {
+    const o = JSON.parse(new TextDecoder().decode(unb64(text.slice(CODE_PREFIX.length))));
+    if (!o.t || !o.g || !o.p) throw new Error("unvollständig");
+    setSyncCfg({ token: o.t, gistId: o.g, pass: o.p });
+    $("s-token").value = o.t; $("s-gist").value = o.g; $("s-pass").value = o.p;
+    sMsg("Code übernommen – verbinde …");
+    await doSync(false);
+    dirty = false;
+    sMsg("Verbunden und synchronisiert.", "ok");
+    toast("Gerät eingerichtet");
+    refreshAfterDataChange();
+  } catch (e) {
+    sMsg("Code ungültig oder Verbindung fehlgeschlagen: " + (e.message || e), "err");
+  }
+});
+$("s-connect").addEventListener("click", async () => {
+  const token = $("s-token").value.trim(), gistId = $("s-gist").value.trim(), pass = $("s-pass").value;
+  if (!token) return sMsg("Bitte GitHub-Token eintragen.", "err");
+  if (!pass || pass.length < 6) return sMsg("Bitte Passwort mit mindestens 6 Zeichen wählen.", "err");
+  setSyncCfg({ token, gistId, pass });
+  try {
+    sMsg("Prüfe Verbindung …");
+    if (!gistId) {
+      const g = await ghApi("/gists", { method: "POST", body: JSON.stringify({
+        description: "Bitcoin Dashboard – verschlüsselte Daten", public: false,
+        files: { [GIST_FILE]: { content: await storePayload(pass) } } }) });
+      setSyncCfg({ token, gistId: g.id, pass });
+      $("s-gist").value = g.id;
+      sMsg("Privates Gist angelegt und erster Stand hochgeladen. Diese Gist-ID am anderen Gerät eintragen.", "ok");
+    } else {
+      await doSync(false);
+      sMsg("Verbunden und synchronisiert.", "ok");
+    }
+    dirty = false;
+    syncStatus("ok", "Synchron");
+    toast("Sync eingerichtet");
+  } catch (e) {
+    sMsg("Fehler: " + (e.message || e), "err");
+    syncStatus("err", "Sync-Fehler");
+  }
+});
+$("s-sync-now").addEventListener("click", () => doSync(true).catch(() => {}));
+$("s-backup").addEventListener("click", downloadBackup);
+$("backup-btn").addEventListener("click", downloadBackup);
+$("s-disconnect").addEventListener("click", async () => {
+  if (!await ask({ title: "Sync trennen?", text: "Der Zugang wird auf diesem Gerät entfernt. Deine Daten bleiben lokal erhalten.", ok: "Trennen", danger: true })) return;
+  setSyncCfg(null);
+  syncStatus("", "Lokal");
+  toast("Sync getrennt");
+});
+
+/* ═══════════ Import (Backup-JSON, Migrations-JSON, Numbers-CSV) ═══════════ */
+$("import-btn").addEventListener("click", () => $("import-input").click());
+$("import-input").addEventListener("change", async () => {
+  const f = $("import-input").files[0];
+  $("import-input").value = "";
+  if (!f) return;
+  try {
+    const text = await f.text();
+    let n = 0;
+    if (/^\s*[{[]/.test(text)) {
+      const o = JSON.parse(text);
+      if (Array.isArray(o.movements)) {
+        const before = STORE.movements.length;
+        STORE.movements = mergeMovs(STORE.movements, o.movements);
+        n = STORE.movements.length - before;
+        saveStore(); markDirty();
+      } else if (o.tables) n = importTables(o.tables);
+      else throw new Error("Unbekanntes JSON-Format");
+    } else {
+      n = importTables(parseCsvAll(text));
+    }
+    refreshAfterDataChange();
+    toast(n ? n + " Bewegungen importiert" : "Keine neuen Bewegungen gefunden");
+  } catch (e) {
+    toast("Import fehlgeschlagen: " + (e.message || e));
+  }
+});
+
+/* ═══════════ Erscheinungsbild: folgt dem System, bis man es selbst umstellt ═══════════ */
+const sysDark = matchMedia("(prefers-color-scheme: dark)");
+const sysTheme = () => (sysDark.matches ? "dark" : "light");
+const storedTheme = () => { try { return localStorage.getItem(LS_THEME); } catch (e) { return null; } };
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("theme-color").content = t === "dark" ? "#000000" : "#F2F2F7";
+  $("theme-toggle").setAttribute("aria-label", t === "dark" ? "Helles Design aktivieren" : "Dunkles Design aktivieren");
+  if (lastMarket) renderCharts(lastMarket);
+}
+$("theme-toggle").addEventListener("click", () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  /* Entspricht die Wahl wieder dem System, wird ihm künftig automatisch gefolgt */
+  try { t === sysTheme() ? localStorage.removeItem(LS_THEME) : localStorage.setItem(LS_THEME, t); } catch (e) {}
+  applyTheme(t);
+});
+sysDark.addEventListener("change", () => { if (!storedTheme()) applyTheme(sysTheme()); });
+applyTheme(storedTheme() || sysTheme());
+
+/* ═══════════ Start ═══════════ */
+const refreshSpot = () => fetchSpot().then(setLive).catch(() => {});
+(async () => {
+  renderPersonSelect();
+  rebuildAll();
+  try {
+    const { hist, fresh } = await loadHistory(t => { $("sk-note").textContent = t; });
+    const candles = hist.map(h => ({ t: h[0] * 1000, close: h[1] }));
+    lastMarket = { candles, live: candles[candles.length - 1].close, fetchedAt: Date.now(), liveOk: fresh };
+    await refreshSpot();
+    $("skeleton").hidden = true;
+    $("content").hidden = false;
+    render(lastMarket);
+    /* Live-Ticker (~5 Sekunden) */
+    setInterval(() => { if (!document.hidden) refreshSpot(); }, 5000);
+    if (!liveMovs().length) {
+      setTimeout(() => toast(syncCfg()
+        ? "Noch keine Daten – Sync läuft oder „+“ für die erste Bewegung"
+        : "Willkommen! Einstellungen öffnen, um den Sync zu verbinden – oder unten „Daten importieren“"), 800);
+    }
+    maybeBackupReminder();
+  } catch (e) {
+    document.querySelector(".spin").hidden = true;
+    $("sk-note").innerHTML = "Dashboard konnte nicht geladen werden.<br><small>" + esc(String(e && e.message || e)) + "</small>";
+  }
+  if (syncCfg()) doSync().catch(() => {});
+  else syncStatus("", "Lokal");
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    if (syncCfg()) doSync().catch(() => {});
+    if (lastMarket) refreshSpot();
+  });
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
