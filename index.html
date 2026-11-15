@@ -15,20 +15,20 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
 <style>
   /* ══ Design-Tokens nach Apples Human Interface Guidelines ══
-     Systemschrift, semantische Systemfarben, gruppierte Hintergründe (Inhaltsebene),
-     Liquid Glass nur für Bedienelemente (Toolbar, Plus-Button, Toast). */
+     Aufbau nach dem Vorbild der Aktien-App: großer Titel, Wert, Diagramm mit Zeitraum-Zeile,
+     Kennzahlen und Bewegungen als gruppierte Listen. Glas nur für die Bedienelemente der Leiste. */
   :root {
     color-scheme: light;
     --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
     /* Textstile (iOS „Large": 1rem = 17pt) */
-    --title2: 1.294rem; --title3: 1.176rem; --sub: .882rem; --foot: .765rem; --cap: max(11px, .706rem);
+    --large: 2rem; --title2: 1.294rem; --title3: 1.176rem; --sub: .882rem; --foot: .765rem; --cap: max(11px, .706rem);
     /* Hintergründe: gruppiert */
     --bg: #F2F2F7; --card: #FFFFFF; --elev: #F2F2F7; --elev-card: #FFFFFF;
     --fill: rgba(120,120,128,.12); --fill-strong: rgba(120,120,128,.2);
     /* Labels & Trennlinien */
     --label: #000000; --label2: rgba(60,60,67,.76); --label3: rgba(60,60,67,.3); --sep: rgba(60,60,67,.2);
-    /* Akzent (Interaktion) */
-    --accent: #1464E8; --accent-fill: #1464E8;
+    /* Akzent: Text-Variante (≥ 4,5:1) und Füllfarbe für Flächen mit weißer Schrift */
+    --accent: #0066CC; --accent-fill: #0071E3;
     /* Systemfarben für Grafik … */
     --pos: #34C759; --neg: #FF383C; --btc: #F7931A; --warn: #FFCC00; --ch-gray: #8E8E93;
     /* … und kontraststärkere Varianten für Text (≥ 4,5:1) */
@@ -36,11 +36,10 @@
     --ch-after: #C7C7CC; --ch-fill-after: rgba(142,142,147,.1);
     --seg-thumb: #FFFFFF;
     /* Materialien */
-    --bar: rgba(242,242,247,.86);
-    --glass: rgba(255,255,255,.62); --glass-edge: rgba(255,255,255,.7);
-    --glass-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.1);
+    --glass: rgba(255,255,255,.66); --glass-edge: rgba(255,255,255,.75);
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.09);
     --blur: blur(24px) saturate(180%);
-    --r: 22px; --pad: 16px;
+    --r: 24px; --pad: 16px;
     --ease: cubic-bezier(.2, .8, .2, 1);
   }
   html[data-theme="dark"] {
@@ -48,13 +47,12 @@
     --bg: #000000; --card: #1C1C1E; --elev: #1C1C1E; --elev-card: #2C2C2E;
     --fill: rgba(120,120,128,.24); --fill-strong: rgba(120,120,128,.36);
     --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --sep: rgba(84,84,88,.65);
-    --accent: #0091FF; --accent-fill: #0071F0;
+    --accent: #2997FF; --accent-fill: #0071E3;
     --pos: #30D158; --neg: #FF4245; --btc: #FF9230; --warn: #FFD600;
     --pos-text: #30D158; --neg-text: #FF4245; --btc-text: #FF9230;
     --ch-after: #48484A; --ch-fill-after: rgba(142,142,147,.12);
     --seg-thumb: #636366;
-    --bar: rgba(0,0,0,.78);
-    --glass: rgba(58,58,60,.6); --glass-edge: rgba(255,255,255,.14);
+    --glass: rgba(58,58,60,.62); --glass-edge: rgba(255,255,255,.14);
     --glass-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.45);
   }
   @media (prefers-contrast: more) {
@@ -62,7 +60,7 @@
     html[data-theme="dark"] { --pos: #4AD968; --neg: #FF6165; --label2: rgba(235,235,245,.8); --sep: rgba(120,120,128,.9); }
   }
   @media (prefers-reduced-transparency: reduce) {
-    :root, html[data-theme="dark"] { --bar: var(--bg); --glass: var(--card); --blur: none; }
+    :root, html[data-theme="dark"] { --glass: var(--card); --blur: none; }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   @media (min-width: 700px) { :root { --pad: 24px; } }
@@ -75,86 +73,95 @@
   body {
     background: var(--bg); color: var(--label); font-family: var(--font); font-size: 1rem; line-height: 1.3;
     font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
-    max-width: 1120px; margin: 0 auto; padding: 0 var(--pad) calc(96px + env(safe-area-inset-bottom));
+    max-width: 1040px; margin: 0 auto; padding: 0 var(--pad) calc(40px + env(safe-area-inset-bottom));
   }
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   input:focus-visible, select:focus-visible { outline: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .icon { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .icon { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon .solid { fill: currentColor; stroke: none; }
   .pos { color: var(--pos-text); }
   .neg { color: var(--neg-text); }
-  .card { background: var(--card); border-radius: var(--r); }
+  .card { background: var(--card); border-radius: var(--r); overflow: hidden; }
   .glass { background: var(--glass); border: .5px solid var(--glass-edge); box-shadow: var(--glass-shadow);
     -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 
-  /* ── Kopfbereich: Toolbar + Portfoliowert, fixiert; Inhalt scrollt weichgezeichnet darunter ── */
-  header, .hero { background: var(--bar); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
-    position: sticky; margin: 0 calc(-1 * var(--pad)); }
-  header { top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between;
-    padding: calc(8px + env(safe-area-inset-top)) var(--pad) 8px; }
+  /* ── Navigationsleiste: nur die Bedienelemente sind Glas; der Inhalt läuft weich darunter aus ── */
+  header { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 10px;
+    margin: 0 calc(-1 * var(--pad)); padding: calc(8px + env(safe-area-inset-top)) var(--pad) 8px; }
+  header::before { content: ""; position: absolute; inset: 0 0 -18px; z-index: -1; pointer-events: none;
+    background: linear-gradient(var(--bg) 35%, transparent);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+  #nav-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2;
+    opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s var(--ease); }
+  header.scrolled #nav-title { opacity: 1; transform: none; }
+  #nav-title b { font-size: var(--sub); font-weight: 600; }
+  #nav-title span { font-size: var(--foot); color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .toolbar { display: flex; border-radius: 99px; }
-  .tb { width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--label);
+  .tb { position: relative; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--label);
     display: grid; place-items: center; transition: background-color .15s; }
-  @media (hover: hover) { .tb:hover { background: var(--fill); } #fab:hover { filter: brightness(1.1); } tbody tr:hover td { background: var(--fill); } }
+  @media (hover: hover) { .tb:hover { background: var(--fill); } #fab:hover { filter: brightness(1.1); } }
   .tb:active { background: var(--fill-strong); }
-  html[data-theme="dark"] .moon, html:not([data-theme="dark"]) .sun { display: none; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--label3); }
+  .dot { position: absolute; top: 9px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
   .dot.ok { background: var(--pos); }
   .dot.pend { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
   .dot.err { background: var(--neg); }
   @keyframes pulse { 50% { opacity: .4; } }
-  .avatar { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  .avatar { position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
     font-size: var(--sub); font-weight: 600; }
   .avatar select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
   .avatar:has(select:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+  /* Primäraktion: einzige farbige Fläche der Leiste */
+  #fab { flex: none; width: 44px; height: 44px; border-radius: 50%; border: .5px solid rgba(255,255,255,.25); background: var(--accent-fill);
+    color: #FFFFFF; box-shadow: var(--glass-shadow); display: grid; place-items: center; transition: transform .15s var(--ease), filter .15s; }
+  #fab .icon { stroke-width: 2.4; }
+  #fab:active { transform: scale(.94); }
 
-  .hero { top: calc(60px + env(safe-area-inset-top)); z-index: 14; padding: 4px var(--pad) 12px; margin-bottom: 12px; }
-  .hero::after { content: ""; position: absolute; inset: 100% 0 auto; height: 12px; pointer-events: none;
-    background: linear-gradient(var(--bar), transparent); }
-  .hero-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-    font-size: var(--sub); color: var(--label2); margin-bottom: 2px; }
-  .hero-label b { color: var(--btc-text); font-weight: 600; }
-  #stand { font-size: var(--foot); }
-  .hero-value { font-family: ui-rounded, var(--font); font-size: clamp(2rem, 9vw, 3rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
-  .hero-pct { font-size: var(--title3); letter-spacing: 0; white-space: nowrap; }
-  #content { animation: rise .4s var(--ease); }
-  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  /* ── Kopf: großer Titel, Portfoliowert, Veränderung ── */
+  .hero { padding: 4px 4px 0; margin-bottom: 20px; }
+  .hero h1 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: var(--large); font-weight: 700; letter-spacing: -.01em; }
+  .hero h1 span { font-size: var(--sub); font-weight: 500; letter-spacing: 0; color: var(--label2); }
+  .hero-value { font-family: ui-rounded, var(--font); font-size: clamp(2.35rem, 11vw, 3.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; margin-top: 10px; }
+  .hero-sub { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .hero-pct { font-size: var(--title3); font-weight: 600; white-space: nowrap; }
+  #stand { font-size: var(--foot); color: var(--label2); }
 
-  /* ── Kennzahlen: iPhone = gruppierte Liste, Desktop = vier Kacheln ── */
-  .kpis { margin-bottom: 16px; }
-  .kpi { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 50px; margin-left: 16px; padding: 8px 16px 8px 0; }
+  /* ── Abschnitte: Titel über der Gruppe ── */
+  .blocks { display: grid; gap: 28px 16px; }
+  .block { min-width: 0; }
+  .sec { font-size: var(--title3); font-weight: 700; padding: 0 16px; margin-bottom: 10px; }
+  .sec span { font-weight: 400; color: var(--label2); margin-left: 4px; }
+  @media (min-width: 900px) { .blocks { grid-template-columns: 1fr 1fr; } .block.wide { grid-column: 1 / -1; } }
+
+  /* ── Kennzahlen: Zeilen mit Wert rechts; ab 700 px zweispaltig ── */
+  .kpi { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; margin-left: 16px; padding: 8px 16px 8px 0; }
   .kpi + .kpi { border-top: .5px solid var(--sep); }
   .kpi-l small { font-size: var(--foot); color: var(--label2); margin-left: 4px; }
   .kpi-r { display: flex; flex-direction: column; align-items: flex-end; font-size: var(--foot); font-weight: 500; color: var(--label2); }
   .kpi-r b { font-size: 1rem; font-weight: 600; color: var(--label); }
   @media (min-width: 700px) {
-    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: none; }
-    .kpi { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; margin: 0; padding: 16px;
-      border: 0 !important; background: var(--card); border-radius: var(--r); }
-    .kpi-l { font-size: var(--foot); color: var(--label2); }
-    .kpi-r { align-items: flex-start; }
-    .kpi-r b { font-size: var(--title3); font-weight: 700; }
+    .kpis { display: grid; grid-template-columns: 1fr 1fr; }
+    .kpi:nth-child(2) { border-top: 0; }
+    .kpi:nth-child(odd) { margin-right: 8px; }
   }
 
   /* ── Diagramm-Karten ── */
-  .charts { display: grid; gap: 16px; }
-  .chart { padding: 16px; min-width: 0; }
-  .chart h2 { font-size: var(--title3); font-weight: 700; margin-bottom: 12px; }
-  .scrub { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-height: 1.9rem; margin: 14px 0 6px; }
-  .scrub-value { font-family: ui-rounded, var(--font); font-size: var(--title2); font-weight: 700; }
+  .chart { padding: 16px; }
+  .scrub { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-height: 1.9rem; margin-bottom: 10px; }
+  .scrub-value { font-size: var(--title2); font-weight: 700; }
   .scrub-delta { font-size: var(--sub); font-weight: 600; }
   .scrub-cap { font-size: var(--foot); color: var(--label2); }
-  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap { position: relative; height: 260px; margin-top: 10px; }
   .chart-wrap canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--foot); color: var(--label2); margin-top: 12px; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .legend i.dash { width: 12px; height: 2px; border-radius: 1px; vertical-align: middle; }
-  @media (min-width: 700px) { .chart-wrap { height: 320px; } }
-  @media (min-width: 900px) { .charts { grid-template-columns: 1fr 1fr; } .chart:first-child { grid-column: 1 / -1; } }
+  @media (min-width: 700px) { .chart-wrap { height: 300px; } }
 
-  /* ── Segmented Control (Zeitraum, Typ, Richtung) ── */
+  /* ── Segmented Control (Typ, Richtung) ── */
   .seg { position: relative; isolation: isolate; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
     padding: 2px; border-radius: 99px; background: var(--fill); }
   .seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px;
@@ -162,55 +169,47 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.14); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .3s var(--ease); }
   .seg button { min-height: 36px; padding: 0 2px; border: 0; border-radius: 99px; background: none; font-size: var(--foot); font-weight: 500; }
   .seg button.sel { font-weight: 600; }
+  /* Zeitraum-Zeile wie in der Aktien-App: ohne Schiene, Auswahl als ruhige Pille */
+  .seg[data-chart] { background: none; padding: 0; margin: 0 -4px; }
+  .seg[data-chart]::before { top: 4px; bottom: 4px; left: 0; width: calc(100% / var(--n, 5)); background: var(--fill); box-shadow: none; }
+  .seg[data-chart] button { min-height: 44px; font-size: var(--sub); color: var(--label2); }
+  .seg[data-chart] button.sel { color: var(--label); }
 
-  /* ── Bewegungen ── */
-  details { margin-top: 16px; padding: 0 16px; }
-  summary { display: flex; align-items: center; justify-content: space-between; min-height: 52px; font-weight: 600; cursor: pointer; list-style: none; }
-  summary::-webkit-details-marker { display: none; }
-  summary span span { color: var(--label2); font-weight: 400; margin-left: 6px; }
-  summary .icon { color: var(--label3); transition: transform .25s var(--ease); }
-  details[open] summary .icon { transform: rotate(90deg); }
-  table { width: 100%; border-collapse: collapse; font-size: var(--sub); }
-  th, td { text-align: right; padding: 12px 6px; border-top: .5px solid var(--sep); }
-  th:first-child, td:first-child { text-align: left; padding-left: 0; }
-  th:last-child, td:last-child { padding-right: 0; }
-  th { font-size: var(--foot); font-weight: 400; color: var(--label2); }
-  tbody tr { cursor: pointer; }
-  .tag { font-size: var(--foot); color: var(--label2); }
-  .typ { font-size: var(--cap); font-weight: 600; border-radius: 99px; padding: 3px 9px; background: var(--fill); color: var(--label2); }
+  /* ── Bewegungen: Listenzeilen, Betrag rechts ── */
+  table, tbody { display: block; width: 100%; }
+  tr { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px; margin-left: 16px; padding: 9px 16px 9px 0; cursor: pointer; }
+  tr + tr { border-top: .5px solid var(--sep); }
+  tr:active { opacity: .55; }
+  td { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  td:last-child { align-items: flex-end; text-align: right; white-space: nowrap; }
+  td b { font-weight: 600; }
+  td span { font-size: var(--sub); color: var(--label2); overflow: hidden; text-overflow: ellipsis; }
+  td:first-child span { white-space: nowrap; }
+  #tx-body:not(.all) tr:nth-child(n+6) { display: none; }
+  tr.empty { cursor: default; color: var(--label2); }
 
-  footer { font-size: var(--foot); color: var(--label2); margin-top: 32px; text-align: center; line-height: 1.8; }
-  footer button { background: none; border: 0; color: var(--accent); padding: 4px; }
-
-  /* ── Ladezustand ── */
-  .sk { border-radius: var(--r); background: var(--card); margin-bottom: 16px; animation: pulse 1.4s ease-in-out infinite; }
-  #sk-note { text-align: center; color: var(--label2); font-size: var(--foot); padding: 10px; }
-
-  /* ── Plus-Button: einzige farbige Glasfläche (Primäraktion) ── */
-  #fab { position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
-    width: 56px; height: 56px; border-radius: 50%; border: .5px solid rgba(255,255,255,.3); background: var(--accent-fill); color: #FFFFFF;
-    box-shadow: var(--glass-shadow); display: grid; place-items: center; transition: transform .15s var(--ease), filter .15s; }
-  #fab .icon { width: 26px; height: 26px; stroke-width: 2.2; }
-  #fab:active { transform: scale(.94); }
-  @media (min-width: 700px) {
-    /* macOS: keine Bedienelemente am unteren Fensterrand – der Button sitzt in der Toolbar */
-    #fab { top: 8px; bottom: auto; width: 44px; height: 44px; right: max(var(--pad), calc((100vw - 1120px) / 2 + var(--pad))); }
-    #fab .icon { width: 21px; height: 21px; }
-    .toolbar { margin-right: 56px; }
-  }
+  /* ── Ladezustand: Aktivitätsanzeige ── */
+  #skeleton { display: grid; justify-items: center; gap: 12px; padding: 30vh 0; color: var(--label2); }
+  .spin { width: 28px; height: 28px; animation: spin .8s steps(8) infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #sk-note { text-align: center; font-size: var(--foot); }
+  #content { animation: fade .3s; }
+  @keyframes fade { from { opacity: 0; } }
 
   /* ── Sheets ── */
   .overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .3s; }
   .overlay.open { opacity: 1; pointer-events: auto; }
   .sheet { position: fixed; z-index: 31; left: 50%; bottom: 0; width: min(540px, 100%); max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
-    background: var(--elev); border-radius: 28px 28px 0 0; padding: 6px 16px calc(20px + env(safe-area-inset-bottom));
+    background: var(--elev); border-radius: 34px 34px 0 0; padding: 6px 16px calc(20px + env(safe-area-inset-bottom));
     transform: translate(-50%, 105%); transition: transform .45s var(--ease); box-shadow: var(--glass-shadow); }
   .sheet.open { transform: translate(-50%, 0); }
   .sheet-top { touch-action: none; }
   .grab { display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 0 auto; }
-  .sheet-head { position: relative; display: flex; align-items: center; justify-content: center; min-height: 56px; margin-bottom: 8px; }
-  .sheet-head h2 { font-size: 1rem; font-weight: 600; }
-  .sheet-head .tb { position: absolute; left: 0; background: var(--fill); }
+  .sheet-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 60px; margin-bottom: 8px; }
+  .sheet-head h2 { grid-column: 2; font-size: 1rem; font-weight: 600; text-align: center; }
+  .sheet-head .tb { background: var(--fill); }
+  .sheet-head .tb.go { background: var(--accent-fill); color: #FFFFFF; }
+  .sheet-head .tb.go .icon { stroke-width: 2.4; }
   @media (min-width: 700px) {
     .sheet { bottom: auto; top: 50%; border-radius: 28px; padding-top: 10px; opacity: 0; pointer-events: none;
       transform: translate(-50%, -48%) scale(.97); transition: transform .3s var(--ease), opacity .3s; }
@@ -218,11 +217,12 @@
     .grab { display: none; }
   }
   .group { background: var(--elev-card); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; }
-  .row { display: flex; align-items: center; gap: 12px; width: calc(100% - 16px); min-height: 50px; margin-left: 16px; padding-right: 16px;
+  .row { display: flex; align-items: center; gap: 12px; width: calc(100% - 16px); min-height: 52px; margin-left: 16px; padding-right: 16px;
     border: 0; background: none; text-align: left; }
   .row + .row { border-top: .5px solid var(--sep); }
   button.row { color: var(--accent); }
-  button.row.danger { color: var(--neg-text); justify-content: center; }
+  button.row:active { opacity: .55; }
+  button.row.danger { color: var(--neg-text); }
   .row input, .row select { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; text-align: right; -webkit-appearance: none; appearance: none; }
   .row select { flex: 0 1 auto; margin-left: auto; color: var(--accent); cursor: pointer; }
   .row input::placeholder { color: var(--label3); }
@@ -239,6 +239,22 @@
   .f-msg.err { color: var(--neg-text); }
   .f-msg.ok { color: var(--pos-text); }
 
+  /* ── Hinweis-Dialog (ersetzt die Browser-Dialoge) ── */
+  #alert-overlay { z-index: 50; }
+  #alert { position: fixed; z-index: 51; left: 50%; top: 50%; width: min(320px, calc(100vw - 48px)); padding: 22px 16px 16px;
+    background: var(--elev-card); border-radius: 30px; box-shadow: var(--glass-shadow);
+    opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(1.06); transition: opacity .2s, transform .25s var(--ease); }
+  #alert.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%); }
+  #alert h2 { font-size: 1rem; font-weight: 600; padding: 0 6px; }
+  #alert p { font-size: var(--sub); color: var(--label2); padding: 0 6px; margin-top: 4px; overflow-wrap: anywhere; }
+  #alert input { width: 100%; min-height: 44px; margin-top: 14px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--fill); }
+  .alert-btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 18px; }
+  .alert-btns button { min-height: 48px; border: 0; border-radius: 99px; background: var(--fill); font-weight: 500; }
+  .alert-btns button:active { opacity: .7; }
+  #alert-ok { background: var(--accent-fill); color: #FFFFFF; font-weight: 600; }
+  #alert-ok.danger { background: var(--neg-text); }
+  html[data-theme="dark"] #alert-ok.danger { background: #D70F28; }
+
   #toast { position: fixed; z-index: 40; left: 50%; top: calc(64px + env(safe-area-inset-top)); width: max-content; max-width: calc(100vw - 32px);
     border-radius: 99px; padding: 12px 20px; font-size: var(--sub); font-weight: 500; text-align: center;
     opacity: 0; pointer-events: none; transform: translate(-50%, -20px); transition: opacity .3s, transform .3s var(--ease); }
@@ -251,83 +267,102 @@
     <span id="person-avatar" aria-hidden="true">&ndash;</span>
     <select id="person-select" aria-label="Person wählen"></select>
   </div>
+  <div id="nav-title" aria-hidden="true"><b>Bitcoin</b><span id="nav-value"></span></div>
   <div class="toolbar glass">
-    <button type="button" class="tb" id="sync-chip" title="Sync-Status" aria-label="Sync-Status"><i class="dot" id="sync-dot"></i><span id="sync-text" class="sr-only">Lokal</span></button>
     <button type="button" class="tb" id="theme-toggle" aria-label="Design wechseln">
-      <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path class="solid" d="M12 3.5a8.5 8.5 0 0 0 0 17z"/></svg>
     </button>
-    <button type="button" class="tb" id="settings-btn" aria-label="Einstellungen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.5"/><circle cx="8" cy="17" r="2.5"/></svg></button>
+    <button type="button" class="tb" id="settings-btn" aria-label="Einstellungen und Sync">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle class="solid" cx="5" cy="12" r="1.9"/><circle class="solid" cx="12" cy="12" r="1.9"/><circle class="solid" cx="19" cy="12" r="1.9"/></svg>
+      <i class="dot" id="sync-dot"></i>
+    </button>
   </div>
+  <button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <span id="sync-text" class="sr-only" role="status">Lokal</span>
 </header>
 
 <div id="skeleton">
-  <div class="sk" style="height:110px"></div>
-  <div class="sk" style="height:200px"></div>
-  <div class="sk" style="height:420px"></div>
+  <svg class="spin" viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 3v4" opacity=".125"/><path d="M12 3v4" opacity=".25" transform="rotate(45 12 12)"/><path d="M12 3v4" opacity=".375" transform="rotate(90 12 12)"/>
+    <path d="M12 3v4" opacity=".5" transform="rotate(135 12 12)"/><path d="M12 3v4" opacity=".625" transform="rotate(180 12 12)"/><path d="M12 3v4" opacity=".75" transform="rotate(225 12 12)"/>
+    <path d="M12 3v4" opacity=".875" transform="rotate(270 12 12)"/><path d="M12 3v4" transform="rotate(315 12 12)"/></g></svg>
   <div id="sk-note">Lade Kursdaten &hellip;</div>
 </div>
 
 <main id="content" hidden>
   <section class="hero" aria-label="BTC-Bestand und Portfoliowert">
-    <div class="hero-label"><b>&#8383; <span id="k-btc-head">–</span></b><span id="stand"></span></div>
-    <div class="hero-value"><span id="k-wert">–</span> <span class="hero-pct" id="k-pnl-pct"></span></div>
+    <h1>Bitcoin <span>&#8383; <span id="k-btc-head">–</span></span></h1>
+    <div class="hero-value"><span id="k-wert">–</span></div>
+    <div class="hero-sub"><span class="hero-pct" id="k-pnl-pct"></span><span id="stand"></span></div>
   </section>
 
-  <div class="kpis card">
-    <div class="kpi"><div class="kpi-l">Investiert</div><div class="kpi-r"><b id="k-inv"></b><span id="k-pnl">–</span></div></div>
-    <div class="kpi"><div class="kpi-l">Allzeithoch<small id="k-ath-date"></small></div><div class="kpi-r"><b id="k-ath"></b><span id="k-ath-sub"></span></div></div>
-    <div class="kpi"><div class="kpi-l" id="k-kurs-sub">Live-Kurs</div><div class="kpi-r"><b id="k-kurs"></b></div></div>
-    <div class="kpi"><div class="kpi-l">&Oslash; Kaufkurs</div><div class="kpi-r"><b id="k-eca"></b></div></div>
+  <div class="blocks">
+    <section class="block wide">
+      <h2 class="sec">Wertentwicklung</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-wert"></div>
+        <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
+        <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
+        <div class="legend"><span><i style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Kennzahlen</h2>
+      <div class="kpis card">
+        <div class="kpi"><div class="kpi-l">Investiert</div><div class="kpi-r"><b id="k-inv"></b><span id="k-pnl">–</span></div></div>
+        <div class="kpi"><div class="kpi-l">Allzeithoch<small id="k-ath-date"></small></div><div class="kpi-r"><b id="k-ath"></b><span id="k-ath-sub"></span></div></div>
+        <div class="kpi"><div class="kpi-l" id="k-kurs-sub">Live-Kurs</div><div class="kpi-r"><b id="k-kurs"></b></div></div>
+        <div class="kpi"><div class="kpi-l">&Oslash; Kaufkurs</div><div class="kpi-r"><b id="k-eca"></b></div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="sec">Bitcoin-Kurs</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-preis"></div>
+        <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
+        <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
+        <div class="legend"><span><i style="background:var(--label)"></i>Kauf</span><span><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="sec">Stack</h2>
+      <div class="chart card">
+        <div class="scrub" id="scrub-sats"></div>
+        <div class="seg" data-chart="sats" role="group" aria-label="Zeitraum Stack"></div>
+        <div class="chart-wrap"><canvas id="chartSats" role="img"></canvas></div>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Bewegungen<span id="tx-count"></span></h2>
+      <div class="card">
+        <table><tbody id="tx-body"></tbody></table>
+        <button type="button" class="row" id="tx-more" hidden>Alle anzeigen</button>
+      </div>
+    </section>
+
+    <section class="block wide">
+      <h2 class="sec">Daten</h2>
+      <div class="group" style="background:var(--card)">
+        <button type="button" class="row" id="backup-btn">Backup herunterladen</button>
+        <button type="button" class="row" id="import-btn">Daten importieren</button>
+      </div>
+      <p class="note" style="margin-top:8px">Kursdaten: Coinbase (BTC/EUR). Daten werden verschl&uuml;sselt synchronisiert.</p>
+      <input type="file" id="import-input" accept=".json,.csv,text/csv,application/json" hidden>
+    </section>
   </div>
-
-  <div class="charts">
-    <section class="chart card">
-      <h2>Wertentwicklung</h2>
-      <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
-      <div class="scrub" id="scrub-wert"></div>
-      <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
-      <div class="legend"><span><i style="background:var(--pos)"></i>Portfoliowert</span><span><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span></div>
-    </section>
-    <section class="chart card">
-      <h2>Bitcoin-Kurs</h2>
-      <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
-      <div class="scrub" id="scrub-preis"></div>
-      <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
-      <div class="legend"><span><i style="background:var(--label)"></i>Kauf</span><span><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
-    </section>
-    <section class="chart card">
-      <h2>Stack</h2>
-      <div class="seg" data-chart="sats" role="group" aria-label="Zeitraum Stack"></div>
-      <div class="scrub" id="scrub-sats"></div>
-      <div class="chart-wrap"><canvas id="chartSats" role="img"></canvas></div>
-    </section>
-  </div>
-
-  <details class="card">
-    <summary><span>Alle Bewegungen<span id="tx-count"></span></span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
-    <table>
-      <thead><tr><th>Datum</th><th>Typ</th><th>Sats</th><th>Euro</th></tr></thead>
-      <tbody id="tx-body"></tbody>
-    </table>
-  </details>
-
-  <footer>
-    Kursdaten: Coinbase (BTC/EUR) &middot; Daten verschl&uuml;sselt synchronisiert
-    <br><button type="button" id="backup-btn">Backup herunterladen</button> &middot;
-    <button type="button" id="import-btn">Daten importieren</button>
-    <input type="file" id="import-input" accept=".json,.csv,text/csv,application/json" hidden>
-  </footer>
 </main>
-
-<button type="button" id="fab" aria-label="Neue Bewegung erfassen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <!-- ── Sheet: Bewegung erfassen/bearbeiten ── -->
 <div class="overlay" id="form-overlay"></div>
 <div class="sheet" id="form-sheet" role="dialog" aria-modal="true" aria-labelledby="form-title">
   <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
-    <button type="button" class="tb" data-close="form" aria-label="Abbrechen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button type="button" class="tb" data-close="form" aria-label="Abbrechen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
     <h2 id="form-title">Neue Bewegung</h2>
+    <button type="button" class="tb go" id="f-save" aria-label="Speichern"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5l4.5 4.5 8.5-10"/></svg></button>
   </div></div>
   <div class="seg" id="typ-seg" role="group" aria-label="Typ">
     <button type="button" data-typ="kauf">Kauf</button>
@@ -349,7 +384,6 @@
     <div class="row"><label for="f-label">Notiz</label><input type="text" id="f-label" placeholder="optional"></div>
   </div>
   <p class="note" id="f-hint"></p>
-  <button type="button" class="btn" id="f-save">Speichern</button>
   <div class="f-msg" id="f-msg"></div>
   <div class="group" id="f-delete-group" hidden><button type="button" class="row danger" id="f-delete">Bewegung l&ouml;schen</button></div>
 </div>
@@ -358,10 +392,10 @@
 <div class="overlay" id="set-overlay"></div>
 <div class="sheet" id="set-sheet" role="dialog" aria-modal="true" aria-labelledby="set-title">
   <div class="sheet-top"><i class="grab"></i><div class="sheet-head">
-    <button type="button" class="tb" data-close="set" aria-label="Schließen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button type="button" class="tb" data-close="set" aria-label="Schließen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
     <h2 id="set-title">Einstellungen</h2>
   </div></div>
-  <div class="group"><button type="button" class="row" id="s-paste">Einrichtungs-Code aus Zwischenablage einf&uuml;gen</button></div>
+  <div class="group"><button type="button" class="row" id="s-paste">Einrichtungs-Code einf&uuml;gen</button></div>
   <p class="note">Am anderen Ger&auml;t unter &bdquo;Einrichtungs-Code kopieren&ldquo; erzeugt &ndash; verbindet ohne Tippen.</p>
   <div class="group">
     <div class="row"><label for="s-token">GitHub-Token</label><input type="text" class="masked" id="s-token" name="cfg-a" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghp_&hellip;"><button type="button" class="eye" data-eye="s-token" aria-label="Token anzeigen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
@@ -372,11 +406,20 @@
   <button type="button" class="btn" id="s-connect">Verbinden &amp; synchronisieren</button>
   <div class="f-msg" id="s-msg"></div>
   <div class="group">
-    <button type="button" class="row" id="s-copycode">Einrichtungs-Code kopieren (f&uuml;r 2. Ger&auml;t)</button>
+    <button type="button" class="row" id="s-copycode">Einrichtungs-Code kopieren</button>
     <button type="button" class="row" id="s-sync-now">Jetzt synchronisieren</button>
     <button type="button" class="row" id="s-backup">Backup herunterladen (unverschl&uuml;sselt)</button>
   </div>
   <div class="group"><button type="button" class="row danger" id="s-disconnect">Sync auf diesem Ger&auml;t trennen</button></div>
+</div>
+
+<!-- ── Hinweis-Dialog ── -->
+<div class="overlay" id="alert-overlay"></div>
+<div id="alert" role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+  <h2 id="alert-title"></h2>
+  <p id="alert-text"></p>
+  <input type="text" id="alert-input" autocomplete="off" autocapitalize="none" spellcheck="false" hidden>
+  <div class="alert-btns"><button type="button" id="alert-cancel">Abbrechen</button><button type="button" id="alert-ok">OK</button></div>
 </div>
 
 <div id="toast" class="glass" role="status"></div>
@@ -424,6 +467,31 @@ function segPick(seg, btn) {
   bs.forEach(b => { b.classList.toggle("sel", b === btn); b.setAttribute("aria-pressed", b === btn); });
   seg.style.setProperty("--i", bs.indexOf(btn));
 }
+/* Hinweis-Dialog statt confirm()/prompt(): liefert true/false bzw. mit input den Text oder null */
+let alertDone = null;
+function ask({ title, text = "", ok = "OK", danger = false, input = false, value = "" }) {
+  return new Promise(resolve => {
+    const inp = $("alert-input");
+    $("alert-title").textContent = title;
+    $("alert-text").textContent = text;
+    $("alert-text").hidden = !text;
+    $("alert-ok").textContent = ok;
+    $("alert-ok").classList.toggle("danger", danger);
+    inp.hidden = !input;
+    inp.value = value;
+    ["alert", "alert-overlay"].forEach(id => $(id).classList.add("open"));
+    alertDone = yes => {
+      alertDone = null;
+      ["alert", "alert-overlay"].forEach(id => $(id).classList.remove("open"));
+      resolve(input ? (yes ? inp.value.trim() : null) : yes);
+    };
+    (input ? inp : $("alert-ok")).focus();
+    if (input && value) inp.select();
+  });
+}
+$("alert-ok").addEventListener("click", () => alertDone && alertDone(true));
+$("alert-cancel").addEventListener("click", () => alertDone && alertDone(false));
+$("alert-input").addEventListener("keydown", e => { if (e.key === "Enter" && alertDone) alertDone(true); });
 
 /* ═══════════ Datenspeicher (Bewegungen) ═══════════
    Bewegung: { id, person, date "YYYY-MM-DD", typ, sats (±Delta),
@@ -437,6 +505,7 @@ const LS_THEME = "btc-glass-theme";
 const LS_BACKUP = "btc-dash-lastbackup";
 const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
 const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
+const TX_PREVIEW = 5; /* so viele Bewegungen zeigt die Liste, bis „Alle anzeigen" getippt wird */
 
 let STORE = { schema: 3, updatedAt: 0, movements: [] };
 try {
@@ -777,6 +846,7 @@ function renderKpis({ live, fetchedAt, liveOk, candles }) {
   const pnlEl = $("k-pnl"), pctEl = $("k-pnl-pct"), cls = pnl >= 0 ? "pos" : "neg";
 
   countTo($("k-wert"), wert, fmtEur);
+  $("nav-value").textContent = fmtEur(wert); /* kompakter Titel in der Leiste, sobald der Kopf weggescrollt ist */
   $("k-btc-head").textContent = num(btc, 8);
   if (hasInvest) {
     countTo(pnlEl, pnl, v => sign(v) + fmtEur(v));
@@ -1022,7 +1092,7 @@ function renderCharts({ candles }) {
       elements: { line: { borderJoinStyle: "round", borderCapStyle: "round" } },
       scales: {
         x: { grid: { display: false }, border: { display: false }, ticks: { ...tick, callback: tickCb(labels), maxRotation: 0, autoSkip: false } },
-        y: { position: "right", min: y.min, max: y.max, border: { display: false, dash: [2, 4] }, grid: { color: C.sep, drawTicks: false },
+        y: { position: "right", min: y.min, max: y.max, border: { display: false }, grid: { color: C.sep, lineWidth: .5, drawTicks: false },
           ticks: { ...tick, padding: 8, stepSize: y.step, callback: yFmt } }
       } } });
   };
@@ -1116,17 +1186,18 @@ $$(".seg[data-chart]").forEach(seg => {
   });
 });
 
-/* ═══════════ Bewegungs-Tabelle ═══════════ */
+/* ═══════════ Bewegungen (Liste; neueste zuerst) ═══════════ */
 function renderTable() {
+  const body = $("tx-body");
   $("tx-count").textContent = ALL.length;
-  $("tx-body").innerHTML = [...ALL].reverse().map(b =>
-    '<tr data-id="' + esc(b.id) + '"><td>' + fmtDate(new Date(b.date + "T00:00:00").getTime()) +
-    (b.who ? ' <span class="tag">' + esc(b.who) + "</span>" : "") + "</td>" +
-    '<td><span class="typ">' + (TYP_NAME[b.typ] || "Kauf") + "</span></td>" +
-    "<td>" + fmtInt(b.sats) + "</td>" +
-    "<td>" + (b.eur ? fmtEur(b.eur) : (b.label ? '<span class="tag">' + esc(b.label) + "</span>" : "–")) + "</td></tr>"
-  ).join("");
+  body.innerHTML = [...ALL].reverse().map(b =>
+    '<tr data-id="' + esc(b.id) + '"><td><b>' + (TYP_NAME[b.typ] || "Kauf") + "</b><span>" +
+    esc([fmtDate(new Date(b.date + "T00:00:00").getTime()), b.who, b.label].filter(Boolean).join(" · ")) + "</span></td>" +
+    "<td><b>" + sign(b.sats) + fmtInt(b.sats) + " Sats</b>" + (b.eur ? "<span>" + fmtEur(b.eur) + "</span>" : "") + "</td></tr>"
+  ).join("") || '<tr class="empty"><td>Noch keine Bewegungen</td></tr>';
+  $("tx-more").hidden = ALL.length <= TX_PREVIEW || body.classList.contains("all");
 }
+$("tx-more").addEventListener("click", () => { $("tx-body").classList.add("all"); $("tx-more").hidden = true; });
 $("tx-body").addEventListener("click", e => {
   const tr = e.target.closest("tr[data-id]");
   if (tr) openForm(tr.dataset.id);
@@ -1191,7 +1262,15 @@ SHEETS.forEach(name => {
   top.addEventListener("pointerup", end);
   top.addEventListener("pointercancel", end);
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") SHEETS.forEach(closeSheet); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (alertDone) alertDone(false); else SHEETS.forEach(closeSheet);
+});
+/* Kompakter Titel in der Leiste, sobald der Portfoliowert aus dem Bild gescrollt ist */
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver(([e]) => $("topbar").classList.toggle("scrolled", !e.isIntersecting),
+    { rootMargin: "-64px 0px 0px 0px" }).observe(document.querySelector(".hero-value"));
+}
 
 /* ═══════════ Formular: Bewegung erfassen / bearbeiten ═══════════ */
 let fTyp = "kauf", fDir = "in", fEditId = null;
@@ -1218,15 +1297,16 @@ function setDir(d) {
 $("typ-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTyp(b.dataset.typ); });
 $("dir-seg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setDir(b.dataset.dir); });
 const typFromMov = m => m.typ || (m.eur > 0 ? "kauf" : m.sats < 0 ? "transfer" : "geschenk");
-$("f-person").addEventListener("change", e => {
-  if (e.target.value !== "__neu__") return;
-  const name = (prompt("Name der neuen Person (Kürzel wie in Numbers):") || "").trim();
+$("f-person").addEventListener("change", async e => {
+  const sel = e.target;
+  if (sel.value !== "__neu__") return;
+  const name = await ask({ title: "Neue Person", text: "Kürzel wie in Numbers.", ok: "Hinzufügen", input: true });
   if (name) {
     const opt = document.createElement("option");
     opt.value = opt.textContent = name;
-    e.target.insertBefore(opt, e.target.lastChild);
-    e.target.value = name;
-  } else e.target.value = person || personList()[0] || "";
+    sel.insertBefore(opt, sel.lastChild);
+    sel.value = name;
+  } else sel.value = person || personList()[0] || "";
 });
 function openForm(editId) {
   fEditId = editId || null;
@@ -1245,8 +1325,8 @@ function openForm(editId) {
   openSheet("form");
 }
 $("fab").addEventListener("click", () => openForm(null));
-$("f-delete").addEventListener("click", () => {
-  if (!fEditId || !confirm("Diese Bewegung wirklich löschen?")) return;
+$("f-delete").addEventListener("click", async () => {
+  if (!fEditId || !await ask({ title: "Bewegung löschen?", text: "Das lässt sich nicht rückgängig machen.", ok: "Löschen", danger: true })) return;
   deleteMov(fEditId);
   closeSheet("form");
   refreshAfterDataChange();
@@ -1278,7 +1358,7 @@ $("f-save").addEventListener("click", () => {
     if (!close) return msg("Kein Kurs verfügbar – bitte Sats angeben.", "err");
     sats = Math.round(eur / close * 1e8);
     $("f-sats").value = String(sats);
-    msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – Speichern erneut tippen zum Bestätigen.", "ok");
+    msg("Aus Kurs berechnet: " + fmtInt(sats) + " Sats – zum Bestätigen erneut auf den Haken tippen.", "ok");
     if (save.dataset.confirmed !== String(sats)) { save.dataset.confirmed = String(sats); return; }
   }
   delete save.dataset.confirmed;
@@ -1308,7 +1388,6 @@ $("settings-btn").addEventListener("click", () => {
   sMsg(cfg && cfg.lastSync ? "Zuletzt synchronisiert: " + new Date(cfg.lastSync).toLocaleString("de-DE") : "");
   openSheet("set");
 });
-$("sync-chip").addEventListener("click", () => $("settings-btn").click());
 $$(".eye").forEach(b => b.addEventListener("click", () => $(b.dataset.eye).classList.toggle("show")));
 /* iOS-Autofill fernhalten: Felder sind readonly, bis sie wirklich fokussiert werden */
 ["s-token", "s-gist", "s-pass"].forEach(id => {
@@ -1322,15 +1401,16 @@ const CODE_PREFIX = "BTCDASH1.";
 $("s-copycode").addEventListener("click", async () => {
   const cfg = syncCfg();
   if (!cfg || !cfg.token || !cfg.gistId || !cfg.pass) { toast("Erst hier verbinden, dann Code erzeugen"); return; }
-  if (!confirm("Der Code enthält Token, Gist-ID und dein Passwort im Klartext. Nur an dich selbst schicken und die Nachricht/Notiz danach löschen. Fortfahren?")) return;
+  if (!await ask({ title: "Einrichtungs-Code kopieren?", ok: "Kopieren",
+    text: "Der Code enthält Token, Gist-ID und dein Passwort im Klartext. Nur an dich selbst schicken und die Nachricht danach löschen." })) return;
   const code = CODE_PREFIX + b64(new TextEncoder().encode(JSON.stringify({ t: cfg.token, g: cfg.gistId, p: cfg.pass })));
   try { await navigator.clipboard.writeText(code); toast("Einrichtungs-Code kopiert"); }
-  catch (e) { prompt("Kopieren nicht möglich – Code manuell markieren:", code); }
+  catch (e) { await ask({ title: "Kopieren nicht möglich", text: "Code manuell markieren und kopieren.", input: true, value: code }); }
 });
 $("s-paste").addEventListener("click", async () => {
   let text = "";
   try { text = (await navigator.clipboard.readText() || "").trim(); }
-  catch (e) { text = (prompt("Einrichtungs-Code hier einfügen:") || "").trim(); }
+  catch (e) { text = await ask({ title: "Einrichtungs-Code", text: "Code hier einfügen.", ok: "Übernehmen", input: true }) || ""; }
   if (!text.startsWith(CODE_PREFIX)) return sMsg("Kein Einrichtungs-Code in der Zwischenablage gefunden.", "err");
   try {
     const o = JSON.parse(new TextDecoder().decode(unb64(text.slice(CODE_PREFIX.length))));
@@ -1376,8 +1456,8 @@ $("s-connect").addEventListener("click", async () => {
 $("s-sync-now").addEventListener("click", () => doSync(true).catch(() => {}));
 $("s-backup").addEventListener("click", downloadBackup);
 $("backup-btn").addEventListener("click", downloadBackup);
-$("s-disconnect").addEventListener("click", () => {
-  if (!confirm("Sync-Zugang auf diesem Gerät entfernen? (Daten bleiben lokal erhalten)")) return;
+$("s-disconnect").addEventListener("click", async () => {
+  if (!await ask({ title: "Sync trennen?", text: "Der Zugang wird auf diesem Gerät entfernt. Deine Daten bleiben lokal erhalten.", ok: "Trennen", danger: true })) return;
   setSyncCfg(null);
   syncStatus("", "Lokal");
   toast("Sync getrennt");
@@ -1452,6 +1532,7 @@ const refreshSpot = () => fetchSpot().then(setLive).catch(() => {});
     }
     maybeBackupReminder();
   } catch (e) {
+    document.querySelector(".spin").hidden = true;
     $("sk-note").innerHTML = "Dashboard konnte nicht geladen werden.<br><small>" + esc(String(e && e.message || e)) + "</small>";
   }
   if (syncCfg()) doSync().catch(() => {});
