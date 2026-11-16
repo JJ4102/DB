@@ -971,12 +971,13 @@ function dottedLine(chart, value, edge) {
   c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
   c.restore();
 }
-/* Bezugslinie, die mit jeder Einzahlung steigt: geglättet (zwischen den Käufen gleichmäßig ansteigend statt in Stufen)
-   und als durchgehende Linie – dünn und grau wie „Investiert" in der Max-Ansicht */
+/* Linien, die sich nur mit jedem Kauf ändern („Investiert", Startwert + Käufe, Ø Kaufkurs): geglättet – zwischen den Käufen
+   gleichmäßig verlaufend statt in Stufen – und als durchgehende, dünne graue Linie gezeichnet */
 const smoothRef = ref => {
   const out = ref.slice();
   let a = 0;
   for (let i = 1; i < ref.length; i++) {
+    if (ref[i] == null || ref[a] == null) { a = i; continue; } /* Lücken (noch kein Bestand) bleiben Lücken */
     if (ref[i] === ref[i - 1]) continue;
     for (let j = a + 1; j < i; j++) out[j] = ref[a] + (ref[i] - ref[a]) * (j - a) / (i - a);
     a = i;
@@ -1003,7 +1004,7 @@ const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => {
 const wholecoinerPlugin = { id: "wholecoiner", afterDatasetsDraw: ch => dottedLine(ch, 1e8, true) };
 /* Wertentwicklung und Bitcoin-Kurs: Fläche zwischen Linie und Bezugslinie („Investiert" bzw. Startwert plus Käufe; beim Kurs der Startkurs).
    Grün über, rot unter der Bezugslinie; Verlauf wie in den anderen Diagrammen (45 % → 0), jeweils von der Außenkante her.
-   stepped: Bezugslinie in Stufen („Investiert"); full: Verlauf über die ganze Höhe (Stufen und geglättete, ansteigende Bezugslinie). */
+   full: Verlauf über die ganze Höhe (geglättete, ansteigende Bezugslinie); stepped: Bezugslinie in Stufen (derzeit ungenutzt). */
 const betweenPlugin = {
   id: "between",
   beforeDatasetsDraw(chart) {
@@ -1233,17 +1234,17 @@ function renderCharts({ candles }) {
 
   /* ── Wertentwicklung ──
      Beginnt wie der Stack einen Tag vor dem ersten Kauf bei 0.
-     Max:  Wert gegen „Investiert" (graue Stufenlinie) – grün darüber, rot darunter, Fläche zwischen beiden Linien.
-     Zoom: ohne Investiert-Linie; Bezug ist der Startwert des Zeitraums plus die seither getätigten Käufe. Ohne Käufe eine
-           gepunktete Gerade; mit Käufen eine durchgehende, geglättete Linie, die zwischen den Käufen gleichmäßig ansteigt
-           (drawW) – grün darüber, rot darunter. Kopfzeile und Legende rechnen weiter mit dem exakten Stand (refW). */
+     Max:  Wert gegen „Investiert" – grün darüber, rot darunter, Fläche zwischen beiden Linien.
+     Zoom: Bezug ist der Startwert des Zeitraums plus die seither getätigten Käufe; ohne Käufe eine gepunktete Gerade.
+     Die Bezugslinie ist in beiden Fällen durchgehend und geglättet: sie steigt zwischen den Käufen gleichmäßig an (drawW).
+     Linienfarbe und Fläche folgen ihr; Kopfzeile und Legende rechnen weiter mit dem exakten Stand (refW). */
   const ptsW = thin(inRange("wert", firstTs - DAY)).map(mapPt), scW = { i: -1 }, maxW = RANGES.wert === "max";
   const [w0, w1] = span(ptsW), depW = w1.eur - w0.eur;
   const gW = w1.wert - w0.wert - depW;                 /* Wertänderung abzüglich Einzahlungen */
   const baseW = w0.wert + Math.max(0, depW), pctW = baseW > 0 ? gW / baseW * 100 : null, negW = gW < 0;
   const refW = ptsW.map(p => (maxW ? p.eur : w0.wert + p.eur - w0.eur));
   const flatW = !maxW && refW.every(x => x === refW[0]); /* Zoom ohne Käufe: gerade Startwert-Linie */
-  const riseW = !maxW && !flatW;                         /* Zoom mit Käufen: geglättete, durchgehende Bezugslinie */
+  const riseW = !flatW;                                  /* Max und Zoom mit Käufen: geglättete, durchgehende Bezugslinie */
   const drawW = riseW ? smoothRef(refW) : refW;          /* gezeichnete Bezugslinie – Linienfarbe und Fläche folgen ihr */
   /* Der Nullpunkt vor dem ersten Kauf liegt auf der Bezugslinie – er übernimmt die Farbe des ersten echten Punkts */
   const upW = i => (i === 0 && !ptsW[0].wert && !drawW[0] && ptsW.length > 1 ? upW(1) : ptsW[i].wert >= drawW[i]);
@@ -1257,16 +1258,16 @@ function renderCharts({ candles }) {
   $("legend-inv-wrap").hidden = !maxW;
   $("legend-base").hidden = maxW;
   $("legend-base-name").textContent = flatW || maxW ? "Startwert" : "Startwert + Käufe";
-  $("legend-base-icon").className = riseW ? "dash" : "dots";
-  $("legend-base-icon").style.background = riseW ? "var(--ch-gray)" : "";
+  $("legend-base-icon").className = flatW ? "dots" : "dash";
+  $("legend-base-icon").style.background = flatW ? "" : "var(--ch-gray)";
   const yW = axisBounds(ptsW.map(p => p.wert).concat(refW), 10000);
   const dense = narrow && maxW; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
   attachScrub(make("chartWert", ptsW, yW, fmtAxisK(yW.step), [
     line(ptsW.map(p => p.wert), colAtW, scW, { label: "Portfoliowert", borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 })
-  ].concat(maxW ? [line(ptsW.map(p => p.eur), () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })] : []),
+  ].concat(maxW ? [line(drawW, () => C.gray, scW, { label: "Investiert", borderWidth: 1.25 })] : []),
   [betweenPlugin, baselinePlugin, scrubPlugin]), scW, {
-    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: flatW ? w0.wert : null, baseLine: riseW ? drawW : null,
-    between: { ref: drawW, stepped: maxW, full: riseW },
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: flatW ? w0.wert : null, baseLine: riseW && !maxW ? drawW : null,
+    between: { ref: drawW, stepped: false, full: riseW },
     idle: () => {
       legendW(ptsW.length - 1);
       return scrubHtml(sign(gW) + fmtEur(gW), pctW != null ? fmtPct(pctW) : "", negW,
@@ -1299,7 +1300,7 @@ function renderCharts({ candles }) {
   /* ── Bitcoin-Kurs: gleiche Farb- und Flächenlogik wie die Wertentwicklung – Bezug ist der Startkurs des Zeitraums
      (gepunktet): grün darüber, rot darunter, Fläche zwischen Kurs und Startkurs. Die Kopfzeile nennt den Live-Kurs,
      daneben dezent die Änderung im Zeitraum. Der Schalter (showBuys, Standard: aus) blendet Käufe als Punkte und den
-     Ø Kaufkurs gestrichelt ein; ohne ihn richtet sich die Achse nur nach dem Kurs und der Scrub rastet nicht auf Käufe ein. ── */
+     Ø Kaufkurs als durchgehende, geglättete Linie ein; ohne ihn richtet sich die Achse nur nach dem Kurs und der Scrub rastet nicht auf Käufe ein. ── */
   const ptsK = thin(inRange("preis", 0)).map(mapPt), scK = { i: -1 };
   const byDay = new Map();
   for (const b of ALL) {
@@ -1318,14 +1319,14 @@ function renderCharts({ candles }) {
     dotInfo[i] = x;
     dotR[i] = 2.2 + 3.3 * Math.sqrt(x.eur / vMax); /* Größe nach Kaufsumme */
   }
-  const avgLine = ptsK.map(p => (showBuys && p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
+  const avgLine = smoothRef(ptsK.map(p => (showBuys && p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null)));
   const k0 = ptsK[0], upK = i => ptsK[i].close >= k0.close, colAtK = i => (upK(i) ? C.pos : C.neg);
   const pctK = v => (v / k0.close - 1) * 100;
   const legendK = i => { $("legend-kurs-dot").style.background = upK(i) ? "var(--pos)" : "var(--neg)"; };
   const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), [10000, 20000], 9);
   attachScrub(make("chartPreis", ptsK, yK, fmtAxisK(yK.step), [
     line(ptsK.map(p => p.close), colAtK, scK, { label: "BTC-Kurs", tension: .2, order: 3 }),
-    { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, borderDash: [4, 4], pointRadius: 0, spanGaps: true, order: 2 },
+    { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, pointRadius: 0, spanGaps: true, order: 2 },
     { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
       pointRadius: c => dotR[c.dataIndex] || 0, order: 1 }
   ], [betweenPlugin, baselinePlugin, scrubPlugin]), scK, {

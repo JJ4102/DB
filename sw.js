@@ -2,7 +2,7 @@
    Seite (HTML): immer zuerst frisch vom Server, der Cache dient nur als Offline-Ersatz –
    so ist ein Update beim nächsten Öffnen sichtbar.
    Übrige Hülle (Icons, Manifest, Chart.js): aus dem Cache, im Hintergrund aufgefrischt. */
-const CACHE = "btc-dash-v20";
+const CACHE = "btc-dash-v21";
 const SHELL = [
   "./",
   "./index.html",
