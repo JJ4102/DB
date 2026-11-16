@@ -1663,8 +1663,20 @@ const refreshSpot = () => fetchSpot().then(setLive).catch(() => {});
     if (syncCfg()) doSync().catch(() => {});
     if (lastMarket) refreshSpot();
   });
+  /* Service Worker: bei jedem Öffnen nach Updates fragen (iOS tut das in Home-Screen-Apps selten von sich aus);
+     übernimmt eine neue Version, lädt die Seite einmal neu, damit sie sofort sichtbar ist */
   if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    const sw = navigator.serviceWorker, hadController = !!sw.controller;
+    let reloaded = false;
+    sw.addEventListener("controllerchange", () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+    sw.register("sw.js", { updateViaCache: "none" }).then(reg => {
+      reg.update().catch(() => {});
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
   }
 })();
 </script>
