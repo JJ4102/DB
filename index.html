@@ -34,7 +34,7 @@
     /* … und kontraststärkere Varianten für Text (≥ 4,5:1) */
     --pos-text: #00802E; --neg-text: #AC0C20;
     --ch-after: #C7C7CC; --ch-fill-after: rgba(142,142,147,.1);
-    --seg-thumb: #FFFFFF;
+    --seg-thumb: #FFFFFF; --knob: #FFFFFF;
     /* Materialien */
     --glass: rgba(255,255,255,.66); --glass-edge: rgba(255,255,255,.75); --glass-hi: rgba(255,255,255,.7);
     --glass-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.09);
@@ -52,7 +52,7 @@
     --pos: #30D158; --neg: #CC3537; --warn: #FFD600;
     --pos-text: #30D158; --neg-text: #CC3537;
     --ch-after: #48484A; --ch-fill-after: rgba(142,142,147,.12);
-    --seg-thumb: #636366;
+    --seg-thumb: #636366; --knob: #FFFFFF;
     --glass: rgba(58,58,60,.62); --glass-edge: rgba(255,255,255,.14); --glass-hi: rgba(255,255,255,.12);
     --glass-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.45);
   }
@@ -153,6 +153,15 @@
   .scrub-value { font-size: var(--title2); font-weight: 600; }
   .scrub-delta { font-size: var(--sub); font-weight: 600; }
   .scrub-cap { font-size: var(--foot); color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Kopfzeile mit Schalter rechts (Kurs-Diagramm: Käufe und Ø Kaufkurs ein-/ausblenden) */
+  .chart-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .chart-head .scrub { flex: 1; min-width: 0; margin-bottom: 0; }
+  .switch { position: relative; flex: none; width: 51px; height: 44px; border: 0; border-radius: 99px; background: none; }
+  .switch::before { content: ""; position: absolute; inset: 6.5px 0; border-radius: 99px; background: var(--fill-strong); transition: background-color .25s; }
+  .switch::after { content: ""; position: absolute; top: 8.5px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--knob);
+    box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .25s var(--ease); }
+  .switch[aria-checked="true"]::before { background: var(--accent-fill); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
   .chart-wrap { position: relative; height: 260px; margin-top: 10px; }
   .chart-wrap canvas { position: absolute; left: 0; top: 0; touch-action: pan-y; }
   .legend { display: flex; gap: 14px; height: 1.9rem; overflow: hidden; white-space: nowrap; align-items: flex-end;
@@ -339,10 +348,13 @@
     <section class="block" data-view="preis">
       <h2 class="sec">Bitcoin-Kurs</h2>
       <div class="chart card">
-        <div class="scrub" id="scrub-preis"></div>
+        <div class="chart-head">
+          <div class="scrub" id="scrub-preis"></div>
+          <button type="button" class="switch" id="buys-toggle" role="switch" aria-checked="true" aria-label="Käufe und Ø Kaufkurs anzeigen"></button>
+        </div>
         <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
         <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
-        <div class="legend"><span><i style="background:var(--label)"></i>Kauf</span><span><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
+        <div class="legend"><span id="legend-kurs" hidden><i id="legend-kurs-dot" style="background:var(--pos)"></i>Kurs</span><span id="legend-buys"><i style="background:var(--label)"></i>Kauf</span><span id="legend-avg"><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
       </div>
     </section>
 
@@ -538,6 +550,7 @@ const LS_SET   = "btc-dash-sync-v1";
 const LS_HIST  = "btc-dash-hist-v1";
 const LS_THEME = "btc-glass-theme";
 const LS_BACKUP = "btc-dash-lastbackup";
+const LS_BUYS  = "btc-dash-buys-v1"; /* Kurs-Diagramm: Käufe und Ø Kaufkurs anzeigen ("0" = aus) */
 const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
 const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
 const TX_PREVIEW = 5; /* Desktop: so viele Bewegungen zeigt die Liste, bis „Alle anzeigen" getippt wird */
@@ -839,6 +852,8 @@ async function fetchSpot() {
 let person = null;
 let ALL = [];            // Bewegungen der gewählten Person, nach Datum sortiert
 let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
+let showBuys = true;     // Kurs-Diagramm: Kaufpunkte und Ø Kaufkurs einblenden
+try { showBuys = localStorage.getItem(LS_BUYS) !== "0"; } catch (e) {}
 const RANGES = { wert: "max", preis: "max", sats: "max" };
 const RANGE_DAYS = { "1w": 7, "1m": 30, "6m": 183, "1y": 365 };
 const RANGE_NAME = { "1w": "7 Tage", "1m": "30 Tage", "6m": "6 Monate", "1y": "1 Jahr", max: "Gesamt" };
@@ -1236,7 +1251,9 @@ function renderCharts({ candles }) {
     html: i => scrubHtml(fmtInt(ptsS[i].sats) + " Sats", "", 0, fmtDate(ptsS[i].t))
   }, C);
 
-  /* ── Bitcoin-Kurs: Linie in Trendfarbe des Zeitraums, Käufe als Punkte, Ø Kaufkurs gestrichelt ── */
+  /* ── Bitcoin-Kurs: Linie in Trendfarbe des Zeitraums, Käufe als Punkte, Ø Kaufkurs gestrichelt.
+     Der Schalter in der Kopfzeile (showBuys) blendet Käufe und Ø Kaufkurs aus: dann bleibt die reine Kurslinie,
+     die Achse richtet sich nur nach dem Kurs und der Scrub rastet nicht mehr auf Käufe ein. ── */
   const ptsK = thin(inRange("preis", 0)).map(mapPt), scK = { i: -1 };
   const byDay = new Map();
   for (const b of ALL) {
@@ -1247,7 +1264,7 @@ function renderCharts({ candles }) {
   }
   const dots = ptsK.map(() => null), dotInfo = ptsK.map(() => null), dotR = ptsK.map(() => 0);
   const vMax = Math.max(1, ...[...byDay.values()].map(x => x.eur));
-  for (const [t, x] of byDay) {
+  for (const [t, x] of showBuys ? byDay : []) {
     if (t < ptsK[0].t - DAY) continue; /* Käufe vor dem gewählten Zeitraum nicht anzeigen */
     let i = ptsK.findIndex(p => p.t >= t);
     if (i < 0) i = ptsK.length - 1;
@@ -1255,8 +1272,9 @@ function renderCharts({ candles }) {
     dotInfo[i] = x;
     dotR[i] = 2.2 + 3.3 * Math.sqrt(x.eur / vMax); /* Größe nach Kaufsumme */
   }
-  const avgLine = ptsK.map(p => (p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
+  const avgLine = ptsK.map(p => (showBuys && p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
   const [k0, k1] = span(ptsK), kPct = (k1.close / k0.close - 1) * 100, colK = kPct < 0 ? C.neg : C.pos;
+  $("legend-kurs-dot").style.background = kPct < 0 ? "var(--neg)" : "var(--pos)";
   const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000);
   attachScrub(make("chartPreis", ptsK, yK, fmtAxisK(yK.step), [
     line(ptsK.map(p => p.close), () => colK, scK, { label: "BTC-Kurs", tension: .2, order: 3, fill: "start", backgroundColor: grad(colK) }),
@@ -1288,6 +1306,21 @@ $$(".seg[data-chart]").forEach(seg => {
     if (lastMarket) renderCharts(lastMarket);
   });
 });
+
+/* ═══════════ Schalter im Kurs-Diagramm: Käufe und Ø Kaufkurs ═══════════
+   Die Wahl bleibt auf dem Gerät gespeichert. Ausgeschaltet nennt die Legende stattdessen die Kurslinie. */
+function applyBuys() {
+  $("buys-toggle").setAttribute("aria-checked", showBuys);
+  $("legend-kurs").hidden = showBuys;
+  $("legend-buys").hidden = $("legend-avg").hidden = !showBuys;
+}
+$("buys-toggle").addEventListener("click", () => {
+  showBuys = !showBuys;
+  try { localStorage.setItem(LS_BUYS, showBuys ? "1" : "0"); } catch (e) {}
+  applyBuys();
+  if (lastMarket) renderCharts(lastMarket);
+});
+applyBuys();
 
 /* ═══════════ Ansicht wählen (schwebende Leiste, iPhone) ═══════════
    Auf dem iPhone ist immer genau ein Abschnitt sichtbar; ab 700 px stehen alle untereinander. */
