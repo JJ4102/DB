@@ -34,7 +34,7 @@
     /* … und kontraststärkere Varianten für Text (≥ 4,5:1) */
     --pos-text: #00802E; --neg-text: #AC0C20;
     --ch-after: #C7C7CC; --ch-fill-after: rgba(142,142,147,.1);
-    --seg-thumb: #FFFFFF; --knob: #FFFFFF;
+    --seg-thumb: #FFFFFF; --knob: #FFFFFF; --switch-on: #636366; --knob-ink: #3A3A3C;
     /* Materialien */
     --glass: rgba(255,255,255,.66); --glass-edge: rgba(255,255,255,.75); --glass-hi: rgba(255,255,255,.7);
     --glass-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.09);
@@ -52,7 +52,7 @@
     --pos: #30D158; --neg: #CC3537; --warn: #FFD600;
     --pos-text: #30D158; --neg-text: #CC3537;
     --ch-after: #48484A; --ch-fill-after: rgba(142,142,147,.12);
-    --seg-thumb: #636366; --knob: #FFFFFF;
+    --seg-thumb: #636366; --knob: #FFFFFF; --switch-on: #8E8E93; --knob-ink: #1C1C1E;
     --glass: rgba(58,58,60,.62); --glass-edge: rgba(255,255,255,.14); --glass-hi: rgba(255,255,255,.12);
     --glass-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.45);
   }
@@ -158,10 +158,12 @@
   .chart-head .scrub { flex: 1; min-width: 0; margin-bottom: 0; }
   .switch { position: relative; flex: none; width: 51px; height: 44px; border: 0; border-radius: 99px; background: none; }
   .switch::before { content: ""; position: absolute; inset: 6.5px 0; border-radius: 99px; background: var(--fill-strong); transition: background-color .25s; }
-  .switch::after { content: ""; position: absolute; top: 8.5px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--knob);
-    box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .25s var(--ease); }
-  .switch[aria-checked="true"]::before { background: var(--accent-fill); }
-  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  /* Knopf trägt das Durchschnittszeichen: der Schalter blendet Käufe und Ø Kaufkurs ein. Bewusst in Graustufen. */
+  .switch::after { content: "\00D8"; position: absolute; top: 8.5px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--knob);
+    display: grid; place-items: center; font-size: 14px; font-weight: 600; line-height: 1; color: var(--ch-gray);
+    box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .25s var(--ease), color .25s; }
+  .switch[aria-checked="true"]::before { background: var(--switch-on); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); color: var(--knob-ink); }
   .chart-wrap { position: relative; height: 260px; margin-top: 10px; }
   .chart-wrap canvas { position: absolute; left: 0; top: 0; touch-action: pan-y; }
   .legend { display: flex; gap: 14px; height: 1.9rem; overflow: hidden; white-space: nowrap; align-items: flex-end;
@@ -295,8 +297,9 @@
 
   #toast { position: fixed; z-index: 40; left: 50%; top: calc(64px + env(safe-area-inset-top)); width: max-content; max-width: calc(100vw - 32px);
     border-radius: 99px; padding: 12px 20px; font-size: var(--sub); font-weight: 500; text-align: center;
-    opacity: 0; pointer-events: none; transform: translate(-50%, -20px); transition: opacity .3s, transform .3s var(--ease); }
-  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+    opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, -20px);
+    transition: opacity .3s, transform .3s var(--ease), visibility 0s .3s; }
+  #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition-delay: 0s; }
 </style>
 </head>
 <body>
@@ -341,7 +344,7 @@
         <div class="scrub" id="scrub-wert"></div>
         <div class="seg" data-chart="wert" role="group" aria-label="Zeitraum Wertentwicklung"></div>
         <div class="chart-wrap"><canvas id="chartWert" role="img"></canvas></div>
-        <div class="legend"><span><i id="legend-wert-dot" style="background:var(--pos)"></i>Portfoliowert</span><span id="legend-inv-wrap"><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span><span id="legend-base" hidden><i class="dots"></i>Startwert <span id="legend-base-val"></span></span></div>
+        <div class="legend"><span><i id="legend-wert-dot" style="background:var(--pos)"></i>Portfoliowert</span><span id="legend-inv-wrap"><i style="background:var(--ch-gray)"></i>Investiert <span id="legend-inv"></span></span><span id="legend-base" hidden><i class="dots"></i><span id="legend-base-name">Startwert</span> <span id="legend-base-val"></span></span></div>
       </div>
     </section>
 
@@ -350,11 +353,11 @@
       <div class="chart card">
         <div class="chart-head">
           <div class="scrub" id="scrub-preis"></div>
-          <button type="button" class="switch" id="buys-toggle" role="switch" aria-checked="true" aria-label="Käufe und Ø Kaufkurs anzeigen"></button>
+          <button type="button" class="switch" id="buys-toggle" role="switch" aria-checked="false" aria-label="Käufe und Ø Kaufkurs anzeigen"></button>
         </div>
         <div class="seg" data-chart="preis" role="group" aria-label="Zeitraum Bitcoin-Kurs"></div>
         <div class="chart-wrap"><canvas id="chartPreis" role="img"></canvas></div>
-        <div class="legend"><span id="legend-kurs" hidden><i id="legend-kurs-dot" style="background:var(--pos)"></i>Kurs</span><span id="legend-buys"><i style="background:var(--label)"></i>Kauf</span><span id="legend-avg"><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
+        <div class="legend"><span id="legend-kurs"><i id="legend-kurs-dot" style="background:var(--pos)"></i>Kurs</span><span id="legend-start"><i class="dots"></i>Startkurs</span><span id="legend-buys"><i style="background:var(--label)"></i>Kauf</span><span id="legend-avg"><i class="dash" style="background:var(--ch-gray)"></i>&Oslash; Kaufkurs</span></div>
       </div>
     </section>
 
@@ -550,7 +553,7 @@ const LS_SET   = "btc-dash-sync-v1";
 const LS_HIST  = "btc-dash-hist-v1";
 const LS_THEME = "btc-glass-theme";
 const LS_BACKUP = "btc-dash-lastbackup";
-const LS_BUYS  = "btc-dash-buys-v1"; /* Kurs-Diagramm: Käufe und Ø Kaufkurs anzeigen ("0" = aus) */
+const LS_BUYS  = "btc-dash-buys-v1"; /* Kurs-Diagramm: Käufe und Ø Kaufkurs anzeigen ("1" = an; Standard: aus) */
 const PERSON_ORDER = ["YP", "AKT", "AKT & YP", "KP", "LMW", "LW", "TP", "GP", "HP", "VS"];
 const TYP_NAME = { kauf: "Kauf", verkauf: "Verkauf", transfer: "Transfer", gebuehr: "Gebühr", geschenk: "Geschenk" };
 const TX_PREVIEW = 5; /* Desktop: so viele Bewegungen zeigt die Liste, bis „Alle anzeigen" getippt wird */
@@ -852,8 +855,8 @@ async function fetchSpot() {
 let person = null;
 let ALL = [];            // Bewegungen der gewählten Person, nach Datum sortiert
 let lastMarket = null;   // { candles, live, fetchedAt, liveOk }
-let showBuys = true;     // Kurs-Diagramm: Kaufpunkte und Ø Kaufkurs einblenden
-try { showBuys = localStorage.getItem(LS_BUYS) !== "0"; } catch (e) {}
+let showBuys = false;    // Kurs-Diagramm: Kaufpunkte und Ø Kaufkurs einblenden (Standard: aus)
+try { showBuys = localStorage.getItem(LS_BUYS) === "1"; } catch (e) {}
 const RANGES = { wert: "max", preis: "max", sats: "max" };
 const RANGE_DAYS = { "1w": 7, "1m": 30, "6m": 183, "1y": 365 };
 const RANGE_NAME = { "1w": "7 Tage", "1m": "30 Tage", "6m": "6 Monate", "1y": "1 Jahr", max: "Gesamt" };
@@ -872,6 +875,9 @@ function setLive(p) {
   m.live = p; m.fetchedAt = Date.now(); m.liveOk = true;
   if (last && Date.now() - last.t < 2 * DAY) last.close = p;
   renderKpis(m);
+  /* Kopfzeile des Kurs-Diagramms zeigt den Live-Kurs – mitziehen, solange nicht gescrubbt wird */
+  const sk = window.Chart && Chart.getChart("chartPreis")?.$scrub;
+  if (sk && sk.i < 0) sk.show(-1);
 }
 
 /* Sanft zählende Zahlen (Portfoliowert, G/V, Kurs) */
@@ -965,10 +971,26 @@ function dottedLine(chart, value, edge) {
   c.beginPath(); c.moveTo(left, y); c.lineTo(right, y); c.stroke();
   c.restore();
 }
-const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => dottedLine(ch, ch.$scrub && ch.$scrub.cfg.base) };
+/* Gepunktete Stufenlinie durch die Werte ref (Bezugslinie, die mit jeder Einzahlung steigt) */
+function dottedSteps(chart, ref) {
+  const s = chart.$scrub, a = chart.chartArea, pts = chart.getDatasetMeta(0).data;
+  if (!s || !a || pts.length < 2) return;
+  const y = i => chart.scales.y.getPixelForValue(ref[i]), c = chart.ctx;
+  c.save();
+  c.beginPath(); c.rect(a.left - 1, a.top - 1, a.right - a.left + 2, a.bottom - a.top + 2); c.clip();
+  c.strokeStyle = s.C.gray; c.globalAlpha = .7; c.lineWidth = 2; c.lineCap = "round"; c.setLineDash([.1, 6]);
+  c.beginPath(); c.moveTo(pts[0].x, y(0));
+  for (let i = 1; i < pts.length; i++) { c.lineTo(pts[i].x, y(i - 1)); c.lineTo(pts[i].x, y(i)); }
+  c.stroke();
+  c.restore();
+}
+const baselinePlugin = { id: "baseline", beforeDatasetsDraw: ch => {
+  const cfg = ch.$scrub && ch.$scrub.cfg;
+  if (cfg && cfg.baseSteps) dottedSteps(ch, cfg.baseSteps); else dottedLine(ch, cfg && cfg.base);
+} };
 /* Wholecoiner-Marke bei 100 Mio. Sats: ersetzt dort die Gitterlinie, die Achse nennt sie „1 ₿" */
 const wholecoinerPlugin = { id: "wholecoiner", afterDatasetsDraw: ch => dottedLine(ch, 1e8, true) };
-/* Wertentwicklung: Fläche zwischen Wert-Linie und Bezugslinie („Investiert" bei Max, sonst Startwert).
+/* Wertentwicklung und Bitcoin-Kurs: Fläche zwischen Linie und Bezugslinie („Investiert" bzw. Startwert plus Käufe; beim Kurs der Startkurs).
    Grün über, rot unter der Bezugslinie; Verlauf wie in den anderen Diagrammen (45 % → 0), jeweils von der Außenkante her. */
 const betweenPlugin = {
   id: "between",
@@ -1041,7 +1063,7 @@ function attachScrub(chart, s, cfg, C) {
   s.cfg = cfg; s.C = C;
   chart.$scrub = s;
   const line = $(cfg.line), canvas = chart.canvas;
-  const show = i => { line.innerHTML = !cfg.n ? "" : i < 0 ? cfg.idle() : cfg.html(i); };
+  const show = s.show = i => { line.innerHTML = !cfg.n ? "" : i < 0 ? cfg.idle() : cfg.html(i); };
   show(-1);
   canvas.setAttribute("aria-label", cfg.name + ": " + line.textContent);
   const setIdx = i => {
@@ -1152,17 +1174,18 @@ function renderCharts({ candles }) {
       return i % every === 0 ? fmt(labels[i]) : "";
     };
   };
-  /* Y-Achse: feste Schritte (10.000 € / 10 Mio. Sats); bei kurzen Zeiträumen feinere 1/2/5-Schritte */
-  const axisBounds = (vals, prefStep) => {
+  /* Y-Achse: feste Schritte (10.000 € / 10 Mio. Sats; Kurs: 10.000 €, bei großer Spanne 20.000 €) – der erste passende
+     Schritt gewinnt, der letzte darf bis zu maxTicks Linien ergeben; bei kurzen Zeiträumen feinere 1/2/5-Schritte */
+  const axisBounds = (vals, prefSteps, maxTicks = 7) => {
     let lo = Infinity, hi = -Infinity;
     for (const x of vals) { if (x == null || !isFinite(x)) continue; if (x < lo) lo = x; if (x > hi) hi = x; }
     if (!isFinite(lo)) { lo = 0; hi = 1; }
     if (lo === hi) { const pad = Math.max(1, hi * 0.05); lo = Math.max(0, lo - pad); hi += pad; }
-    let step = prefStep;
-    const ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
-    if (ticks(step) < 2 || ticks(step) > 7) {
+    const prefs = [].concat(prefSteps), ticks = s => Math.ceil(hi / s) - Math.floor(lo / s);
+    let step = prefs.find((s, i) => ticks(s) >= 2 && ticks(s) <= (i === prefs.length - 1 ? maxTicks : 7));
+    if (!step) {
       const mag = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4)));
-      step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefStep;
+      step = [1, 2, 5, 10].map(m => m * mag).find(s => (hi - lo) / s <= 5) || prefs[0];
     }
     return { min: Math.max(0, Math.floor(lo / step) * step), max: Math.ceil(hi / step) * step, step };
   };
@@ -1197,31 +1220,37 @@ function renderCharts({ candles }) {
   const span = pts => [pts[0], pts[pts.length - 1]];
 
   /* ── Wertentwicklung ──
+     Beginnt wie der Stack einen Tag vor dem ersten Kauf bei 0.
      Max:  Wert gegen „Investiert" (graue Stufenlinie) – grün darüber, rot darunter, Fläche zwischen beiden Linien.
-     Zoom: ohne Investiert-Linie; Bezug ist der Startwert des Zeitraums (gepunktete Basislinie) – grün darüber, rot darunter.
-     Die Kopfzeile nennt in beiden Fällen das Ergebnis des Zeitraums. */
-  const ptsW = thin(inRange("wert", firstTs)).map(mapPt), scW = { i: -1 }, maxW = RANGES.wert === "max";
+     Zoom: ohne Investiert-Linie; Bezug ist der Startwert des Zeitraums plus die seither getätigten Käufe (gepunktet; ohne Käufe
+           eine Gerade, sonst steigt sie mit jedem Kauf) – grün darüber, rot darunter.
+     Kopfzeile, Linienfarbe und Fläche messen damit dasselbe: das Ergebnis des Zeitraums ohne Einzahlungen. */
+  const ptsW = thin(inRange("wert", firstTs - DAY)).map(mapPt), scW = { i: -1 }, maxW = RANGES.wert === "max";
   const [w0, w1] = span(ptsW), depW = w1.eur - w0.eur;
   const gW = w1.wert - w0.wert - depW;                 /* Wertänderung abzüglich Einzahlungen */
   const baseW = w0.wert + Math.max(0, depW), pctW = baseW > 0 ? gW / baseW * 100 : null, negW = gW < 0;
-  const refW = ptsW.map(p => (maxW ? p.eur : w0.wert));
-  const upW = i => ptsW[i].wert >= refW[i], colAtW = i => (upW(i) ? C.pos : C.neg);
+  const refW = ptsW.map(p => (maxW ? p.eur : w0.wert + p.eur - w0.eur));
+  const flatW = !maxW && refW.every(x => x === refW[0]); /* Zoom ohne Käufe: gerade Startwert-Linie */
+  /* Der Nullpunkt vor dem ersten Kauf liegt auf der Bezugslinie – er übernimmt die Farbe des ersten echten Punkts */
+  const upW = i => (i === 0 && !ptsW[0].wert && !refW[0] && ptsW.length > 1 ? upW(1) : ptsW[i].wert >= refW[i]);
+  const colAtW = i => (upW(i) ? C.pos : C.neg);
   /* Legende folgt dem gezeigten Punkt: Farbe des Portfoliowerts und Stand von „Investiert" */
   const legendW = i => {
     $("legend-wert-dot").style.background = upW(i) ? "var(--pos)" : "var(--neg)";
     $("legend-inv").textContent = fmtEur(ptsW[i].eur);
+    $("legend-base-val").textContent = fmtEur(refW[i]);
   };
   $("legend-inv-wrap").hidden = !maxW;
   $("legend-base").hidden = maxW;
-  $("legend-base-val").textContent = fmtEur(w0.wert);
-  const yW = axisBounds(ptsW.flatMap(p => (maxW ? [p.wert, p.eur] : [p.wert])), 10000);
+  $("legend-base-name").textContent = flatW || maxW ? "Startwert" : "Startwert + Käufe";
+  const yW = axisBounds(ptsW.map(p => p.wert).concat(refW), 10000);
   const dense = narrow && maxW; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
   attachScrub(make("chartWert", ptsW, yW, fmtAxisK(yW.step), [
     line(ptsW.map(p => p.wert), colAtW, scW, { label: "Portfoliowert", borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 })
   ].concat(maxW ? [line(ptsW.map(p => p.eur), () => C.gray, scW, { label: "Investiert", borderWidth: 1.25, stepped: true })] : []),
   [betweenPlugin, baselinePlugin, scrubPlugin]), scW, {
-    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: maxW ? null : w0.wert,
-    between: { ref: refW, stepped: maxW },
+    line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: flatW ? w0.wert : null, baseSteps: maxW || flatW ? null : refW,
+    between: { ref: refW, stepped: !flatW },
     idle: () => {
       legendW(ptsW.length - 1);
       return scrubHtml(sign(gW) + fmtEur(gW), pctW != null ? fmtPct(pctW) : "", negW,
@@ -1251,9 +1280,10 @@ function renderCharts({ candles }) {
     html: i => scrubHtml(fmtInt(ptsS[i].sats) + " Sats", "", 0, fmtDate(ptsS[i].t))
   }, C);
 
-  /* ── Bitcoin-Kurs: Linie in Trendfarbe des Zeitraums, Käufe als Punkte, Ø Kaufkurs gestrichelt.
-     Der Schalter in der Kopfzeile (showBuys) blendet Käufe und Ø Kaufkurs aus: dann bleibt die reine Kurslinie,
-     die Achse richtet sich nur nach dem Kurs und der Scrub rastet nicht mehr auf Käufe ein. ── */
+  /* ── Bitcoin-Kurs: gleiche Farb- und Flächenlogik wie die Wertentwicklung – Bezug ist der Startkurs des Zeitraums
+     (gepunktet): grün darüber, rot darunter, Fläche zwischen Kurs und Startkurs. Die Kopfzeile nennt den Live-Kurs,
+     daneben dezent die Änderung im Zeitraum. Der Schalter (showBuys, Standard: aus) blendet Käufe als Punkte und den
+     Ø Kaufkurs gestrichelt ein; ohne ihn richtet sich die Achse nur nach dem Kurs und der Scrub rastet nicht auf Käufe ein. ── */
   const ptsK = thin(inRange("preis", 0)).map(mapPt), scK = { i: -1 };
   const byDay = new Map();
   for (const b of ALL) {
@@ -1273,22 +1303,31 @@ function renderCharts({ candles }) {
     dotR[i] = 2.2 + 3.3 * Math.sqrt(x.eur / vMax); /* Größe nach Kaufsumme */
   }
   const avgLine = ptsK.map(p => (showBuys && p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null));
-  const [k0, k1] = span(ptsK), kPct = (k1.close / k0.close - 1) * 100, colK = kPct < 0 ? C.neg : C.pos;
-  $("legend-kurs-dot").style.background = kPct < 0 ? "var(--neg)" : "var(--pos)";
-  const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), 10000);
+  const k0 = ptsK[0], upK = i => ptsK[i].close >= k0.close, colAtK = i => (upK(i) ? C.pos : C.neg);
+  const pctK = v => (v / k0.close - 1) * 100;
+  const legendK = i => { $("legend-kurs-dot").style.background = upK(i) ? "var(--pos)" : "var(--neg)"; };
+  const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), [10000, 20000], 9);
   attachScrub(make("chartPreis", ptsK, yK, fmtAxisK(yK.step), [
-    line(ptsK.map(p => p.close), () => colK, scK, { label: "BTC-Kurs", tension: .2, order: 3, fill: "start", backgroundColor: grad(colK) }),
+    line(ptsK.map(p => p.close), colAtK, scK, { label: "BTC-Kurs", tension: .2, order: 3 }),
     { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, borderDash: [4, 4], pointRadius: 0, spanGaps: true, order: 2 },
     { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
       pointRadius: c => dotR[c.dataIndex] || 0, order: 1 }
-  ], [baselinePlugin, scrubPlugin]), scK, {
+  ], [betweenPlugin, baselinePlugin, scrubPlugin]), scK, {
     line: "scrub-preis", name: "Bitcoin-Kurs", n: ptsK.length, base: k0.close,
-    colorAt: i => (dotInfo[i] ? C.label : colK),
+    between: { ref: ptsK.map(() => k0.close), stepped: false },
+    colorAt: i => (dotInfo[i] ? C.label : colAtK(i)),
     snap: dotInfo.flatMap((x, i) => (x ? [i] : [])),
-    idle: () => scrubHtml(fmtPct(kPct), "", 0, "Kursänderung · " + RANGE_NAME[RANGES.preis], kPct < 0 ? "neg" : "pos"),
+    idle: () => {
+      const live = lastMarket ? lastMarket.live : ptsK[ptsK.length - 1].close, pct = pctK(live);
+      legendK(ptsK.length - 1);
+      return scrubHtml(fmtEur(live), fmtPct(pct), pct < 0,
+        (lastMarket && lastMarket.liveOk ? "Live-Kurs · " : "Kurs · ") + RANGE_NAME[RANGES.preis]);
+    },
     html: i => {
-      const p = ptsK[i], x = dotInfo[i];
-      return scrubHtml(fmtEur(p.close), "", 0, fmtDate(p.t) + (x ? " · Kauf " + fmtEur(x.eur) + " · " + fmtInt(x.sats) + " Sats" : ""));
+      const p = ptsK[i], x = dotInfo[i], pct = pctK(p.close);
+      legendK(i);
+      return scrubHtml(fmtEur(p.close), fmtPct(pct), pct < 0,
+        fmtDate(p.t) + (x ? " · Kauf " + fmtEur(x.eur) + " · " + fmtInt(x.sats) + " Sats" : ""));
     }
   }, C);
 }
@@ -1308,10 +1347,11 @@ $$(".seg[data-chart]").forEach(seg => {
 });
 
 /* ═══════════ Schalter im Kurs-Diagramm: Käufe und Ø Kaufkurs ═══════════
-   Die Wahl bleibt auf dem Gerät gespeichert. Ausgeschaltet nennt die Legende stattdessen die Kurslinie. */
+   Standard: aus; die Wahl bleibt auf dem Gerät gespeichert. Eingeschaltet nennt die Legende Käufe und Ø Kaufkurs
+   statt des Startkurses (mehr passt auf dem iPhone nicht in eine Zeile). */
 function applyBuys() {
   $("buys-toggle").setAttribute("aria-checked", showBuys);
-  $("legend-kurs").hidden = showBuys;
+  $("legend-start").hidden = showBuys;
   $("legend-buys").hidden = $("legend-avg").hidden = !showBuys;
 }
 $("buys-toggle").addEventListener("click", () => {
@@ -1342,14 +1382,24 @@ $("tabbar").addEventListener("click", e => {
 setView("wert");
 /* iOS, Home-Bildschirm-App: Das Fenster endet dort teils um die Höhe der Statusleiste zu früh – die Leiste
    schwebt dann zu hoch. Die fehlende Höhe wird gemessen und ausgeglichen (--vfix); sonst bleibt alles unverändert. */
+let vfix = -1;
 function fixViewport() {
   const standalone = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
   const gap = Math.max(screen.width, screen.height) - innerHeight;
-  const ok = standalone && innerHeight > innerWidth && gap >= 20 && gap <= 80;
-  document.documentElement.style.setProperty("--vfix", (ok ? gap : 0) + "px");
+  const v = standalone && innerHeight > innerWidth && gap >= 20 && gap <= 80 ? gap : 0;
+  if (v === vfix) return;
+  vfix = v;
+  document.documentElement.style.setProperty("--vfix", v + "px");
 }
-fixViewport();
-addEventListener("resize", fixViewport);
+/* iOS meldet die Fensterhöhe beim Start teils erst verzögert richtig – und ohne „resize". Ein einmal zu Beginn
+   gemessener Ausgleich schob die Leiste dann halb aus dem Bild. Deshalb: in den ersten Sekunden mehrfach nachmessen,
+   bei jeder Rückkehr in die App erneut und danach in ruhigem Takt. */
+function watchViewport() { [0, 100, 300, 700, 1500, 3000].forEach(ms => setTimeout(fixViewport, ms)); }
+watchViewport();
+["resize", "orientationchange", "pageshow"].forEach(ev => addEventListener(ev, watchViewport));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) watchViewport(); });
+window.visualViewport?.addEventListener("resize", fixViewport);
+setInterval(fixViewport, 2000);
 
 /* ═══════════ Bewegungen (Liste; neueste zuerst) ═══════════ */
 function renderTable() {
