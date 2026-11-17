@@ -950,6 +950,40 @@ const SCRUB_ACTIVATE_DX = 8;  /* klar horizontale Geste aktiviert sofort */
 const SCRUB_SNAP_PX = 10;     /* Einrast-Radius auf Kaufpunkte */
 /* Liegt ein Liniensegment zeitlich hinter dem aktiven Punkt? */
 const scrubAfter = (s, c) => s.i >= 0 && c.p0DataIndex >= s.i;
+/* Linienfarbe nach Lage zur Basis (gemeinsam für alle Diagramme mit Basis-Linie): d = Wert − Basis an derselben
+   x-Position, die Basis darf sich über die Zeit ändern. d ≥ 0 → grün, d < 0 → rot; die Steigung spielt keine Rolle.
+   Wechselt d zwischen zwei Punkten das Vorzeichen, wechselt die Farbe genau am Schnittpunkt (lineare Interpolation,
+   t = d1 / (d1 − d2)) – hart, ohne Verlauf. Liegt ein Endpunkt auf der Basis, zählt die Seite des anderen; liegen
+   beide darauf: grün. Ergebnis: Farbabschnitte in Pixeln – die Schnittpunkte sind reine Zeichenpositionen, keine Datenpunkte. */
+function signRuns(xs, vals, ref, pos, neg) {
+  const runs = [], side = d => (d >= 0 ? pos : neg);
+  const push = (x0, x1, col) => {
+    const r = runs[runs.length - 1];
+    if (r && r.col === col) r.x1 = x1; else runs.push({ x0, x1, col });
+  };
+  for (let i = 1; i < xs.length; i++) {
+    const d1 = vals[i - 1] - ref[i - 1], d2 = vals[i] - ref[i], x1 = xs[i - 1], x2 = xs[i];
+    if (d1 * d2 < 0) {
+      const xc = x1 + d1 / (d1 - d2) * (x2 - x1);
+      push(x1, xc, side(d1));
+      push(xc, x2, side(d2));
+    } else push(x1, x2, side(d1 === 0 ? d2 : d1));
+  }
+  return runs;
+}
+/* Die Abschnitte als waagrechter Farbverlauf mit harten Stopps: Chart.js zeichnet die Linie (Kurve, Stärke, Enden)
+   unverändert, nur die Farbe wechselt an den Schnittpunkten. Je Layout einmal berechnet, beim Scrubben wiederverwendet. */
+function signStroke(chart, di, vals, ref, pos, neg) {
+  const a = chart && chart.chartArea, meta = a && chart.getDatasetMeta(di), pts = meta ? meta.data : [], n = pts.length;
+  if (n < 2) return pos;
+  const key = [a.left, a.right, pts[0].x, pts[n - 1].x].join("|");
+  if (meta.$sign && meta.$sign.key === key) return meta.$sign.g;
+  const w = a.right - a.left || 1, f = x => Math.min(1, Math.max(0, (x - a.left) / w));
+  const g = chart.ctx.createLinearGradient(a.left, 0, a.right, 0);
+  for (const r of signRuns(pts.map(p => p.x), vals, ref, pos, neg)) { g.addColorStop(f(r.x0), r.col); g.addColorStop(f(r.x1), r.col); }
+  meta.$sign = { key, g };
+  return g;
+}
 /* Deckkraft der Flächenverläufe an der Linie (hex, 73 = 45 %); läuft zur Gegenseite auf 0 aus */
 const FILL_TOP = "73";
 /* Kopfzeile über dem Diagramm: zwei feste Zeilen (Wert · Veränderung / Beschriftung) – keine Umbrüche, keine Höhenänderung */
@@ -1167,13 +1201,13 @@ function renderCharts({ candles }) {
     const stride = Math.ceil(arr.length / MAXPTS);
     return arr.filter((c, i) => i % stride === 0 || i === arr.length - 1 || buyTs.has(c.t));
   };
-  /* Zeitraum-Filter pro Chart */
+  /* Zeitraum-Filter pro Chart; minLen: so viele Punkte braucht der Chart mindestens, sonst die letzten zwei Kurse */
   const lastTs = candles.length ? candles[candles.length - 1].t : Date.now();
-  const inRange = (key, minTs) => {
+  const inRange = (key, minTs, minLen = 2) => {
     const days = RANGE_DAYS[RANGES[key]];
     const cut = Math.max(minTs || 0, days ? lastTs - days * DAY : 0);
     const arr = candles.filter(c => c.t >= cut);
-    return arr.length >= 2 ? arr : candles.slice(-2);
+    return arr.length >= minLen ? arr : candles.slice(-2);
   };
   /* X-Achse: Anzahl der Labels richtet sich nach der Chartbreite */
   const tickCb = labels => {
@@ -1210,9 +1244,11 @@ function renderCharts({ candles }) {
     g.addColorStop(0, col + FILL_TOP); g.addColorStop(1, col + "00");
     return g;
   };
-  /* Linie; hinter dem Scrub-Marker blassen Kurve und Fläche aus */
-  const line = (data, colAt, sc, extra) => ({ data, borderColor: colAt(data.length - 1), borderWidth: 2, pointRadius: 0, pointHitRadius: 6,
-    segment: { borderColor: c => (scrubAfter(sc, c) ? C.after : colAt(c.p1DataIndex)),
+  /* Linie; hinter dem Scrub-Marker blassen Kurve und Fläche aus. Mit ref (Basis je Punkt) färbt sich die Linie
+     nach ihrer Lage zur Basis (signStroke), sonst einfarbig über colAt. */
+  const line = (data, colAt, sc, extra, ref) => ({ data, borderColor: colAt(data.length - 1), borderWidth: 2, pointRadius: 0, pointHitRadius: 6,
+    segment: { borderColor: c => (scrubAfter(sc, c) ? C.after
+                 : ref ? signStroke(c.chart, c.datasetIndex, data, ref, C.pos, C.neg) : colAt(c.p1DataIndex)),
                backgroundColor: c => (scrubAfter(sc, c) ? C.fillAfter : undefined) }, ...extra });
   const tick = { color: C.label2, font: { size: 11 } };
   const make = (id, pts, y, yFmt, datasets, plugins) => {
@@ -1233,17 +1269,19 @@ function renderCharts({ candles }) {
   const span = pts => [pts[0], pts[pts.length - 1]];
 
   /* ── Wertentwicklung ──
-     Beginnt wie der Stack einen Tag vor dem ersten Kauf bei 0.
+     Beginnt am Tag der ersten Bewegung mit deren Wert – bewusst ohne senkrechten Anstieg von 0; die Y-Achse beginnt dann weiterhin bei 0.
+     Reicht der Zeitraum bis dorthin, rechnen Bezugslinie und Kopfzeile wie bisher vom Stand 0 aus (gedachter Nullpunkt, nicht gezeichnet).
      Max:  Wert gegen „Investiert" – grün darüber, rot darunter, Fläche zwischen beiden Linien.
      Zoom: Bezug ist der Startwert des Zeitraums plus die seither getätigten Käufe; ohne Käufe eine gepunktete Gerade.
      Die Bezugslinie ist in beiden Fällen durchgehend und geglättet: sie steigt zwischen den Käufen gleichmäßig an (drawW).
      Linienfarbe und Fläche folgen ihr; Kopfzeile und Legende rechnen weiter mit dem exakten Stand (refW). */
-  const ptsW = thin(inRange("wert", firstTs - DAY)).map(mapPt), scW = { i: -1 }, maxW = RANGES.wert === "max";
-  const [w0, w1] = span(ptsW), depW = w1.eur - w0.eur;
+  const ptsW = thin(inRange("wert", firstTs, 1)).map(mapPt), scW = { i: -1 }, maxW = RANGES.wert === "max";
+  const fromStart = ALL.length > 0 && ptsW[0].t <= firstTs;
+  const w0 = fromStart ? { wert: 0, eur: 0 } : ptsW[0], w1 = ptsW[ptsW.length - 1], depW = w1.eur - w0.eur;
   const gW = w1.wert - w0.wert - depW;                 /* Wertänderung abzüglich Einzahlungen */
   const baseW = w0.wert + Math.max(0, depW), pctW = baseW > 0 ? gW / baseW * 100 : null, negW = gW < 0;
   const refW = ptsW.map(p => (maxW ? p.eur : w0.wert + p.eur - w0.eur));
-  const flatW = !maxW && refW.every(x => x === refW[0]); /* Zoom ohne Käufe: gerade Startwert-Linie */
+  const flatW = !maxW && refW.every(x => x === (fromStart ? 0 : refW[0])); /* Zoom ohne Käufe: gerade Startwert-Linie */
   const riseW = !flatW;                                  /* Max und Zoom mit Käufen: geglättete, durchgehende Bezugslinie */
   const drawW = riseW ? smoothRef(refW) : refW;          /* gezeichnete Bezugslinie – Linienfarbe und Fläche folgen ihr */
   /* Der Nullpunkt vor dem ersten Kauf liegt auf der Bezugslinie – er übernimmt die Farbe des ersten echten Punkts */
@@ -1260,10 +1298,12 @@ function renderCharts({ candles }) {
   $("legend-base-name").textContent = flatW || maxW ? "Startwert" : "Startwert + Käufe";
   $("legend-base-icon").className = flatW ? "dots" : "dash";
   $("legend-base-icon").style.background = flatW ? "" : "var(--ch-gray)";
-  const yW = axisBounds(ptsW.map(p => p.wert).concat(refW), 10000);
+  const yW = axisBounds(ptsW.map(p => p.wert).concat(refW, fromStart ? [0] : []), 10000);
   const dense = narrow && maxW; /* viele Punkte auf wenig Breite → feinere, glattere Kurve */
+  /* Nur ein Datenpunkt: keine Linie möglich – der Punkt wird als kleiner Kreis gezeigt */
+  const soloW = ptsW.length === 1 ? { pointRadius: 3, pointBackgroundColor: colAtW(0), pointBorderWidth: 0 } : {};
   attachScrub(make("chartWert", ptsW, yW, fmtAxisK(yW.step), [
-    line(ptsW.map(p => p.wert), colAtW, scW, { label: "Portfoliowert", borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2 })
+    line(ptsW.map(p => p.wert), colAtW, scW, { label: "Portfoliowert", borderWidth: dense ? 1.6 : 2, tension: dense ? .35 : .2, ...soloW }, drawW)
   ].concat(maxW ? [line(drawW, () => C.gray, scW, { label: "Investiert", borderWidth: 1.25 })] : []),
   [betweenPlugin, baselinePlugin, scrubPlugin]), scW, {
     line: "scrub-wert", name: "Wertentwicklung", n: ptsW.length, colorAt: colAtW, base: flatW ? w0.wert : null, baseLine: riseW && !maxW ? drawW : null,
@@ -1290,10 +1330,8 @@ function renderCharts({ candles }) {
     line(ptsS.map(p => p.sats), () => C.btc, scS, { label: "Sats", stepped: true, fill: "start", backgroundColor: grad(C.btc) })
   ], [baselinePlugin, wholecoinerPlugin, scrubPlugin]), scS, {
     line: "scrub-sats", name: "Stack", n: ptsS.length, colorAt: () => C.btc, base: ptsS[0].sats,
-    idle: () => {
-      const [a, b] = span(ptsS), d = b.sats - a.sats;
-      return scrubHtml(sign(d) + fmtInt(d) + " Sats", "", 0, "Zuwachs · " + RANGE_NAME[RANGES.sats]);
-    },
+    /* Grundzustand: Summe des Bestands am Ende des Zeitraums, ohne Vorzeichen */
+    idle: () => scrubHtml(fmtInt(ptsS[ptsS.length - 1].sats) + " Sats", "", 0, "Bestand · " + RANGE_NAME[RANGES.sats]),
     html: i => scrubHtml(fmtInt(ptsS[i].sats) + " Sats", "", 0, fmtDate(ptsS[i].t))
   }, C);
 
@@ -1321,17 +1359,18 @@ function renderCharts({ candles }) {
   }
   const avgLine = smoothRef(ptsK.map(p => (showBuys && p.eur > 0 && p.sats > 0 ? p.eur / (p.sats / 1e8) : null)));
   const k0 = ptsK[0], upK = i => ptsK[i].close >= k0.close, colAtK = i => (upK(i) ? C.pos : C.neg);
+  const refK = ptsK.map(() => k0.close);
   const pctK = v => (v / k0.close - 1) * 100;
   const legendK = i => { $("legend-kurs-dot").style.background = upK(i) ? "var(--pos)" : "var(--neg)"; };
   const yK = axisBounds(ptsK.map(p => p.close).concat(avgLine.filter(x => x != null)), [10000, 20000], 9);
   attachScrub(make("chartPreis", ptsK, yK, fmtAxisK(yK.step), [
-    line(ptsK.map(p => p.close), colAtK, scK, { label: "BTC-Kurs", tension: .2, order: 3 }),
+    line(ptsK.map(p => p.close), colAtK, scK, { label: "BTC-Kurs", tension: .2, order: 3 }, refK),
     { label: "Ø Kaufkurs", data: avgLine, borderColor: C.gray, borderWidth: 1.25, pointRadius: 0, spanGaps: true, order: 2 },
     { label: "Kauf", data: dots, showLine: false, backgroundColor: C.label, pointBorderColor: C.card, pointBorderWidth: 1.5,
       pointRadius: c => dotR[c.dataIndex] || 0, order: 1 }
   ], [betweenPlugin, baselinePlugin, scrubPlugin]), scK, {
     line: "scrub-preis", name: "Bitcoin-Kurs", n: ptsK.length, base: k0.close,
-    between: { ref: ptsK.map(() => k0.close), stepped: false },
+    between: { ref: refK, stepped: false },
     colorAt: i => (dotInfo[i] ? C.label : colAtK(i)),
     snap: dotInfo.flatMap((x, i) => (x ? [i] : [])),
     idle: () => {
